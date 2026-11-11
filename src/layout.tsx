@@ -48,6 +48,26 @@ code { font-size:.9em; }
 .log li:last-child { border-bottom:0; }
 .log .log-top { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
 .log .muted { font-size:.8125rem; }
+.small { font-size:.8125rem; }
+.pick label { font-weight:600; font-size:.875rem; display:block; margin-bottom:4px; }
+.pick-row { display:flex; gap:8px; }
+.pick select { flex:1; min-width:0; min-height:44px; font:15px var(--font); border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; background:var(--card); color:var(--fg); }
+.pick p { margin:6px 0 0; }
+.chips { display:flex; gap:8px; overflow-x:auto; padding:12px 0 4px; margin:0 -16px; padding-left:16px; padding-right:16px; scrollbar-width:none; }
+.chip { flex:none; display:inline-flex; align-items:center; min-height:40px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--fg); text-decoration:none; font-weight:500; font-size:.9375rem; }
+.chip.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+a.tile { color:inherit; text-decoration:none; }
+.tile.on { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+.list { list-style:none; margin:0; padding:0; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); }
+.list > li { padding:12px 14px; border-bottom:1px solid var(--line); }
+.list > li:last-child { border-bottom:0; }
+.row-link { display:block; color:inherit; text-decoration:none; }
+.row-top { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+.bar { height:6px; border-radius:999px; background:var(--soft); margin:8px 0; overflow:hidden; }
+.bar span { display:block; height:100%; background:var(--accent); border-radius:999px; }
+.media-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.mc { display:inline-flex; align-items:center; gap:4px; font-size:.8125rem; font-weight:600; padding:3px 10px; border-radius:999px; background:var(--soft); }
+.mc.v svg { color:#DC2626; } .mc.i svg { color:var(--accent); }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
@@ -70,7 +90,8 @@ export function Layout(props: { title: string; children?: Child }) {
           <a href="/" class="brand">
             nskt-hub
           </a>
-          <a href="/du-lieu">Tình trạng dữ liệu</a>
+          <a href="/nop-bai">Nộp bài</a>
+          <a href="/du-lieu">Dữ liệu</a>
         </header>
         <main>{props.children}</main>
       </body>

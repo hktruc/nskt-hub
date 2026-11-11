@@ -31,7 +31,10 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Điểm và bảng xếp hạng **tính từ sau ngày khai giảng 29/09/2026**. |
 | 2026-11-11 | **Bảng xếp hạng công khai** (không cần đăng nhập), gồm toàn bộ học viên khóa, lọc được theo đội; ba màu xanh / vàng / đỏ = tốt / trung bình / tệ. |
 | 2026-11-11 | Điểm cộng dồn cả hành trình nhưng **điểm cũ mờ dần**, để người cố gắng về sau vẫn lên được màu xanh. |
-| 2026-11-11 | Chấm bài tập tuần bằng AI, dùng **mô hình rẻ nhất vừa đủ đọc hiểu** (Claude Haiku 5.5, `claude-haiku-5-5`). |
+| 2026-11-11 | Chấm bằng AI qua **API OpenAI của chủ dự án**, dùng mô hình rẻ nhất vừa đủ đọc hiểu: mặc định `gpt-5-nano` (đặt trong biến `OPENAI_MODEL`, đổi được). Khóa là secret `OPENAI_API_KEY` trên Cloudflare, chủ dự án tự nhập. |
+| 2026-11-11 | Nộp trễ (OVERDUE/LATE): **mỗi video được 2 điểm** (Claude hiểu: thay cho 3 / 10 điểm khi đúng hạn — chờ xác nhận). Đồng điểm: ai **nộp đủ video sớm hơn và đúng hạn** xếp trên. |
+| 2026-11-11 | Bảng xếp hạng công khai hiện: **họ tên, đội, điểm, màu**. Không hiện số điện thoại, email, cảnh báo. |
+| 2026-11-11 | Bắt đầu tính từ bài có hạn **30/09/2026** (không tính bài cam kết khai giảng 29/09). |
 | 2026-11-11 | Nguồn danh sách học viên ↔ số điện thoại: Google Sheet **"NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_HV` chỉ có 6 số cuối; tab `DS_CHIA_THON` và `DS_UP_DH3G` có đủ số, `DS_UP_DH3G` có cả Team Code và mã dh3g). |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
@@ -44,9 +47,7 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
 - Duyệt đề xuất của Claude về **độ mờ dần và ngưỡng màu** (mục "Quy tắc điểm" bên dưới) — chặn Đợt 4.
-- Bài nộp trễ (OVERDUE/LATE) có được tính điểm không, có trừ không; xử lý đồng hạng.
-- Bảng xếp hạng công khai hiện **họ tên đầy đủ** hay tên rút gọn.
-- Khóa API Anthropic (cho AI chấm bài) — chủ dự án tự nhập làm secret `ANTHROPIC_API_KEY` trên Cloudflare.
+- Xác nhận cách hiểu "nộp trễ được 2 điểm mỗi video": câu chữ trong bài nộp trễ có được điểm không.
 - **Khóa dh3g đang nằm dạng chữ thường trong file "NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_ZALO_THÔN`) — Claude khuyên xóa khỏi file và xin dh3g cấp khóa mới.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
 - Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
@@ -59,8 +60,8 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | Đợt | Nội dung | Trạng thái |
 |---|---|---|
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
-| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong; đã chạy trên máy với dữ liệu dh3g thật và số liệu khớp (185 học viên, 13 đội, 44 bài tập, 8.140 bài nộp). Đang chờ duyệt PR. **Chưa triển khai lên Cloudflare** |
-| 2 | Bảng theo dõi nộp bài | Chưa bắt đầu |
+| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong; đã chạy trên máy với dữ liệu dh3g thật và số liệu khớp (185 học viên, 13 đội, 44 bài tập, 8.140 bài nộp). PR #2 chờ chủ dự án bấm gộp. **Chưa triển khai lên Cloudflare** |
+| 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). PR #3 (xếp chồng trên PR #2) |
 | 3 | Đọc bài và chấm điểm | Chưa bắt đầu |
 | 4 | Bảng xếp hạng | Chưa bắt đầu |
 | 5 | Báo cáo thống kê | Chưa bắt đầu |
@@ -148,6 +149,8 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/auth.ts` — kiểm tra đăng nhập Cloudflare Access
 - `src/dh3g/` — gọi dh3g (`client`), đọc phản hồi (`parse`), ghi D1 (`store`)
 - `src/sync/queue.ts` — lên kế hoạch và xử lý hàng đợi đồng bộ
+- `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
+- `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
 - `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng)
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
