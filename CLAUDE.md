@@ -32,7 +32,7 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | **Bảng xếp hạng công khai** (không cần đăng nhập), gồm toàn bộ học viên khóa, lọc được theo đội; ba màu xanh / vàng / đỏ = tốt / trung bình / tệ. |
 | 2026-11-11 | Điểm cộng dồn cả hành trình nhưng **điểm cũ mờ dần**, để người cố gắng về sau vẫn lên được màu xanh. |
 | 2026-11-11 | Chấm bằng AI qua **API OpenAI của chủ dự án**, dùng mô hình rẻ nhất vừa đủ đọc hiểu: mặc định `gpt-5-nano` (đặt trong biến `OPENAI_MODEL`, đổi được). Khóa là secret `OPENAI_API_KEY` trên Cloudflare, chủ dự án tự nhập. |
-| 2026-11-11 | Nộp trễ (OVERDUE/LATE): **mỗi video được 2 điểm** (Claude hiểu: thay cho 3 / 10 điểm khi đúng hạn; câu chữ vẫn tính bình thường — chờ xác nhận). Đồng điểm: ai **nộp đủ video sớm hơn và đúng hạn** xếp trên. |
+| 2026-11-11 | Nộp trễ (OVERDUE/LATE): **mỗi video được 2 điểm** (thay cho 3 / 10 điểm khi đúng hạn), tính vào **đúng tuần của bài tập đó**. **Câu chữ nộp trễ được một nửa điểm**, AI vẫn kiểm tra nội dung (chủ dự án chốt 11/11). Đồng điểm: ai **nộp đủ video sớm hơn và đúng hạn** xếp trên. |
 | 2026-11-11 | Bảng xếp hạng công khai hiện: **họ tên, đội, điểm, màu**. Không hiện số điện thoại, email, cảnh báo. **Mỗi người một dòng, cả dòng tô theo màu**, không ghi chữ "Xanh/Vàng/Đỏ" hay chấm màu. |
 | 2026-11-11 | Ngưỡng **xanh từ 80%**. |
 | 2026-11-11 | Bắt đầu tính từ bài có hạn **30/09/2026** (không tính bài cam kết khai giảng 29/09). |
@@ -48,7 +48,6 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
 - Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%** (ngưỡng xanh đã chốt 80%).
-- Xác nhận cách hiểu "nộp trễ được 2 điểm mỗi video": câu chữ trong bài nộp trễ có được điểm không.
 - **Khóa dh3g đang nằm dạng chữ thường trong file "NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_ZALO_THÔN`) — Claude khuyên xóa khỏi file và xin dh3g cấp khóa mới.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
 - Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
@@ -61,14 +60,14 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | Đợt | Nội dung | Trạng thái |
 |---|---|---|
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
-| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong; đã chạy trên máy với dữ liệu dh3g thật và số liệu khớp (185 học viên, 13 đội, 44 bài tập, 8.140 bài nộp). PR #2 chờ chủ dự án bấm gộp. **Chưa triển khai lên Cloudflare** |
-| 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). PR #3 (xếp chồng trên PR #2) |
+| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Xong, đã gộp (PR #2). Đã chạy trên máy với dữ liệu thật. **Chưa triển khai lên Cloudflare** |
+| 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). Xong, đã gộp (PR #3 → PR #5). |
 | 3 | Đọc bài và chấm điểm | Chưa bắt đầu |
-| 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). PR #4 (xếp chồng trên PR #3) |
+| 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). Xong, đã gộp (PR #4 → PR #5). |
 | 5 | Báo cáo thống kê | Chưa bắt đầu |
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |
 
-Cập nhật bảng này ở cuối mỗi đợt.
+Cập nhật bảng này ở cuối mỗi đợt. Mỗi PR trỏ thẳng vào `main`, **không xếp chồng** (PR #3, #4 từng bị gộp vào nhánh trung gian, phải mở PR #5 để đưa vào `main`).
 
 ## Quy tắc điểm (chủ dự án mô tả 2026-11-11)
 

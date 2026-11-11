@@ -57,9 +57,25 @@ describe("chấm một bài nộp", () => {
     expect([s.earned, s.max, s.onTimeVideos, s.hoursEarly, s.provisional]).toEqual([6, 6, 1, 3, false]);
   });
 
-  it("nộp trễ: video chỉ được 2 điểm, câu chữ vẫn tính", () => {
+  it("nộp trễ: video được 2 điểm, câu chữ được một nửa", () => {
     const s = scoreSubmission({ spec: daily, answers: ans("a", "b", "c", "https://fb.watch/x"), status: "OVERDUE", submittedAt: "2026-11-08T08:00:00", dueAt: DUE });
-    expect([s.earned, s.onTimeVideos, s.hoursEarly]).toEqual([5, 0, null]);
+    expect([s.earned, s.max, s.onTimeVideos, s.hoursEarly]).toEqual([1.5 + 2, 6, 0, null]);
+  });
+
+  it("bài tuần nộp trễ: AI vẫn kiểm tra nội dung, đạt thì được nửa điểm", () => {
+    const qs = ["Làm câu chuyện", "Viết nhật ký đúc kết?", "01 điểm tốt cần phát huy trong lớp học là gì?"];
+    const spec = buildWeeklySpec(qs, [[{ question: qs[0]!, type: "Tự luận", answer: "https://youtu.be/a" }]]);
+    const answers = [
+      { question: qs[0]!, type: "Tự luận", answer: "https://youtu.be/a" },
+      { question: qs[1]!, type: "Tự luận", answer: "Em học được cách lắng nghe đồng đội" },
+      { question: qs[2]!, type: "Tự luận", answer: "Thầy rất tận tâm" },
+    ];
+    expect(aiTasks(spec, answers).map((t) => t.index)).toEqual([1, 2]);
+    const s = scoreSubmission({
+      spec, answers, status: "OVERDUE", submittedAt: "2026-11-07T10:00:00", dueAt: "2026-11-06T23:00:00",
+      ai: [{ index: 1, ok: true, nonsense: false }, { index: 2, ok: false, nonsense: true }],
+    });
+    expect([s.earned, s.max]).toEqual([2 + 1.5 + 0, 10 + 3 + 1]);
   });
 
   it("câu khuyến khích bằng chữ: AI nói sâu sắc thì 1 điểm; chưa có AI thì tạm theo độ dài", () => {

@@ -13,6 +13,8 @@ export const SCORING = {
   weekly: { perVideo: 10, mandatory: 3, idea: 1 },
   /** Nộp trễ: mỗi video được bấy nhiêu điểm (thay cho điểm video đúng hạn). */
   lateVideo: 2,
+  /** Nộp trễ: câu trả lời bằng chữ (kể cả ảnh) được bấy nhiêu phần điểm; AI vẫn kiểm tra nội dung. */
+  lateTextFactor: 0.5,
 } as const;
 
 export type Color = "xanh" | "vang" | "do";
