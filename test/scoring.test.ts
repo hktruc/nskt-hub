@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { colorOf } from "../src/scoring/config";
-import { rank, weight, type ScoreRow } from "../src/scoring/leaderboard";
+import { rank, rankHistory, summarize, weight, type ScoreRow } from "../src/scoring/leaderboard";
 import { aiTasks, looksNonsense, scoreSubmission } from "../src/scoring/rules";
 import { buildDailySpec, buildWeeklySpec, labelPoints, specMax } from "../src/scoring/spec";
 
@@ -150,5 +150,47 @@ describe("bảng xếp hạng", () => {
     });
     const { ranked } = rank([r(1, 1, 2), r(2, 2, 1), r(3, 1, 5), r(4, 1, 2), r(5, 9, 9, "BTC")], "2026-11-11");
     expect(ranked.map((x) => [x.learnerId, x.rank])).toEqual([[2, 1], [3, 2], [1, 3], [4, 3]]);
+  });
+});
+
+describe("chi tiết học viên trên bảng xếp hạng", () => {
+  const row = (id: number, due: string, earned: number): ScoreRow => ({
+    learner_id: id, full_name: `HV ${id}`, team_name: "Đội Cá Chép 01", due_at: `${due}T23:00:00`,
+    earned, max: 6, on_time_videos: 0, hours_early: null, provisional: 0,
+  });
+
+  it("thứ hạng 3 tuần trước chỉ tính các bài đã tới hạn lúc đó", () => {
+    // HV 1 tốt ở đầu, sa sút về sau; HV 2 ngược lại.
+    const rows = [row(1, "2026-10-14", 6), row(2, "2026-10-14", 0), row(1, "2026-11-10", 0), row(2, "2026-11-10", 6)];
+    const h1 = rankHistory(rows, 1, "2026-11-11T08:00:00");
+    expect(h1.map((h) => [h.weeksAgo, h.day, h.rank])).toEqual([
+      [3, "2026-10-21", 1],
+      [2, "2026-10-28", 1],
+      [1, "2026-11-04", 1],
+      [0, "2026-11-11", 2],
+    ]);
+    expect(rankHistory(rows, 2, "2026-11-11T08:00:00").map((h) => h.rank)).toEqual([2, 2, 2, 1]);
+    // Chưa có bài nào tới hạn thì chưa có hạng.
+    expect(rankHistory(rows, 1, "2026-10-20T08:00:00")[0]).toMatchObject({ rank: null, percent: null, total: 0 });
+  });
+
+  it("gộp điểm theo tuần (thứ Hai → Chủ nhật), theo loại bài và tình trạng nộp", () => {
+    const s = summarize(
+      [
+        { type: "NORMAL", due_at: "2026-11-09T23:00:00", earned: 6, max: 6, on_time_videos: 1, provisional: 0, status: "DONE" },
+        { type: "NORMAL", due_at: "2026-11-10T23:00:00", earned: 1.5, max: 6, on_time_videos: 0, provisional: 1, status: "OVERDUE" },
+        { type: "WEEK", due_at: "2026-11-08T23:00:00", earned: 0, max: 40, on_time_videos: 0, provisional: 0, status: "NOT_SUBMITTED" },
+      ],
+      "2026-11-11T08:00:00",
+    );
+    expect(s.weeks.map((w) => [w.from, w.to, w.earned, w.max, w.percent])).toEqual([
+      ["2026-11-09", "2026-11-15", 7.5, 12, 63],
+      ["2026-11-02", "2026-11-08", 0, 40, 0],
+    ]);
+    expect(s.byType).toEqual([
+      { label: "Bài ngày", earned: 7.5, max: 12 },
+      { label: "Bài tuần", earned: 0, max: 40 },
+    ]);
+    expect([s.due, s.onTime, s.late, s.missing, s.videos, s.provisional]).toEqual([3, 1, 1, 1, 1, true]);
   });
 });

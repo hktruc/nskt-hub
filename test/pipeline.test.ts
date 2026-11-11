@@ -65,6 +65,28 @@ describe("chuỗi chấm điểm", () => {
     // Các trang khác vẫn bị khóa.
     expect((await app.fetch(new Request("https://nskt-hub.invalid/nop-bai"), env)).status).toBe(503);
   });
+
+  it("bấm tên trên bảng xếp hạng: chi tiết công khai, không lộ số điện thoại / email / cảnh báo", async () => {
+    const { env, raw } = await synced();
+    raw.prepare("UPDATE teams SET name='🐟 Đội Cá Chép 07' WHERE id=7").run();
+    await scoringTick(env, NOW);
+    const list = await (await app.fetch(new Request("https://nskt-hub.invalid/bang-xep-hang"), env)).text();
+    expect(list).toContain('href="/bang-xep-hang/hv/1001"');
+    for (const url of ["/bang-xep-hang/hv/1001", "/bang-xep-hang/hv/1001?p=1"]) {
+      const res = await app.fetch(new Request(`https://nskt-hub.invalid${url}`), env);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain("Học Viên A");
+      expect(html).toContain("Thứ hạng 3 tuần gần nhất");
+      expect(html).toContain("Điểm tích lũy");
+      expect(html).not.toContain("0000000001");
+      expect(html).not.toContain("example.invalid");
+      expect(html).not.toContain("Cảnh báo");
+    }
+    // Người không thuộc 12 đội, hoặc mã sai: không có trang.
+    expect((await app.fetch(new Request("https://nskt-hub.invalid/bang-xep-hang/hv/1002"), env)).status).toBe(404);
+    expect((await app.fetch(new Request("https://nskt-hub.invalid/bang-xep-hang/hv/abc"), env)).status).toBe(404);
+  });
 });
 
 describe("bảng xếp hạng theo đội", () => {
