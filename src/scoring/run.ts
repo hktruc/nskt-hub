@@ -12,7 +12,9 @@ import { buildDailySpec, buildWeeklySpec, type AssignmentSpec } from "./spec";
 //  3. Tính lại điểm cho các bài nộp có thay đổi.
 // Mỗi bước có giới hạn số lượng để một lượt chạy không quá nặng.
 
-export const AI_PER_TICK = 8;
+/** Tối đa số bài nộp gửi AI mỗi lượt 5 phút, và số lời gọi chạy song song. */
+export const AI_PER_TICK = 40;
+export const AI_CONCURRENCY = 5;
 export const SCORES_PER_TICK = 400;
 const AI_MAX_ATTEMPTS = 3;
 
@@ -102,42 +104,49 @@ export async function aiTick(env: Env, now: Date, fetchImpl?: typeof fetch): Pro
                 OR (r.status = 'loi' AND r.attempts < ?))
          ORDER BY s.submitted_at DESC LIMIT ?`,
       )
-      .bind(AI_VERSION, AI_MAX_ATTEMPTS, AI_PER_TICK * 4)
+      .bind(AI_VERSION, AI_MAX_ATTEMPTS, AI_PER_TICK * 3)
       .all<SubRow & { spec_json: string }>()
   ).results;
 
   let reviewed = 0;
   let failed = 0;
+  const save = (r: SubRow, status: "ok" | "loi", result: AiVerdict[] | null, error: string | null) =>
+    db
+      .prepare(
+        `INSERT INTO ai_reviews (learner_id, assignment_id, answers_hash, version, status, result_json, model, error, attempts, created_at)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,1,?9)
+         ON CONFLICT(learner_id, assignment_id) DO UPDATE SET
+           attempts = CASE WHEN ai_reviews.answers_hash = excluded.answers_hash AND ai_reviews.version = excluded.version
+                           AND ai_reviews.status = 'loi' THEN ai_reviews.attempts + 1 ELSE 1 END,
+           answers_hash=excluded.answers_hash, version=excluded.version, status=excluded.status,
+           result_json=excluded.result_json, model=excluded.model, error=excluded.error, created_at=excluded.created_at`,
+      )
+      .bind(r.learner_id, r.assignment_id, r.answers_hash ?? "", AI_VERSION, status, result ? JSON.stringify(result) : null, cfg.model, error, now.toISOString())
+      .run();
+
+  // Bài không có câu nào cần AI: ghi lại ngay để khỏi xét lại. Bài còn lại gửi AI theo nhóm chạy song song.
+  const work: { r: SubRow; items: ReturnType<typeof aiTasks> }[] = [];
   for (const r of rows) {
-    if (reviewed + failed >= AI_PER_TICK) break;
-    const spec = JSON.parse(r.spec_json) as AssignmentSpec;
-    const items = aiTasks(spec, parseAnswers(r.answers_json));
-    const save = (status: "ok" | "loi", result: AiVerdict[] | null, error: string | null) =>
-      db
-        .prepare(
-          `INSERT INTO ai_reviews (learner_id, assignment_id, answers_hash, version, status, result_json, model, error, attempts, created_at)
-           VALUES (?1,?2,?3,?4,?5,?6,?7,?8,1,?9)
-           ON CONFLICT(learner_id, assignment_id) DO UPDATE SET
-             attempts = CASE WHEN ai_reviews.answers_hash = excluded.answers_hash AND ai_reviews.version = excluded.version
-                             AND ai_reviews.status = 'loi' THEN ai_reviews.attempts + 1 ELSE 1 END,
-             answers_hash=excluded.answers_hash, version=excluded.version, status=excluded.status,
-             result_json=excluded.result_json, model=excluded.model, error=excluded.error, created_at=excluded.created_at`,
-        )
-        .bind(r.learner_id, r.assignment_id, r.answers_hash ?? "", AI_VERSION, status, result ? JSON.stringify(result) : null, cfg.model, error, now.toISOString())
-        .run();
-    if (items.length === 0) {
-      await save("ok", [], null); // không có câu nào cần AI: ghi lại để khỏi xét lại
-      continue;
+    const items = aiTasks(JSON.parse(r.spec_json) as AssignmentSpec, parseAnswers(r.answers_json));
+    if (items.length === 0) await save(r, "ok", [], null);
+    else if (work.length < AI_PER_TICK) work.push({ r, items });
+  }
+  for (let i = 0; i < work.length; i += AI_CONCURRENCY) {
+    const group = work.slice(i, i + AI_CONCURRENCY);
+    const outs = await Promise.all(group.map((w) => reviewItems(cfg, w.items)));
+    let stop = false;
+    for (const [k, out] of outs.entries()) {
+      const r = group[k]!.r;
+      if (out.ok) {
+        reviewed++;
+        await save(r, "ok", out.verdicts, null);
+      } else {
+        failed++;
+        await save(r, "loi", null, out.error);
+        stop ||= out.stop; // khóa sai / hết hạn mức: dừng cả lượt, không gọi dồn
+      }
     }
-    const out = await reviewItems(cfg, items);
-    if (out.ok) {
-      reviewed++;
-      await save("ok", out.verdicts, null);
-    } else {
-      failed++;
-      await save("loi", null, out.error);
-      if (out.stop) break;
-    }
+    if (stop) break;
   }
   return { status: "ran", reviewed, failed };
 }
