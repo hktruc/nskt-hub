@@ -114,8 +114,8 @@ describe("bảng xếp hạng", () => {
     expect(weight("2026-09-30", "2026-11-11")).toBeCloseTo(0.25);
   });
 
-  it("màu theo ngưỡng 75 / 50", () => {
-    expect([colorOf(75), colorOf(74.9), colorOf(50), colorOf(49.9)]).toEqual(["xanh", "vang", "vang", "do"]);
+  it("màu theo ngưỡng 80 / 50", () => {
+    expect([colorOf(80), colorOf(79.9), colorOf(50), colorOf(49.9)]).toEqual(["xanh", "vang", "vang", "do"]);
   });
 
   it("người cố gắng về sau vượt người chỉ làm tốt lúc đầu", () => {
@@ -125,7 +125,7 @@ describe("bảng xếp hạng", () => {
     const rows = [row(1, "2026-10-01", 10), row(1, "2026-11-10", 0), row(2, "2026-10-01", 0), row(2, "2026-11-10", 10)];
     const { ranked } = rank(rows, "2026-11-11");
     expect(ranked.map((r) => [r.learnerId, r.rank])).toEqual([[2, 1], [1, 2]]);
-    expect(ranked[0]!.color).toBe("xanh");
+    expect(ranked[0]!.percent).toBeCloseTo(76, 0); // bài cũ 5 tuần trước chỉ còn ~32%
   });
 
   it("đồng điểm: nhiều video đúng hạn hơn xếp trên, rồi nộp sớm hơn; bằng hết thì ngang hạng; bỏ đội BTC", () => {

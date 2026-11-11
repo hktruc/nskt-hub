@@ -75,7 +75,7 @@ describe("bảng xếp hạng theo đội", () => {
     });
     const ranked = [mk(1, "T01", 90, 1), mk(2, "T02", 80, 2), mk(3, "T02", 80, 2), mk(4, "T02", 70, 4)];
     const html = String(LeaderboardPage({ ranked, team: "T02", teams: ["T01", "T02"], provisional: false, updatedAt: null }));
-    expect(html).toContain("hạng khóa 4");
+    expect(html).toContain("#4 khóa");
     expect(html.match(/class="rank">(\d+)</g)).toEqual(['class="rank">1<', 'class="rank">1<', 'class="rank">3<']);
     expect(html).not.toContain("HV 1<");
   });

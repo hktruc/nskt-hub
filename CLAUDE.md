@@ -33,7 +33,8 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Điểm cộng dồn cả hành trình nhưng **điểm cũ mờ dần**, để người cố gắng về sau vẫn lên được màu xanh. |
 | 2026-11-11 | Chấm bằng AI qua **API OpenAI của chủ dự án**, dùng mô hình rẻ nhất vừa đủ đọc hiểu: mặc định `gpt-5-nano` (đặt trong biến `OPENAI_MODEL`, đổi được). Khóa là secret `OPENAI_API_KEY` trên Cloudflare, chủ dự án tự nhập. |
 | 2026-11-11 | Nộp trễ (OVERDUE/LATE): **mỗi video được 2 điểm** (Claude hiểu: thay cho 3 / 10 điểm khi đúng hạn; câu chữ vẫn tính bình thường — chờ xác nhận). Đồng điểm: ai **nộp đủ video sớm hơn và đúng hạn** xếp trên. |
-| 2026-11-11 | Bảng xếp hạng công khai hiện: **họ tên, đội, điểm, màu**. Không hiện số điện thoại, email, cảnh báo. |
+| 2026-11-11 | Bảng xếp hạng công khai hiện: **họ tên, đội, điểm, màu**. Không hiện số điện thoại, email, cảnh báo. **Mỗi người một dòng, cả dòng tô theo màu**, không ghi chữ "Xanh/Vàng/Đỏ" hay chấm màu. |
+| 2026-11-11 | Ngưỡng **xanh từ 80%**. |
 | 2026-11-11 | Bắt đầu tính từ bài có hạn **30/09/2026** (không tính bài cam kết khai giảng 29/09). |
 | 2026-11-11 | Nguồn danh sách học viên ↔ số điện thoại: Google Sheet **"NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_HV` chỉ có 6 số cuối; tab `DS_CHIA_THON` và `DS_UP_DH3G` có đủ số, `DS_UP_DH3G` có cả Team Code và mã dh3g). |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
@@ -46,7 +47,7 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 ## Còn chờ chủ dự án quyết
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
-- Duyệt **độ mờ dần (nửa đời 3 tuần) và ngưỡng màu 75% / 50%** (mục "Quy tắc điểm") — đã lập trình theo đề xuất, đổi được.
+- Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%** (ngưỡng xanh đã chốt 80%).
 - Xác nhận cách hiểu "nộp trễ được 2 điểm mỗi video": câu chữ trong bài nộp trễ có được điểm không.
 - **Khóa dh3g đang nằm dạng chữ thường trong file "NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_ZALO_THÔN`) — Claude khuyên xóa khỏi file và xin dh3g cấp khóa mới.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
@@ -87,7 +88,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 **Cách tính đang dùng (Claude đề xuất, chủ dự án chưa duyệt — mọi con số ở `src/scoring/config.ts`):**
 - Điểm là **% so với điểm tối đa có thể đạt**, cùng độ mờ, để tuần nhiều bài hay ít bài vẫn so sánh công bằng.
 - Mờ dần theo **nửa đời 3 tuần**: điểm của 3 tuần trước tính một nửa, 6 tuần trước một phần tư.
-- Màu: **Xanh ≥ 75%**, **Vàng 50–74%**, **Đỏ < 50%**. Ngưỡng tuyệt đối (ai đạt cũng xanh), không theo thứ hạng. Chạy trên dữ liệu thật 11/11 (AI chưa chấm): 49 xanh / 72 vàng / 19 đỏ trên 140 người (ngưỡng 60/35 ban đầu cho 98 xanh — quá dễ).
+- Màu: **Xanh ≥ 80%** (chủ dự án chốt 11/11), **Vàng 50–79%**, **Đỏ < 50%**. Ngưỡng tuyệt đối (ai đạt cũng xanh), không theo thứ hạng. Dữ liệu thật 11/11 (AI chưa chấm): 23 xanh / 98 vàng / 19 đỏ trên 140 người.
 - Đồng điểm: nhiều video đúng hạn hơn xếp trên; rồi trung bình nộp video sớm hơn hạn nhiều giờ hơn xếp trên; bằng hết thì ngang hạng.
 - Cấu trúc bài tuần (câu nào là câu video, tối đa mấy video) suy ra từ dữ liệu nộp: câu mà ≥ 50% người nộp có video là câu video, số video tối đa = mức 75% người nộp đạt. Khớp với dữ liệu thật (tuần 02–04: 40 điểm video, tuần 05: 20).
 - AI chấm là **gợi ý**; khi chưa có AI dùng quy tắc tạm theo độ dài và trang xếp hạng ghi "đang chờ chấm". Sửa tay của coach/BTC sẽ có ở Đợt 3.

@@ -44,30 +44,26 @@ export function LeaderboardPage(props: {
         ))}
       </nav>
 
-      <div class="legend">
-        <span class="dot-label xanh">Xanh ≥ {SCORING.greenFrom}% · {count("xanh")}</span>
-        <span class="dot-label vang">Vàng {SCORING.yellowFrom}–{SCORING.greenFrom - 1}% · {count("vang")}</span>
-        <span class="dot-label do">Đỏ &lt; {SCORING.yellowFrom}% · {count("do")}</span>
+      <div class="legend" aria-label="Chú thích màu">
+        <span class="swatch xanh">≥ {SCORING.greenFrom}% · {count("xanh")} người</span>
+        <span class="swatch vang">
+          {SCORING.yellowFrom}–{SCORING.greenFrom - 1}% · {count("vang")} người
+        </span>
+        <span class="swatch do">
+          &lt; {SCORING.yellowFrom}% · {count("do")} người
+        </span>
       </div>
 
       {list.length === 0 ? (
         <p class="muted">Chưa có điểm.</p>
       ) : (
-        <ol class="list rank-list">
+        <ol class="rank-list">
           {list.map((r) => (
-            <li class={`rank-row ${r.color}`}>
+            <li class={`rank-row ${r.color}`} title={`${r.colorLabel}`}>
               <span class="rank">{r.shown}</span>
-              <span class="who">
-                <strong>{r.name}</strong>
-                <span class="muted small">
-                  {teamLabel(r.team)}
-                  {props.team ? ` · hạng khóa ${r.rank}` : ""}
-                </span>
-              </span>
-              <span class="score">
-                <strong>{r.percent.toLocaleString("vi-VN")}%</strong>
-                <span class={`dot-label ${r.color}`}>{r.colorLabel}</span>
-              </span>
+              <span class="name">{r.name}</span>
+              <span class="team">{props.team ? `#${r.rank} khóa` : teamLabel(r.team)}</span>
+              <span class="pct">{r.percent.toLocaleString("vi-VN")}%</span>
             </li>
           ))}
         </ol>

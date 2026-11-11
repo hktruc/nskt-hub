@@ -6,7 +6,7 @@ export const SCORING = {
   /** Điểm của bài cách đây `halfLifeWeeks` tuần chỉ còn tính một nửa. */
   halfLifeWeeks: 3,
   /** Ngưỡng màu, theo % điểm đạt được so với tối đa (sau khi đã làm mờ). */
-  greenFrom: 75,
+  greenFrom: 80,
   yellowFrom: 50,
 
   daily: { mandatory: 1, encouragedVideo: 3, encouragedDeepText: 1 },
