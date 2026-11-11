@@ -5,10 +5,10 @@ import type { Env } from "./env";
 import { Layout } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
-import { LeaderboardPage } from "./pages/leaderboard";
+import { LeaderboardPage, LearnerDetailPage, LearnerDetailView } from "./pages/leaderboard";
 import { FlagsPage, loadFlags } from "./pages/flags";
 import { SubmissionDetailPage, loadDetail } from "./pages/submission-detail";
-import { loadLeaderboard } from "./scoring/leaderboard";
+import { loadLeaderboard, loadLearnerDetail } from "./scoring/leaderboard";
 import { nowVN, recomputeScores } from "./scoring/run";
 import { DAYS_AHEAD, RECENT_DAYS_BACK, enqueueRange, planDaily, planFull, workQueue } from "./sync/queue";
 
@@ -26,6 +26,15 @@ app.get("/bang-xep-hang", async (c) => {
   return c.html(
     <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} updatedAt={data.updatedAt} />,
   );
+});
+
+// Chi tiết một học viên trên bảng xếp hạng (công khai như bảng xếp hạng). `?p=1`: chỉ phần nội dung cho cửa sổ bật lên.
+app.get("/bang-xep-hang/hv/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const d = Number.isSafeInteger(id) ? await loadLearnerDetail(c.env.DB, id, nowVN(new Date())) : null;
+  if (!d) return c.text("Không tìm thấy học viên trên bảng xếp hạng.", 404);
+  c.header("Cache-Control", "public, max-age=300");
+  return c.html(c.req.query("p") ? <LearnerDetailView d={d} inDialog /> : <LearnerDetailPage d={d} />);
 });
 
 // Mọi trang khác: phải đăng nhập qua Cloudflare Access.

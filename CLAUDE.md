@@ -129,7 +129,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 ## Bảo mật
 
-- `/bang-xep-hang` công khai (không đăng nhập), chỉ hiện hạng, họ tên, đội, %, màu. Mọi trang khác trừ `/health` phải có mã Cloudflare Access hợp lệ; ứng dụng tự kiểm tra chữ ký và AUD (`src/auth.ts`). Thiếu `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` thì khóa toàn bộ.
+- `/bang-xep-hang` công khai (không đăng nhập), chỉ hiện hạng, họ tên, đội, %, màu. Bấm tên mở `/bang-xep-hang/hv/<mã>` (cũng công khai, nằm dưới cùng đường dẫn bỏ qua Access): điểm tích lũy theo tuần, số bài đúng hạn / trễ / chưa nộp, số video, thứ hạng hôm nay và 1–3 tuần trước. Không hiện cảnh báo, số điện thoại, email, nội dung bài. Mọi trang khác trừ `/health` phải có mã Cloudflare Access hợp lệ; ứng dụng tự kiểm tra chữ ký và AUD (`src/auth.ts`). Thiếu `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` thì khóa toàn bộ.
 - `LOCAL_DEV_NO_AUTH=true` chỉ có tác dụng trên localhost; chỉ đặt trong `.dev.vars` (không commit).
 - Thao tác ghi (POST) kiểm tra tiêu đề `Origin`.
 
