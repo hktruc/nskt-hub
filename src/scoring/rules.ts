@@ -88,6 +88,8 @@ export function scoreSubmission(input: {
   const { spec, answers } = input;
   const submitted = input.status === "DONE" || input.status === "OVERDUE" || input.status === "LATE";
   const late = input.status === "OVERDUE" || input.status === "LATE";
+  // Câu chữ trong bài nộp trễ: tính một nửa (chủ dự án chốt 11/11). Video trễ tính riêng (2 điểm/video).
+  const textPts = (pts: number) => (late ? pts * SCORING.lateTextFactor : pts);
   const ai = new Map((input.ai ?? []).map((v) => [v.index, v]));
   const detail: QuestionScore[] = [];
   const flags: SubmissionScore["flags"] = [];
@@ -118,7 +120,7 @@ export function scoreSubmission(input: {
     if (rule && !ai.has(q.index) && videos === 0 && !(q.wantsImage && media.length > 0)) flags.push({ index: q.index, reason: rule });
 
     if (q.kind === "bat-buoc" && spec.type === "NORMAL") {
-      detail.push({ ...base, earned: text || media.length ? q.max : 0 });
+      detail.push({ ...base, earned: text || media.length ? textPts(q.max) : 0 });
     } else if (q.kind === "khuyen-khich") {
       if (videos > 0) {
         const n = Math.min(videos, 1);
@@ -126,22 +128,22 @@ export function scoreSubmission(input: {
         detail.push({ ...base, videos, earned: late ? n * SCORING.lateVideo : q.max });
       } else if (text) {
         const j = judge("sau-sac");
-        detail.push({ ...base, earned: j.ok ? SCORING.daily.encouragedDeepText : 0, source: j.source, note: j.note });
+        detail.push({ ...base, earned: j.ok ? textPts(SCORING.daily.encouragedDeepText) : 0, source: j.source, note: j.note });
       } else detail.push(base);
     } else if (q.kind === "video") {
       const n = Math.min(videos, q.expectedVideos ?? 1);
       if (!late) onTimeVideos += n;
       detail.push({ ...base, videos, earned: n * (late ? SCORING.lateVideo : SCORING.weekly.perVideo) });
     } else if (q.kind === "bat-buoc") {
-      if (q.wantsImage && media.length > 0) detail.push({ ...base, earned: q.max });
+      if (q.wantsImage && media.length > 0) detail.push({ ...base, earned: textPts(q.max) });
       else if (text) {
         const j = judge("dat-yeu-cau");
-        detail.push({ ...base, earned: j.ok ? q.max : 0, source: j.source, note: j.note });
+        detail.push({ ...base, earned: j.ok ? textPts(q.max) : 0, source: j.source, note: j.note });
       } else detail.push(base);
     } else {
       if (text) {
         const j = judge("gop-y");
-        detail.push({ ...base, earned: j.ok ? q.max : 0, source: j.source, note: j.note });
+        detail.push({ ...base, earned: j.ok ? textPts(q.max) : 0, source: j.source, note: j.note });
       } else detail.push(base);
     }
   }
