@@ -4,8 +4,8 @@ Chưa làm bước nào dưới đây. Chỉ làm khi chủ dự án đồng ý 
 
 Những việc **chỉ chủ dự án làm được** (Claude không có quyền vào Cloudflare):
 
-1. **Tạo cơ sở dữ liệu D1** tên `nskt-hub-db`, rồi gửi lại *mã cơ sở dữ liệu* (Database ID — không phải bí mật) để điền vào `wrangler.jsonc`.
-2. **Tạo các bảng** bằng các file trong thư mục `migrations/` (theo thứ tự số).
+1. ✅ **Đã làm 11/11/2026:** cơ sở dữ liệu D1 `nskt-hub-db` (mã `66754a8e-7e74-4f88-aea9-bbd4c75b65fd`, vùng châu Á – Thái Bình Dương).
+2. ✅ **Đã làm 11/11/2026:** tạo các bảng bằng `docs/d1-tao-bang-lan-dau.sql` (Claude chạy qua khóa API chỉ có quyền D1). Lần sau thêm bảng mới bằng `npx wrangler d1 migrations apply nskt-hub-db --remote`.
 3. **Kết nối repo này với Cloudflare** (Workers Builds) để mỗi lần gộp vào `main` thì tự triển khai worker `nskt-hub`.
 4. **Bật Cloudflare Access** cho địa chỉ của ứng dụng và chỉ cho phép email của BTC. Gửi lại hai giá trị (không phải bí mật): tên miền nhóm Access (`ACCESS_TEAM_DOMAIN`) và mã AUD của ứng dụng (`ACCESS_AUD`).
 5. **Nhập khóa dh3g** vào worker `nskt-hub` dưới dạng secret tên `DH3G_API_KEY`. Không gửi khóa qua chat, không dán vào file nào.

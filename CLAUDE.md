@@ -37,6 +37,8 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Ngưỡng **xanh từ 80%**. |
 | 2026-11-11 | Bắt đầu tính từ bài có hạn **30/09/2026** (không tính bài cam kết khai giảng 29/09). |
 | 2026-11-11 | Nguồn danh sách học viên ↔ số điện thoại: Google Sheet **"NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_HV` chỉ có 6 số cuối; tab `DS_CHIA_THON` và `DS_UP_DH3G` có đủ số, `DS_UP_DH3G` có cả Team Code và mã dh3g). |
+| 2026-11-11 | **Tiếp tục dùng khóa dh3g hiện tại** (đội chủ dự án quyết định), dù khóa đang có trong file Google Sheet "NSKT 2026 CHIA THÔN HỌC VIÊN". |
+| 2026-11-11 | Cloudflare: gói **Workers Paid**; chạy ở địa chỉ miễn phí **`nskt-hub.<tài-khoản>.workers.dev`** (không dùng tên miền riêng). |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -48,7 +50,6 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
 - Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%** (ngưỡng xanh đã chốt 80%).
-- **Khóa dh3g đang nằm dạng chữ thường trong file "NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_ZALO_THÔN`) — Claude khuyên xóa khỏi file và xin dh3g cấp khóa mới.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
 - Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
 - Ký hiệu `PD` trong file điểm danh nghĩa là gì (trang hướng dẫn chưa ghi).

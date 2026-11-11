@@ -4,8 +4,9 @@
   "name": "nskt-hub",
   "main": "src/index.tsx",
   "compatibility_date": "2026-11-01",
-  // Chưa mở địa chỉ công khai nào. Khi triển khai sẽ gắn tên miền đứng sau Cloudflare Access.
-  "workers_dev": false,
+  // Chạy ở địa chỉ miễn phí nskt-hub.<tài-khoản>.workers.dev (chủ dự án chọn 11/11/2026).
+  // Trang nội bộ khóa bằng Cloudflare Access; /bang-xep-hang để công khai.
+  "workers_dev": true,
   "preview_urls": false,
   "observability": {
     "enabled": true
@@ -24,8 +25,8 @@
     {
       "binding": "DB",
       "database_name": "nskt-hub-db",
-      // Điền mã D1 sau khi chủ dự án tạo cơ sở dữ liệu (xem docs/TRIEN-KHAI.md).
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Tạo ngày 11/11/2026 (đã có đủ bảng 0001, 0002).
+      "database_id": "66754a8e-7e74-4f88-aea9-bbd4c75b65fd",
       "migrations_dir": "migrations"
     }
   ],
