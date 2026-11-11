@@ -294,7 +294,9 @@ export function SubmissionsPage(props: { data: BoardData }) {
               {d.lines.map((l) => (
                 <li>
                   <div class="row-top">
-                    <strong>{l.name}</strong>
+                    <a href={`/bai?hv=${l.id}&bt=${d.assignment?.id}`}>
+                      <strong>{l.name}</strong>
+                    </a>
                     <span class={`badge ${BUCKET_BADGE[l.bucket]}`}>{BUCKET_LABEL[l.bucket]}</span>
                   </div>
                   <div class="muted small">

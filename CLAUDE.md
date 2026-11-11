@@ -61,9 +61,9 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | Đợt | Nội dung | Trạng thái |
 |---|---|---|
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
-| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Xong, đã gộp (PR #2). Đã chạy trên máy với dữ liệu thật. **Chưa triển khai lên Cloudflare** |
+| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Xong. **Đã chạy thật trên Cloudflare từ 12/11/2026** (`https://nskt-hub.hktruc.workers.dev`). |
 | 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). Xong, đã gộp (PR #3 → PR #5). |
-| 3 | Đọc bài và chấm điểm | Chưa bắt đầu |
+| 3 | Đọc bài và chấm điểm | **3a** (PR #9): trang đọc bài `/bai`, BTC sửa điểm tay từng câu, trang `/canh-bao` — dùng đăng nhập Cloudflare Access. **3b** chưa làm: đăng nhập số điện thoại cho coach / phụng sự, phân công đội. |
 | 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). Xong, đã gộp (PR #4 → PR #5). |
 | 5 | Báo cáo thống kê | Chưa bắt đầu |
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |
@@ -91,7 +91,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 - Màu: **Xanh ≥ 80%** (chủ dự án chốt 11/11), **Vàng 50–79%**, **Đỏ < 50%**. Ngưỡng tuyệt đối (ai đạt cũng xanh), không theo thứ hạng. Dữ liệu thật 11/11 (AI chưa chấm): 23 xanh / 98 vàng / 19 đỏ trên 140 người.
 - Đồng điểm: nhiều video đúng hạn hơn xếp trên; rồi trung bình nộp video sớm hơn hạn nhiều giờ hơn xếp trên; bằng hết thì ngang hạng.
 - Cấu trúc bài tuần (câu nào là câu video, tối đa mấy video) suy ra từ dữ liệu nộp: câu mà ≥ 50% người nộp có video là câu video, số video tối đa = mức 75% người nộp đạt. Khớp với dữ liệu thật (tuần 02–04: 40 điểm video, tuần 05: 20).
-- AI chấm là **gợi ý**; khi chưa có AI dùng quy tắc tạm theo độ dài và trang xếp hạng ghi "đang chờ chấm". Sửa tay của coach/BTC sẽ có ở Đợt 3.
+- AI chấm là **gợi ý**; khi chưa có AI dùng quy tắc tạm theo độ dài và trang xếp hạng ghi "đang chờ chấm". BTC sửa tay từng câu ở trang `/bai` (bảng `score_overrides`, ghi email người sửa); điểm sửa tay ưu tiên hơn AI, bị kẹp trong 0…điểm tối đa của câu.
 - Chỉ xếp hạng học viên thuộc 12 đội (bỏ đội "BTC" và người chưa có đội).
 
 ## Nguồn Google Sheet (đọc 2026-11-11, chưa tích hợp)
@@ -154,7 +154,7 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/ai/openai.ts` — gọi OpenAI chấm câu cần đọc hiểu
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng)
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001, 0002, 0003.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử
