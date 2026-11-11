@@ -28,6 +28,11 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Bàn chấm bài: phân loại theo đội; nút bấm rõ ràng mở video/ảnh/tệp ngay; tự phát hiện link YouTube / Facebook / TikTok… trong nội dung bài, kể cả khi dh3g ghi 0 tệp; tệp tải thẳng lên dh3g cũng được tính; thống kê số video, số ảnh theo học viên / đội. |
 | 2026-11-11 | Giao diện: **mobile first**, phương án **A** (xanh ngọc, bo tròn, phẳng, phông Be Vietnam Pro) — chi tiết ở `docs/THIET-KE.md`. Chủ dự án giao Claude tự thiết kế UI/UX theo các nhu cầu trên. |
 | 2026-11-11 | Nguồn ngoài dh3g: Google Sheet **"NSKT2026 - KỶ LUẬT - HỌC VIÊN"** (điểm danh offline, trang `CHECK_IN`) và **"NSKT2026 - CHẤM CHÉO BÀI TẬP"** (chấm chéo offline, trang `CHAM_CHEO_LOG`). Khác với chấm chéo trên dh3g. |
+| 2026-11-11 | Điểm và bảng xếp hạng **tính từ sau ngày khai giảng 29/09/2026**. |
+| 2026-11-11 | **Bảng xếp hạng công khai** (không cần đăng nhập), gồm toàn bộ học viên khóa, lọc được theo đội; ba màu xanh / vàng / đỏ = tốt / trung bình / tệ. |
+| 2026-11-11 | Điểm cộng dồn cả hành trình nhưng **điểm cũ mờ dần**, để người cố gắng về sau vẫn lên được màu xanh. |
+| 2026-11-11 | Chấm bài tập tuần bằng AI, dùng **mô hình rẻ nhất vừa đủ đọc hiểu** (Claude Haiku 5.5, `claude-haiku-5-5`). |
+| 2026-11-11 | Nguồn danh sách học viên ↔ số điện thoại: Google Sheet **"NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_HV` chỉ có 6 số cuối; tab `DS_CHIA_THON` và `DS_UP_DH3G` có đủ số, `DS_UP_DH3G` có cả Team Code và mã dh3g). |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -38,9 +43,12 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 ## Còn chờ chủ dự án quyết
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
-- Công thức xếp hạng: cộng điểm, trừ điểm trễ hạn, đồng hạng — chặn Đợt 4.
+- Duyệt đề xuất của Claude về **độ mờ dần và ngưỡng màu** (mục "Quy tắc điểm" bên dưới) — chặn Đợt 4.
+- Bài nộp trễ (OVERDUE/LATE) có được tính điểm không, có trừ không; xử lý đồng hạng.
+- Bảng xếp hạng công khai hiện **họ tên đầy đủ** hay tên rút gọn.
+- Khóa API Anthropic (cho AI chấm bài) — chủ dự án tự nhập làm secret `ANTHROPIC_API_KEY` trên Cloudflare.
+- **Khóa dh3g đang nằm dạng chữ thường trong file "NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_ZALO_THÔN`) — Claude khuyên xóa khỏi file và xin dh3g cấp khóa mới.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
-- **File dữ liệu khóa học nối Mã Cư Dân ↔ số điện thoại** — chủ dự án sẽ gửi; chặn việc ghép điểm danh và chấm chéo offline vào học viên.
 - Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
 - Ký hiệu `PD` trong file điểm danh nghĩa là gì (trang hướng dẫn chưa ghi).
 - Ai phân công phụng sự vào đội (chỉ admin, hay cả coach); điểm phụng sự chấm có cần coach duyệt không.
@@ -59,6 +67,30 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |
 
 Cập nhật bảng này ở cuối mỗi đợt.
+
+## Quy tắc điểm (chủ dự án mô tả 2026-11-11)
+
+Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
+
+**Bài tập ngày** (dh3g loại `NORMAL`, 4 câu; nhãn có sẵn trong câu hỏi):
+- Câu "(bắt buộc) (X1)": trả lời = **1 điểm**.
+- Câu "(khuyến khích) (X3)": có **video** = **3 điểm**; không có video nhưng là chữ có **đúc kết sâu sắc** = **1 điểm** (AI đánh giá); còn lại 0.
+
+**Bài tập tuần** (dh3g loại `WEEK`, tiêu đề có "(X10)"; câu hỏi đổi theo tuần nên AI đọc cả câu hỏi lẫn câu trả lời):
+- Câu yêu cầu nộp video: **mỗi video 10 điểm**.
+- Câu bắt buộc khác: trả lời liên quan, có trách nhiệm, sâu sắc = **3 điểm**.
+- Câu góp ý cho BTC (không bắt buộc — "điểm tốt cần phát huy", "điểm cần cải thiện", "hành động đóng góp", "khó khăn & câu hỏi"): **1 điểm mỗi câu**.
+
+**Cảnh báo trả lời đối phó**: vài chữ cái / ký hiệu vô nghĩa / gõ đại → ghim cảnh báo cho BTC (chỉ BTC thấy, không hiện trên bảng công khai). Dữ liệu thật: ~2.960 câu tự luận ngày và ~1.110 câu tự luận tuần dưới 15 ký tự, không có link.
+
+**Đề xuất của Claude, chờ chủ dự án duyệt:**
+- Điểm là **% so với điểm tối đa có thể đạt**, cùng độ mờ, để học viên vào sau hay tuần nhiều bài vẫn so sánh công bằng.
+- Mờ dần theo **nửa đời 3 tuần**: điểm của 3 tuần trước tính một nửa, 6 tuần trước một phần tư.
+- Màu: **Xanh ≥ 60%**, **Vàng 35–59%**, **Đỏ < 35%**. Ngưỡng tuyệt đối (ai đạt cũng xanh), không theo thứ hạng.
+- Hệ quả với nửa đời 3 tuần: đang vàng 40% mà làm đủ 100% thì ~2 tuần lên xanh; làm đủ 80% thì ~3 tuần; từ 0 làm đủ 100% thì ~4 tuần.
+- Thử trên dữ liệu thật (phần AI tạm thay bằng quy tắc độ dài): khoảng 1/4 xanh, 2/3 vàng, 1/10 đỏ. Hiệu chỉnh lại ngưỡng sau 2 tuần chạy AI thật.
+- AI chấm là **gợi ý**; coach/BTC xem lại và sửa được, điểm sửa tay được ưu tiên.
+- Chỉ xếp hạng học viên thuộc 12 đội (bỏ đội "BTC" và người chưa có đội).
 
 ## Nguồn Google Sheet (đọc 2026-11-11, chưa tích hợp)
 
