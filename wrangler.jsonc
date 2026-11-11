@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Worker mới, tách hẳn khỏi các worker long-mon-* cũ.
+  "name": "nskt-hub",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-11-01",
+  // Chưa mở địa chỉ công khai nào. Sẽ bật cùng Cloudflare Access khi triển khai (Đợt 1).
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "APP_NAME": "nskt-hub"
+  }
+  // D1 "nskt-hub-db" và cron đồng bộ sẽ được thêm ở Đợt 1.
+  // Khóa dh3g KHÔNG đặt ở đây: nhập dưới dạng secret trên Cloudflare.
+}
