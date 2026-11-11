@@ -120,7 +120,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 - Bảng `sync_jobs` vừa là hàng đợi vừa là nhật ký: mỗi dòng là một lần gọi dh3g cho một khoảng ngày.
 - Cron `15 0 * * *` (07:15 giờ VN): xếp việc cho các bài có hạn nộp từ 14 ngày trước đến 7 ngày tới. Lần đầu tiên và mỗi thứ Hai: xếp toàn bộ từ `SYNC_START_DATE`.
-- Cron `*/5 * * * *`: xử lý tối đa 3 việc, ngày mới nhất trước. Không có khóa thì không làm gì. Sau đó chấm điểm: dựng cấu trúc câu hỏi cho bài có bài nộp mới, gửi AI tối đa 8 bài nộp, tính lại tối đa 400 dòng điểm có thay đổi.
+- Cron `*/5 * * * *`: xử lý tối đa 3 việc, ngày mới nhất trước. Không có khóa thì không làm gì. Sau đó chấm điểm: dựng cấu trúc câu hỏi cho bài có bài nộp mới, gửi AI tối đa 40 bài nộp (5 lời gọi song song), tính lại tối đa 400 dòng điểm có thay đổi.
 - Bài nộp: mỗi khoảng 1 ngày (theo hạn nộp), luôn kèm câu trả lời. Điểm danh: mỗi khoảng 7 ngày.
 - Lỗi tạm thời thử lại tối đa 3 lần. Khóa bị từ chối (401/403) hoặc bị giới hạn (429): dừng lượt, việc vẫn nằm trong hàng đợi.
 - Mỗi cặp (học viên, bài tập) là một dòng trong `submissions`; câu trả lời, nhận xét, lịch sử sửa lưu dạng JSON trong dòng đó. `changed_at` chỉ đổi khi nội dung thật sự khác; `answers_hash` để Đợt 3 biết bài đã bị sửa sau khi chấm.
