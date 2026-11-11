@@ -69,9 +69,8 @@ a.tile { color:inherit; text-decoration:none; }
 .mc { display:inline-flex; align-items:center; gap:4px; font-size:.8125rem; font-weight:600; padding:3px 10px; border-radius:999px; background:var(--soft); }
 .mc.v svg { color:#DC2626; } .mc.i svg { color:var(--accent); }
 .legend { display:flex; flex-wrap:wrap; gap:6px 10px; margin:10px 0; font-size:.8125rem; }
-.rules { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px 14px; margin:8px 0; font-size:.875rem; }
-.rules summary { cursor:pointer; font-weight:600; color:var(--accent); min-height:28px; }
-.rules h2 { font-size:.9375rem; margin:14px 0 4px; }
+.rules { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px 14px; margin:16px 0 8px; font-size:.8125rem; }
+.rules h2 { font-size:.875rem; margin:0 0 4px; }
 .rules ul { padding-left:18px; margin:4px 0; } .rules li { margin:4px 0; }
 .rules p { margin:4px 0; }
 :root { --g-bg:#DCFCE7; --g-fg:#14532D; --y-bg:#FEF3C7; --y-fg:#713F12; --r-bg:#FEE2E2; --r-fg:#7F1D1D; }
