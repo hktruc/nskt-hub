@@ -142,7 +142,9 @@ export function DataStatusPage(props: { status: DataStatus; notice?: string }) {
             <tbody>
               {s.byStatus.map((r) => (
                 <tr>
-                  <td>{STATUS_VI[r.status] ?? r.status}</td>
+                  <td>
+                    <span class={`badge ${r.status === "DONE" ? "ok" : r.status === "NOT_SUBMITTED" ? "bad" : "warn"}`}>{STATUS_VI[r.status] ?? r.status}</span>
+                  </td>
                   <td class="r">{r.n.toLocaleString("vi-VN")}</td>
                 </tr>
               ))}
@@ -167,32 +169,22 @@ export function DataStatusPage(props: { status: DataStatus; notice?: string }) {
       {s.recent.length === 0 ? (
         <p class="muted">Chưa có lần nào.</p>
       ) : (
-        <div class="scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Lúc</th>
-                <th>Loại</th>
-                <th>Khoảng ngày</th>
-                <th>Lý do</th>
-                <th>Kết quả</th>
-                <th>Chi tiết</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.recent.map((j) => (
-                <tr>
-                  <td>{formatVN(j.finished_at)}</td>
-                  <td>{REPORT_VI[j.report] ?? j.report}</td>
-                  <td>{j.from_date === j.to_date ? j.from_date : `${j.from_date} → ${j.to_date}`}</td>
-                  <td>{REASON_VI[j.reason] ?? j.reason}</td>
-                  <td>{JOB_VI[j.status] ?? j.status}</td>
-                  <td>{j.status === "done" ? summaryText(j.summary) : j.error}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul class="log">
+          {s.recent.map((j) => (
+            <li>
+              <div class="log-top">
+                <strong>
+                  {REPORT_VI[j.report] ?? j.report} · {j.from_date === j.to_date ? j.from_date : `${j.from_date} → ${j.to_date}`}
+                </strong>
+                <span class={`badge ${j.status === "done" ? "ok" : j.status === "failed" ? "bad" : "warn"}`}>{JOB_VI[j.status] ?? j.status}</span>
+              </div>
+              <div class="muted">
+                {formatVN(j.finished_at)} · {REASON_VI[j.reason] ?? j.reason}
+              </div>
+              <div>{j.status === "done" ? summaryText(j.summary) : j.error}</div>
+            </li>
+          ))}
+        </ul>
       )}
     </Layout>
   );

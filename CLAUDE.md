@@ -21,18 +21,30 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Viết lại phần lấy dữ liệu dh3g trong dự án này, lưu vào D1 mới. Hệ thống cũ để yên làm bản lưu. |
 | 2026-11-11 | Phiên bản đầu gồm: bảng theo dõi nộp bài, đọc bài và chấm điểm, bảng xếp hạng, báo cáo thống kê (học tập, kỷ luật, điểm danh…). |
 | 2026-11-11 | Được phép gọi dh3g thật để phát triển và đối chiếu ngay từ đầu, không chỉ dùng dữ liệu giả. |
+| 2026-11-11 | 12 thôn = 12 đội, ký hiệu T01–T12; trên dh3g tên là "Đội Cá Chép 01…12" (dh3g còn một đội "BTC"). |
+| 2026-11-11 | **Số điện thoại là định danh chính thức** của học viên và coach, dùng để ghép dh3g với các file Google Sheet. Mã Cư Dân và mã học viên dh3g có thể thay đổi, không dùng làm khóa ghép. |
+| 2026-11-11 | Vai trò: **admin** (chủ dự án), **BTC**, **coach** — toàn quyền; **phụng sự** (học viên được BTC giao vai trò) — chỉ chấm các đội được phân công. |
+| 2026-11-11 | Đăng nhập người chấm: **số điện thoại + mật khẩu tự đặt**, kích hoạt lần đầu bằng **mã dùng một lần do admin cấp**; admin thu hồi quyền / cấp lại mã bất cứ lúc nào. Không dùng OTP SMS/Zalo. |
+| 2026-11-11 | Bàn chấm bài: phân loại theo đội; nút bấm rõ ràng mở video/ảnh/tệp ngay; tự phát hiện link YouTube / Facebook / TikTok… trong nội dung bài, kể cả khi dh3g ghi 0 tệp; tệp tải thẳng lên dh3g cũng được tính; thống kê số video, số ảnh theo học viên / đội. |
+| 2026-11-11 | Giao diện: **mobile first**, phương án **A** (xanh ngọc, bo tròn, phẳng, phông Be Vietnam Pro) — chi tiết ở `docs/THIET-KE.md`. Chủ dự án giao Claude tự thiết kế UI/UX theo các nhu cầu trên. |
+| 2026-11-11 | Nguồn ngoài dh3g: Google Sheet **"NSKT2026 - KỶ LUẬT - HỌC VIÊN"** (điểm danh offline, trang `CHECK_IN`) và **"NSKT2026 - CHẤM CHÉO BÀI TẬP"** (chấm chéo offline, trang `CHAM_CHEO_LOG`). Khác với chấm chéo trên dh3g. |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
-- Người dùng chỉ là BTC, đăng nhập qua Cloudflare Access. Chưa có trang cho học viên.
-- D1 mới tải lại dữ liệu từ dh3g kể từ 2026-09-23.
+- D1 mới tải lại dữ liệu từ dh3g kể từ 2026-09-23. Chưa có trang cho học viên.
+- (Claude hiểu) Cloudflare Access trong Đợt 1 chỉ là lớp khóa tạm khi chưa có đăng nhập riêng; khi làm đăng nhập bằng số điện thoại (cùng Đợt 3), Access sẽ bỏ hoặc chỉ giữ cho trang quản trị.
 
 ## Còn chờ chủ dự án quyết
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
 - Công thức xếp hạng: cộng điểm, trừ điểm trễ hạn, đồng hạng — chặn Đợt 4.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
+- **File dữ liệu khóa học nối Mã Cư Dân ↔ số điện thoại** — chủ dự án sẽ gửi; chặn việc ghép điểm danh và chấm chéo offline vào học viên.
+- Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
+- Ký hiệu `PD` trong file điểm danh nghĩa là gì (trang hướng dẫn chưa ghi).
+- Ai phân công phụng sự vào đội (chỉ admin, hay cả coach); điểm phụng sự chấm có cần coach duyệt không.
+- Bàn chấm bài có hai khu vực: khu vực 1 cho phụng sự / coach chấm; **khu vực 2 chủ dự án chưa mô tả**.
 
 ## Tiến độ
 
@@ -48,6 +60,12 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
 Cập nhật bảng này ở cuối mỗi đợt.
 
+## Nguồn Google Sheet (đọc 2026-11-11, chưa tích hợp)
+
+- **Điểm danh offline** (`CHECK_IN`): mỗi dòng một học viên (Mã Thôn, Mã Cư Dân, họ tên, khu vực), mỗi cột một buổi: KHAI GIANG rồi các thứ Sáu 09/10 → 25/12. Ký hiệu: ✅ đúng giờ đúng chỗ, X đúng giờ sai vị trí, ⚠️ không có vị trí / dùng chung máy, M muộn, M1 muộn + sai vị trí, P nghỉ có phép, PD (chưa rõ), ❌ vắng không phép. Giờ check-in đúng giờ 17:00–18:30, muộn 18:30–19:30 (buổi khai giảng 15:00–16:30).
+- **Chấm chéo offline** (`CHAM_CHEO_LOG`): mỗi dòng một lượt chấm — người chấm, người được chấm (Mã Cư Dân), mã đợt, tóm tắt, 4 tiêu chí 1–5 sao kèm nhận xét: Sơ đồ, Thuyết phục, Phản biện, Đặt câu hỏi; điểm TB. Có dòng thử của BTC (mã `BTC..`, thôn `TEST`) — phải loại. Mã đợt chưa thống nhất (`CC-T1` ở `DOT_CHAM`, `CC-20260925` ở `TONG_HOP`).
+- Hai file chưa có số điện thoại. Ghép thử theo họ tên chỉ khớp chắc chắn ~80% → không ghép theo tên.
+
 ## Nguồn dữ liệu dh3g (đã đối chiếu với dữ liệu thật ngày 2026-11-11)
 
 - Bài nộp: `GET https://api.dh3g.vn/hkm-api/public/report/cohort-submissions` với `communityId=44`, `fromDate`, `toDate` (lọc theo **hạn nộp**, tối đa 62 ngày), `includeAnswers=true`. Khóa gửi trong tiêu đề `X-API-KEY`.
@@ -60,7 +78,7 @@ Cập nhật bảng này ở cuối mỗi đợt.
   - `OVERDUE` / "Nộp trễ" / SUBMIT_LATER — **đã nộp nhưng sau hạn** (không phải "chưa nộp và quá hạn").
   - `LATE` / "Nộp muộn" / REVIEWED — rất hiếm (4 dòng), nộp sau hạn.
   - `NOT_SUBMITTED` / "Chưa nộp" — gồm cả bài **chưa tới hạn**; `submissionId`, `answers` là null.
-- Câu trả lời: `type` là "Trắc nghiệm" hoặc "Tự luận" (đôi khi null). Bài nộp lớn nhất khoảng 80 KB; một ngày lớn nhất 1,4 MB.
+- Câu trả lời: `type` là "Trắc nghiệm" hoặc "Tự luận" (đôi khi null). Link video/ảnh nằm trong câu **tự luận**: chủ yếu YouTube (youtu.be, youtube.com), Facebook, TikTok, Google Drive; tệp tải thẳng lên dh3g có dạng đường dẫn `s3.sunteco.app` (chủ yếu jpeg/png, vài pdf). `mediaCount` của dh3g không tách video/ảnh và có ~240 bài ghi 0 dù có link → tự đếm từ link. Bài nộp lớn nhất khoảng 80 KB; một ngày lớn nhất 1,4 MB.
 - Nhận xét (`feedbacks`): do **học viên chấm chéo nhau**, điểm `grade` thang 0–100; mới có ở khoảng 6% bài đã nộp.
 - `gracePeriodMinutes` luôn bằng 0. Không có bài nào thiếu hạn nộp.
 
@@ -100,5 +118,6 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/sync/queue.ts` — lên kế hoạch và xử lý hàng đợi đồng bộ
 - `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng)
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
+- `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử
 - `wrangler.jsonc` — cấu hình Cloudflare (không chứa secret)
