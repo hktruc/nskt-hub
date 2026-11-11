@@ -68,10 +68,23 @@ a.tile { color:inherit; text-decoration:none; }
 .media-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .mc { display:inline-flex; align-items:center; gap:4px; font-size:.8125rem; font-weight:600; padding:3px 10px; border-radius:999px; background:var(--soft); }
 .mc.v svg { color:#DC2626; } .mc.i svg { color:var(--accent); }
+:root { --green:#15803D; --yellow:#B45309; --red:#B91C1C; }
+@media (prefers-color-scheme: dark) { :root { --green:#4ADE80; --yellow:#FBBF24; --red:#F87171; } }
+.legend { display:flex; flex-wrap:wrap; gap:8px 14px; margin:12px 0; font-size:.875rem; }
+.dot-label { display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:.8125rem; }
+.dot-label::before { content:""; width:10px; height:10px; border-radius:50%; background:currentColor; }
+.dot-label.xanh { color:var(--green); } .dot-label.vang { color:var(--yellow); } .dot-label.do { color:var(--red); }
+.rank-list { counter-reset:none; }
+.rank-row { display:flex; align-items:center; gap:12px; border-left:4px solid transparent; }
+.rank-row.xanh { border-left-color:var(--green); } .rank-row.vang { border-left-color:var(--yellow); } .rank-row.do { border-left-color:var(--red); }
+.rank-row .rank { flex:none; width:2.2em; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; color:var(--muted); }
+.rank-row .who { flex:1; min-width:0; display:flex; flex-direction:column; }
+.rank-row .who strong { overflow-wrap:anywhere; }
+.rank-row .score { flex:none; display:flex; flex-direction:column; align-items:flex-end; font-variant-numeric:tabular-nums; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
-export function Layout(props: { title: string; children?: Child }) {
+export function Layout(props: { title: string; children?: Child; publicPage?: boolean }) {
   return (
     <html lang="vi">
       <head>
@@ -87,11 +100,16 @@ export function Layout(props: { title: string; children?: Child }) {
       </head>
       <body>
         <header>
-          <a href="/" class="brand">
+          <a href={props.publicPage ? "/bang-xep-hang" : "/"} class="brand">
             nskt-hub
           </a>
-          <a href="/nop-bai">Nộp bài</a>
-          <a href="/du-lieu">Dữ liệu</a>
+          {props.publicPage ? null : (
+            <>
+              <a href="/nop-bai">Nộp bài</a>
+              <a href="/bang-xep-hang">Xếp hạng</a>
+              <a href="/du-lieu">Dữ liệu</a>
+            </>
+          )}
         </header>
         <main>{props.children}</main>
       </body>

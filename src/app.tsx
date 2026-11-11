@@ -5,12 +5,26 @@ import type { Env } from "./env";
 import { Layout } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
+import { LeaderboardPage } from "./pages/leaderboard";
+import { loadLeaderboard } from "./scoring/leaderboard";
+import { nowVN } from "./scoring/run";
 import { DAYS_AHEAD, RECENT_DAYS_BACK, enqueueRange, planDaily, planFull, workQueue } from "./sync/queue";
 
 const app = new Hono<{ Bindings: Env; Variables: { email: string } }>();
 
 // Không cần đăng nhập, không chứa dữ liệu.
 app.get("/health", (c) => c.json({ ok: true, app: c.env.APP_NAME }));
+
+// Bảng xếp hạng công khai (chủ dự án quyết định 11/11/2026): chỉ họ tên, đội, điểm, màu.
+app.get("/bang-xep-hang", async (c) => {
+  const data = await loadLeaderboard(c.env.DB, nowVN(new Date()));
+  const teams = [...new Set(data.ranked.map((r) => r.team))].sort();
+  const doi = c.req.query("doi") ?? "";
+  c.header("Cache-Control", "public, max-age=300");
+  return c.html(
+    <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} updatedAt={data.updatedAt} />,
+  );
+});
 
 // Mọi trang khác: phải đăng nhập qua Cloudflare Access.
 app.use("*", async (c, next) => {
@@ -47,7 +61,9 @@ app.get("/", (c) =>
           <a href="/nop-bai">Theo dõi nộp bài</a>
         </li>
         <li>Đọc bài và chấm điểm — sắp có (Đợt 3)</li>
-        <li>Bảng xếp hạng — sắp có (Đợt 4)</li>
+        <li>
+          <a href="/bang-xep-hang">Bảng xếp hạng (công khai)</a>
+        </li>
         <li>Báo cáo thống kê — sắp có (Đợt 5)</li>
       </ul>
     </Layout>,

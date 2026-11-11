@@ -8,6 +8,12 @@ export type Env = {
   DH3G_COMMUNITY_ID: string;
   SYNC_START_DATE: string;
 
+  // AI chấm bài (OpenAI của chủ dự án). Khóa là secret, không nằm trong repo.
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  OPENAI_REASONING_EFFORT?: string;
+  OPENAI_BASE_URL?: string;
+
   // Đăng nhập qua Cloudflare Access.
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
