@@ -31,7 +31,11 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Điểm và bảng xếp hạng **tính từ sau ngày khai giảng 29/09/2026**. |
 | 2026-11-11 | **Bảng xếp hạng công khai** (không cần đăng nhập), gồm toàn bộ học viên khóa, lọc được theo đội; ba màu xanh / vàng / đỏ = tốt / trung bình / tệ. |
 | 2026-11-11 | Điểm cộng dồn cả hành trình nhưng **điểm cũ mờ dần**, để người cố gắng về sau vẫn lên được màu xanh. |
-| 2026-11-11 | Chấm bài tập tuần bằng AI, dùng **mô hình rẻ nhất vừa đủ đọc hiểu** (Claude Haiku 5.5, `claude-haiku-5-5`). |
+| 2026-11-11 | Chấm bằng AI qua **API OpenAI của chủ dự án**, dùng mô hình rẻ nhất vừa đủ đọc hiểu: mặc định `gpt-5-nano` (đặt trong biến `OPENAI_MODEL`, đổi được). Khóa là secret `OPENAI_API_KEY` trên Cloudflare, chủ dự án tự nhập. |
+| 2026-11-11 | Nộp trễ (OVERDUE/LATE): **mỗi video được 2 điểm** (Claude hiểu: thay cho 3 / 10 điểm khi đúng hạn; câu chữ vẫn tính bình thường — chờ xác nhận). Đồng điểm: ai **nộp đủ video sớm hơn và đúng hạn** xếp trên. |
+| 2026-11-11 | Bảng xếp hạng công khai hiện: **họ tên, đội, điểm, màu**. Không hiện số điện thoại, email, cảnh báo. **Mỗi người một dòng, cả dòng tô theo màu**, không ghi chữ "Xanh/Vàng/Đỏ" hay chấm màu. |
+| 2026-11-11 | Ngưỡng **xanh từ 80%**. |
+| 2026-11-11 | Bắt đầu tính từ bài có hạn **30/09/2026** (không tính bài cam kết khai giảng 29/09). |
 | 2026-11-11 | Nguồn danh sách học viên ↔ số điện thoại: Google Sheet **"NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_HV` chỉ có 6 số cuối; tab `DS_CHIA_THON` và `DS_UP_DH3G` có đủ số, `DS_UP_DH3G` có cả Team Code và mã dh3g). |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
@@ -43,10 +47,8 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 ## Còn chờ chủ dự án quyết
 
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
-- Duyệt đề xuất của Claude về **độ mờ dần và ngưỡng màu** (mục "Quy tắc điểm" bên dưới) — chặn Đợt 4.
-- Bài nộp trễ (OVERDUE/LATE) có được tính điểm không, có trừ không; xử lý đồng hạng.
-- Bảng xếp hạng công khai hiện **họ tên đầy đủ** hay tên rút gọn.
-- Khóa API Anthropic (cho AI chấm bài) — chủ dự án tự nhập làm secret `ANTHROPIC_API_KEY` trên Cloudflare.
+- Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%** (ngưỡng xanh đã chốt 80%).
+- Xác nhận cách hiểu "nộp trễ được 2 điểm mỗi video": câu chữ trong bài nộp trễ có được điểm không.
 - **Khóa dh3g đang nằm dạng chữ thường trong file "NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_ZALO_THÔN`) — Claude khuyên xóa khỏi file và xin dh3g cấp khóa mới.
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
 - Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
@@ -59,10 +61,10 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | Đợt | Nội dung | Trạng thái |
 |---|---|---|
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
-| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong; đã chạy trên máy với dữ liệu dh3g thật và số liệu khớp (185 học viên, 13 đội, 44 bài tập, 8.140 bài nộp). Đang chờ duyệt PR. **Chưa triển khai lên Cloudflare** |
-| 2 | Bảng theo dõi nộp bài | Chưa bắt đầu |
+| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong; đã chạy trên máy với dữ liệu dh3g thật và số liệu khớp (185 học viên, 13 đội, 44 bài tập, 8.140 bài nộp). PR #2 chờ chủ dự án bấm gộp. **Chưa triển khai lên Cloudflare** |
+| 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). PR #3 (xếp chồng trên PR #2) |
 | 3 | Đọc bài và chấm điểm | Chưa bắt đầu |
-| 4 | Bảng xếp hạng | Chưa bắt đầu |
+| 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). PR #4 (xếp chồng trên PR #3) |
 | 5 | Báo cáo thống kê | Chưa bắt đầu |
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |
 
@@ -83,13 +85,13 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 **Cảnh báo trả lời đối phó**: vài chữ cái / ký hiệu vô nghĩa / gõ đại → ghim cảnh báo cho BTC (chỉ BTC thấy, không hiện trên bảng công khai). Dữ liệu thật: ~2.960 câu tự luận ngày và ~1.110 câu tự luận tuần dưới 15 ký tự, không có link.
 
-**Đề xuất của Claude, chờ chủ dự án duyệt:**
-- Điểm là **% so với điểm tối đa có thể đạt**, cùng độ mờ, để học viên vào sau hay tuần nhiều bài vẫn so sánh công bằng.
+**Cách tính đang dùng (Claude đề xuất, chủ dự án chưa duyệt — mọi con số ở `src/scoring/config.ts`):**
+- Điểm là **% so với điểm tối đa có thể đạt**, cùng độ mờ, để tuần nhiều bài hay ít bài vẫn so sánh công bằng.
 - Mờ dần theo **nửa đời 3 tuần**: điểm của 3 tuần trước tính một nửa, 6 tuần trước một phần tư.
-- Màu: **Xanh ≥ 60%**, **Vàng 35–59%**, **Đỏ < 35%**. Ngưỡng tuyệt đối (ai đạt cũng xanh), không theo thứ hạng.
-- Hệ quả với nửa đời 3 tuần: đang vàng 40% mà làm đủ 100% thì ~2 tuần lên xanh; làm đủ 80% thì ~3 tuần; từ 0 làm đủ 100% thì ~4 tuần.
-- Thử trên dữ liệu thật (phần AI tạm thay bằng quy tắc độ dài): khoảng 1/4 xanh, 2/3 vàng, 1/10 đỏ. Hiệu chỉnh lại ngưỡng sau 2 tuần chạy AI thật.
-- AI chấm là **gợi ý**; coach/BTC xem lại và sửa được, điểm sửa tay được ưu tiên.
+- Màu: **Xanh ≥ 80%** (chủ dự án chốt 11/11), **Vàng 50–79%**, **Đỏ < 50%**. Ngưỡng tuyệt đối (ai đạt cũng xanh), không theo thứ hạng. Dữ liệu thật 11/11 (AI chưa chấm): 23 xanh / 98 vàng / 19 đỏ trên 140 người.
+- Đồng điểm: nhiều video đúng hạn hơn xếp trên; rồi trung bình nộp video sớm hơn hạn nhiều giờ hơn xếp trên; bằng hết thì ngang hạng.
+- Cấu trúc bài tuần (câu nào là câu video, tối đa mấy video) suy ra từ dữ liệu nộp: câu mà ≥ 50% người nộp có video là câu video, số video tối đa = mức 75% người nộp đạt. Khớp với dữ liệu thật (tuần 02–04: 40 điểm video, tuần 05: 20).
+- AI chấm là **gợi ý**; khi chưa có AI dùng quy tắc tạm theo độ dài và trang xếp hạng ghi "đang chờ chấm". Sửa tay của coach/BTC sẽ có ở Đợt 3.
 - Chỉ xếp hạng học viên thuộc 12 đội (bỏ đội "BTC" và người chưa có đội).
 
 ## Nguồn Google Sheet (đọc 2026-11-11, chưa tích hợp)
@@ -118,7 +120,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 - Bảng `sync_jobs` vừa là hàng đợi vừa là nhật ký: mỗi dòng là một lần gọi dh3g cho một khoảng ngày.
 - Cron `15 0 * * *` (07:15 giờ VN): xếp việc cho các bài có hạn nộp từ 14 ngày trước đến 7 ngày tới. Lần đầu tiên và mỗi thứ Hai: xếp toàn bộ từ `SYNC_START_DATE`.
-- Cron `*/5 * * * *`: xử lý tối đa 3 việc, ngày mới nhất trước. Không có khóa thì không làm gì.
+- Cron `*/5 * * * *`: xử lý tối đa 3 việc, ngày mới nhất trước. Không có khóa thì không làm gì. Sau đó chấm điểm: dựng cấu trúc câu hỏi cho bài có bài nộp mới, gửi AI tối đa 8 bài nộp, tính lại tối đa 400 dòng điểm có thay đổi.
 - Bài nộp: mỗi khoảng 1 ngày (theo hạn nộp), luôn kèm câu trả lời. Điểm danh: mỗi khoảng 7 ngày.
 - Lỗi tạm thời thử lại tối đa 3 lần. Khóa bị từ chối (401/403) hoặc bị giới hạn (429): dừng lượt, việc vẫn nằm trong hàng đợi.
 - Mỗi cặp (học viên, bài tập) là một dòng trong `submissions`; câu trả lời, nhận xét, lịch sử sửa lưu dạng JSON trong dòng đó. `changed_at` chỉ đổi khi nội dung thật sự khác; `answers_hash` để Đợt 3 biết bài đã bị sửa sau khi chấm.
@@ -127,7 +129,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 ## Bảo mật
 
-- Mọi trang trừ `/health` phải có mã Cloudflare Access hợp lệ; ứng dụng tự kiểm tra chữ ký và AUD (`src/auth.ts`). Thiếu `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` thì khóa toàn bộ.
+- `/bang-xep-hang` công khai (không đăng nhập), chỉ hiện hạng, họ tên, đội, %, màu. Mọi trang khác trừ `/health` phải có mã Cloudflare Access hợp lệ; ứng dụng tự kiểm tra chữ ký và AUD (`src/auth.ts`). Thiếu `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` thì khóa toàn bộ.
 - `LOCAL_DEV_NO_AUTH=true` chỉ có tác dụng trên localhost; chỉ đặt trong `.dev.vars` (không commit).
 - Thao tác ghi (POST) kiểm tra tiêu đề `Origin`.
 
@@ -148,6 +150,10 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/auth.ts` — kiểm tra đăng nhập Cloudflare Access
 - `src/dh3g/` — gọi dh3g (`client`), đọc phản hồi (`parse`), ghi D1 (`store`)
 - `src/sync/queue.ts` — lên kế hoạch và xử lý hàng đợi đồng bộ
+- `src/scoring/` — quy tắc điểm (`config`, `spec`, `rules`), chạy định kỳ (`run`), bảng xếp hạng (`leaderboard`)
+- `src/ai/openai.ts` — gọi OpenAI chấm câu cần đọc hiểu
+- `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
+- `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
 - `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng)
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)

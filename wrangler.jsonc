@@ -14,7 +14,10 @@
     "APP_NAME": "nskt-hub",
     "DH3G_BASE_URL": "https://api.dh3g.vn",
     "DH3G_COMMUNITY_ID": "44",
-    "SYNC_START_DATE": "2026-09-23"
+    "SYNC_START_DATE": "2026-09-23",
+    // AI chấm bài: mô hình OpenAI rẻ nhất vừa đủ. Khóa nhập riêng làm secret OPENAI_API_KEY.
+    "OPENAI_MODEL": "gpt-5-nano",
+    "OPENAI_REASONING_EFFORT": "minimal"
     // ACCESS_TEAM_DOMAIN và ACCESS_AUD: điền khi thiết lập Cloudflare Access (xem docs/TRIEN-KHAI.md).
   },
   "d1_databases": [
