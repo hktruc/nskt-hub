@@ -1,5 +1,7 @@
 -- Đợt 1: dữ liệu lấy từ dh3g và hàng đợi đồng bộ.
--- Thời gian lưu dạng chuỗi ISO. Các cột *_at từ dh3g giữ nguyên chuỗi dh3g trả về.
+-- Cột do ứng dụng ghi (first_seen_at, last_seen_at, changed_at, enqueued_at...) là ISO theo UTC.
+-- Cột thời gian lấy từ dh3g (due_at, submitted_at, last_edited_at, start_at...) giữ nguyên chuỗi dh3g:
+-- GIỜ VIỆT NAM, không ghi múi giờ (ví dụ 2026-11-07T23:00:00).
 
 CREATE TABLE teams (
   id INTEGER PRIMARY KEY,
@@ -39,7 +41,7 @@ CREATE TABLE submissions (
   learner_id INTEGER NOT NULL,
   assignment_id INTEGER NOT NULL,
   submission_id INTEGER,
-  status TEXT,          -- DONE | LATE | OVERDUE | NOT_SUBMITTED
+  status TEXT,          -- DONE (đúng hạn) | OVERDUE (nộp sau hạn, dh3g gọi "Nộp trễ") | LATE ("Nộp muộn", hiếm) | NOT_SUBMITTED
   status_label TEXT,
   raw_status TEXT,
   priority_status TEXT,

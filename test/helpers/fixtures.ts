@@ -1,4 +1,4 @@
-// Dữ liệu GIẢ theo đúng cấu trúc báo cáo dh3g. Không có thông tin thật nào.
+// Dữ liệu GIẢ theo đúng cấu trúc báo cáo dh3g thật (đã đối chiếu 2026-11-11). Không có thông tin thật nào.
 import type { Env } from "../../src/env";
 
 export function submissionsReport(opts: { answer?: string; day?: string } = {}) {
@@ -10,7 +10,7 @@ export function submissionsReport(opts: { answer?: string; day?: string } = {}) 
     toDate: day,
     generatedAt: `${day}T01:00:00Z`,
     assignments: [
-      { id: 501, title: "Bài thử 1", type: "NORMAL", typeLabel: "Bài thường", dueDate: `${day}T16:59:00Z`, gracePeriodMinutes: 30, courseId: 9, courseName: "Khóa thử" },
+      { id: 501, title: "Bài thử 1", type: "NORMAL", typeLabel: "Bài thường", dueDate: `${day}T23:00:00`, gracePeriodMinutes: 30, courseId: 9, courseName: "Khóa thử" },
     ],
     members: [
       {
@@ -18,16 +18,16 @@ export function submissionsReport(opts: { answer?: string; day?: string } = {}) 
         submissions: [
           {
             assignmentId: 501, status: "DONE", statusLabel: "Đã nộp", rawStatus: "SUBMITTED", submissionId: 9001,
-            submittedAt: `${day}T10:00:00Z`, editCount: 0, charCount: 12, mediaCount: 0,
+            submittedAt: `${day}T10:00:00.123456`, editCount: 0, charCount: 12, mediaCount: 0,
             answers: [{ question: "Câu 1", type: "TEXT", answer: opts.answer ?? "Trả lời thử" }],
             feedbackCount: 1,
-            feedbacks: [{ submissionId: 9001, reviewerId: 1002, reviewerName: "Học Viên B", grade: 8, comment: "Tốt", createdAt: `${day}T12:00:00Z` }],
+            feedbacks: [{ submissionId: 9001, reviewerId: 1002, reviewerName: "Học Viên B", grade: 80, comment: "Tốt", createdAt: `${day}T12:00:00.123456`, updatedAt: `${day}T12:00:00.123456` }],
           },
         ],
       },
       {
-        userId: 1002, fullName: "Học Viên B", phone: "0000000002", email: "b@example.invalid", cohort: 1, teamId: 7, teamName: "Đội Thử 1",
-        submissions: [{ assignmentId: 501, status: "NOT_SUBMITTED", statusLabel: "Chưa nộp" }],
+        userId: 1002, fullName: "Học Viên B", phone: "0000000002", email: "b@example.invalid", cohort: null, teamId: null, teamName: null,
+        submissions: [{ assignmentId: 501, status: "NOT_SUBMITTED", statusLabel: "Chưa nộp", rawStatus: null, submissionId: null, submittedAt: null, editCount: 0, edits: [], answers: null, feedbackCount: 0, feedbacks: [] }],
       },
     ],
   };
@@ -40,7 +40,7 @@ export function attendanceReport() {
     sessions: [{ id: 301, title: "Buổi thử", startTime: "2026-11-05T12:00:00Z", endTime: "2026-11-05T14:00:00Z", courseId: 9 }],
     members: [
       { userId: 1001, fullName: "Học Viên A", teamId: 7, teamName: "Đội Thử 1", attendances: [{ sessionId: 301, attended: true, attendedAt: "2026-11-05T12:01:00Z" }] },
-      { userId: 1002, fullName: "Học Viên B", teamId: 7, teamName: "Đội Thử 1", attendances: [{ sessionId: 301, attended: false }] },
+      { userId: 1002, fullName: "Học Viên B", cohort: null, teamId: null, teamName: null, attendances: [{ sessionId: 301, attended: false }] },
     ],
   };
 }

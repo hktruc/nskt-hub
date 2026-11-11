@@ -28,10 +28,11 @@ export type DataStatus = {
 };
 
 const STATUS_VI: Record<string, string> = {
+  // Nhãn theo đúng cách dh3g gọi (đã đối chiếu dữ liệu thật 2026-11-11).
   DONE: "Đúng hạn",
-  LATE: "Nộp trễ",
-  OVERDUE: "Quá hạn",
-  NOT_SUBMITTED: "Chưa nộp",
+  OVERDUE: "Nộp trễ (sau hạn)",
+  LATE: "Nộp muộn",
+  NOT_SUBMITTED: "Chưa nộp (kể cả bài chưa tới hạn)",
 };
 const JOB_VI: Record<string, string> = {
   pending: "Đang chờ",

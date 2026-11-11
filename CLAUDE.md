@@ -6,6 +6,7 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 
 - Làm trên nhánh riêng, mở pull request. **Không gộp vào `main`** khi chủ dự án chưa đồng ý.
 - Mỗi đợt nhỏ, kiểm tra được; PR ghi rõ cách chủ dự án tự kiểm tra.
+- Dữ liệu thật để phát triển (chủ dự án cho phép 2026-11-11): chỉ tải về thư mục tạm của phiên làm việc, **ngoài repo**; khi phân tích chỉ in số lượng và cấu trúc, không in tên, điện thoại, email, bài làm. Khóa dh3g cho phiên làm việc nằm trong môi trường Claude `nskt-hub` (mục Network secrets, máy chủ `api.dh3g.vn`, tiêu đề `X-API-KEY`); Claude không thấy giá trị.
 - **Không in, không lưu, không commit khóa API** hay bất kỳ secret nào. Khóa dh3g chỉ tồn tại dưới dạng secret trên Cloudflare (`DH3G_API_KEY`), do chủ dự án tự nhập.
 - Không commit dữ liệu thật của học viên (tên, số điện thoại, email, bài làm). Kiểm thử chỉ dùng dữ liệu giả.
 - **Không đụng tới hệ thống cũ**: ba repo `long-mon-*`, worker `long-mon-dh3g-staging-private-v1`, `long-mon-staging-test-v1` và các D1 của chúng. Không xóa dữ liệu đang có. Chỉ tắt hệ thống cũ khi chủ dự án yêu cầu.
@@ -19,6 +20,7 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Dự án mới hoàn toàn, tên `nskt-hub`, repo riêng. Không có brief cũ nào là chuẩn. |
 | 2026-11-11 | Viết lại phần lấy dữ liệu dh3g trong dự án này, lưu vào D1 mới. Hệ thống cũ để yên làm bản lưu. |
 | 2026-11-11 | Phiên bản đầu gồm: bảng theo dõi nộp bài, đọc bài và chấm điểm, bảng xếp hạng, báo cáo thống kê (học tập, kỷ luật, điểm danh…). |
+| 2026-11-11 | Được phép gọi dh3g thật để phát triển và đối chiếu ngay từ đầu, không chỉ dùng dữ liệu giả. |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -37,7 +39,7 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | Đợt | Nội dung | Trạng thái |
 |---|---|---|
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
-| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong, thử bằng dữ liệu giả; đang chờ duyệt PR. **Chưa triển khai, chưa chạy với dh3g thật** |
+| 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Mã xong; đã chạy trên máy với dữ liệu dh3g thật và số liệu khớp (185 học viên, 13 đội, 44 bài tập, 8.140 bài nộp). Đang chờ duyệt PR. **Chưa triển khai lên Cloudflare** |
 | 2 | Bảng theo dõi nộp bài | Chưa bắt đầu |
 | 3 | Đọc bài và chấm điểm | Chưa bắt đầu |
 | 4 | Bảng xếp hạng | Chưa bắt đầu |
@@ -46,12 +48,21 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
 Cập nhật bảng này ở cuối mỗi đợt.
 
-## Nguồn dữ liệu dh3g (ghi nhận từ hệ thống cũ)
+## Nguồn dữ liệu dh3g (đã đối chiếu với dữ liệu thật ngày 2026-11-11)
 
-- Địa chỉ đã dùng: `GET https://api.dh3g.vn/hkm-api/public/report/cohort-submissions` với `communityId=44`, `fromDate`, `toDate` (lọc theo hạn nộp bài), `includeAnswers`.
-- Trả về: bài tập (tên, loại NORMAL/WEEK/EXAM, hạn nộp, khóa học); học viên (họ tên, điện thoại, email, khóa, đội); bài nộp (trạng thái DONE/LATE/OVERDUE/NOT_SUBMITTED, thời điểm nộp, số lần sửa); câu trả lời; nhận xét và điểm của người chấm.
-- dh3g có khai báo báo cáo điểm danh nhưng hệ thống cũ chưa từng gọi. Cần thử ở Đợt 1 xem khóa hiện tại có được phép không.
-- Hệ thống cũ gọi theo từng khoảng 1–2 ngày để tránh phản hồi quá lớn. Giữ cách này.
+- Bài nộp: `GET https://api.dh3g.vn/hkm-api/public/report/cohort-submissions` với `communityId=44`, `fromDate`, `toDate` (lọc theo **hạn nộp**, tối đa 62 ngày), `includeAnswers=true`. Khóa gửi trong tiêu đề `X-API-KEY`.
+- Điểm danh: `.../cohort-attendance` gọi được với khóa hiện tại, nhưng **dh3g chưa có buổi học nào** (danh sách `sessions` rỗng cho cả khóa). Chưa có dữ liệu điểm danh để làm báo cáo.
+- **Thời gian dh3g là giờ Việt Nam, không ghi múi giờ** (ví dụ `2026-11-07T23:00:00`). Không được coi là UTC.
+- Quy mô (23/09 → 18/11/2026): 185 học viên (23 người không có khóa `cohort`, 41 người không có đội), 13 đội (4–13 người), 44 bài tập (30 bài ngày NORMAL, 9 bài tuần WEEK, 5 bài thi EXAM), 8.140 dòng bài nộp. Hạn nộp thường 23:00; 17/57 ngày không có bài.
+- Mỗi lần gọi trả về **đủ 185 học viên** và một dòng cho mỗi bài trong khoảng ngày, kể cả chưa nộp.
+- Trạng thái (`status` / nhãn dh3g / `rawStatus`):
+  - `DONE` / "Done" / SUBMITTED hoặc REVIEWED — nộp trước hạn.
+  - `OVERDUE` / "Nộp trễ" / SUBMIT_LATER — **đã nộp nhưng sau hạn** (không phải "chưa nộp và quá hạn").
+  - `LATE` / "Nộp muộn" / REVIEWED — rất hiếm (4 dòng), nộp sau hạn.
+  - `NOT_SUBMITTED` / "Chưa nộp" — gồm cả bài **chưa tới hạn**; `submissionId`, `answers` là null.
+- Câu trả lời: `type` là "Trắc nghiệm" hoặc "Tự luận" (đôi khi null). Bài nộp lớn nhất khoảng 80 KB; một ngày lớn nhất 1,4 MB.
+- Nhận xét (`feedbacks`): do **học viên chấm chéo nhau**, điểm `grade` thang 0–100; mới có ở khoảng 6% bài đã nộp.
+- `gracePeriodMinutes` luôn bằng 0. Không có bài nào thiếu hạn nộp.
 
 ## Cách đồng bộ dh3g hoạt động
 

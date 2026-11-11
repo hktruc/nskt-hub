@@ -61,13 +61,15 @@ describe("xử lý hàng đợi", () => {
     expect(sub.url.href).not.toContain(FAKE_KEY);
 
     expect(one("SELECT COUNT(*) AS n FROM learners").n).toBe(2);
+    expect(one("SELECT team_id, cohort FROM learners WHERE id=1002")).toEqual({ team_id: null, cohort: null });
+    expect(one("SELECT answers_json FROM submissions WHERE learner_id=1002").answers_json).toBe("[]");
     expect(one("SELECT name FROM teams WHERE id=7").name).toBe("Đội Thử 1");
     expect(one("SELECT title, type FROM assignments WHERE id=501")).toEqual({ title: "Bài thử 1", type: "NORMAL" });
     expect(one("SELECT COUNT(*) AS n FROM submissions").n).toBe(2);
     const a = one("SELECT status, submission_id, answers_json, feedbacks_json FROM submissions WHERE learner_id=1001");
     expect(a.status).toBe("DONE");
     expect(JSON.parse(a.answers_json as string)[0].answer).toBe("Trả lời thử");
-    expect(JSON.parse(a.feedbacks_json as string)[0].grade).toBe(8);
+    expect(JSON.parse(a.feedbacks_json as string)[0].grade).toBe(80);
     expect(one("SELECT status, submission_id, submitted_at FROM submissions WHERE learner_id=1002")).toEqual({ status: "NOT_SUBMITTED", submission_id: null, submitted_at: null });
     expect(one("SELECT attended FROM attendances WHERE learner_id=1001").attended).toBe(1);
     expect(one("SELECT attended FROM attendances WHERE learner_id=1002").attended).toBe(0);

@@ -13,10 +13,3 @@ Những việc **chỉ chủ dự án làm được** (Claude không có quyền
 Thứ tự an toàn: làm 1–4 trước, kiểm tra trang "Tình trạng dữ liệu" mở được và báo "Chưa nhập khóa dh3g", rồi mới làm bước 5. Khi chưa có khóa, ứng dụng không gọi dh3g.
 
 Sau bước 5: bấm "Tải lại toàn bộ từ đầu khóa" một lần. Dữ liệu về dần, mỗi 5 phút 3 khoảng ngày (khoảng 2 giờ cho lần đầu).
-
-## Điều cần kiểm tra ở lần chạy thật đầu tiên
-
-- Báo cáo điểm danh: khóa hiện tại có được phép gọi không (hệ thống cũ chưa từng gọi).
-- Kích thước phản hồi của một ngày có câu trả lời đầy đủ.
-- Định dạng thời gian dh3g trả về (có múi giờ hay không).
-- Bài tập không có hạn nộp có xuất hiện trong báo cáo theo ngày hay không.
