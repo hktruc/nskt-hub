@@ -1,5 +1,6 @@
 import app from "./app";
 import type { Env } from "./env";
+import { scoringTick } from "./scoring/run";
 import { DAILY_CRON, planDaily, workQueue } from "./sync/queue";
 
 export type { Env };
@@ -12,9 +13,12 @@ export default {
       ctx.waitUntil(planDaily(env, now).then((r) => console.log("sync: lên kế hoạch", JSON.stringify(r))));
     } else {
       ctx.waitUntil(
-        workQueue(env, now).then((r) => {
+        (async () => {
+          const r = await workQueue(env, now);
           if (r.done > 0 || r.failed > 0) console.log("sync: xử lý hàng đợi", JSON.stringify(r));
-        }),
+          const s = await scoringTick(env, now);
+          if (s.specs || s.scored || s.ai.reviewed || s.ai.failed) console.log("điểm:", JSON.stringify(s));
+        })(),
       );
     }
   },
