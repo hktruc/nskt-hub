@@ -4,8 +4,9 @@
   "name": "nskt-hub",
   "main": "src/index.tsx",
   "compatibility_date": "2026-11-01",
-  // Chưa mở địa chỉ công khai nào. Khi triển khai sẽ gắn tên miền đứng sau Cloudflare Access.
-  "workers_dev": false,
+  // Chạy ở địa chỉ miễn phí nskt-hub.<tài-khoản>.workers.dev (chủ dự án chọn 11/11/2026).
+  // Trang nội bộ khóa bằng Cloudflare Access; /bang-xep-hang để công khai.
+  "workers_dev": true,
   "preview_urls": false,
   "observability": {
     "enabled": true
