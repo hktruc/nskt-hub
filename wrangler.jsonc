@@ -25,8 +25,8 @@
     {
       "binding": "DB",
       "database_name": "nskt-hub-db",
-      // Điền mã D1 sau khi chủ dự án tạo cơ sở dữ liệu (xem docs/TRIEN-KHAI.md).
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Tạo ngày 11/11/2026 (đã có đủ bảng 0001, 0002).
+      "database_id": "66754a8e-7e74-4f88-aea9-bbd4c75b65fd",
       "migrations_dir": "migrations"
     }
   ],
