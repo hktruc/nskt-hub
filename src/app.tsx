@@ -4,6 +4,7 @@ import { addDays, vietnamDay } from "./dates";
 import type { Env } from "./env";
 import { Layout } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
+import { SubmissionsPage, loadBoard } from "./pages/submissions";
 import { DAYS_AHEAD, RECENT_DAYS_BACK, enqueueRange, planDaily, planFull, workQueue } from "./sync/queue";
 
 const app = new Hono<{ Bindings: Env; Variables: { email: string } }>();
@@ -42,7 +43,9 @@ app.get("/", (c) =>
         <li>
           <a href="/du-lieu">Tình trạng dữ liệu</a>
         </li>
-        <li>Bảng theo dõi nộp bài — sắp có (Đợt 2)</li>
+        <li>
+          <a href="/nop-bai">Theo dõi nộp bài</a>
+        </li>
         <li>Đọc bài và chấm điểm — sắp có (Đợt 3)</li>
         <li>Bảng xếp hạng — sắp có (Đợt 4)</li>
         <li>Báo cáo thống kê — sắp có (Đợt 5)</li>
@@ -55,6 +58,11 @@ const NOTICES: Record<string, string> = {
   "da-xep": "Đã xếp việc vào hàng đợi. Dữ liệu sẽ về dần; tải lại trang này sau vài phút.",
   "khong-co-gi-moi": "Các khoảng ngày này đã nằm sẵn trong hàng đợi, không cần xếp thêm.",
 };
+
+app.get("/nop-bai", async (c) => {
+  const data = await loadBoard(c.env, { bt: c.req.query("bt"), doi: c.req.query("doi"), tt: c.req.query("tt") });
+  return c.html(<SubmissionsPage data={data} />);
+});
 
 app.get("/du-lieu", async (c) => {
   const status = await loadDataStatus(c.env);
