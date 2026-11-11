@@ -1,40 +1,21 @@
-import { Hono } from "hono";
-import { Layout } from "./layout";
+import app from "./app";
+import type { Env } from "./env";
+import { DAILY_CRON, planDaily, workQueue } from "./sync/queue";
 
-export type Env = {
-  APP_NAME: string;
+export type { Env };
+
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const now = new Date(event.scheduledTime);
+    if (event.cron === DAILY_CRON) {
+      ctx.waitUntil(planDaily(env, now).then((r) => console.log("sync: lên kế hoạch", JSON.stringify(r))));
+    } else {
+      ctx.waitUntil(
+        workQueue(env, now).then((r) => {
+          if (r.done > 0 || r.failed > 0) console.log("sync: xử lý hàng đợi", JSON.stringify(r));
+        }),
+      );
+    }
+  },
 };
-
-const app = new Hono<{ Bindings: Env }>();
-
-app.get("/health", (c) => c.json({ ok: true, app: c.env.APP_NAME }));
-
-app.get("/", (c) =>
-  c.html(
-    <Layout title="Trang chủ">
-      <h1>nskt-hub</h1>
-      <p>Web app quản lý học tập NSKT2026 cho BTC. Đang xây dựng.</p>
-      <ul>
-        <li>Tình trạng dữ liệu — sắp có (Đợt 1)</li>
-        <li>Bảng theo dõi nộp bài — sắp có (Đợt 2)</li>
-        <li>Đọc bài và chấm điểm — sắp có (Đợt 3)</li>
-        <li>Bảng xếp hạng — sắp có (Đợt 4)</li>
-        <li>Báo cáo thống kê — sắp có (Đợt 5)</li>
-      </ul>
-    </Layout>,
-  ),
-);
-
-app.notFound((c) =>
-  c.html(
-    <Layout title="Không tìm thấy">
-      <h1>Không tìm thấy trang</h1>
-      <p>
-        <a href="/">Về trang chủ</a>
-      </p>
-    </Layout>,
-    404,
-  ),
-);
-
-export default app;

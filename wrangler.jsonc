@@ -4,15 +4,33 @@
   "name": "nskt-hub",
   "main": "src/index.tsx",
   "compatibility_date": "2026-11-01",
-  // Chưa mở địa chỉ công khai nào. Sẽ bật cùng Cloudflare Access khi triển khai (Đợt 1).
+  // Chưa mở địa chỉ công khai nào. Khi triển khai sẽ gắn tên miền đứng sau Cloudflare Access.
   "workers_dev": false,
   "preview_urls": false,
   "observability": {
     "enabled": true
   },
   "vars": {
-    "APP_NAME": "nskt-hub"
+    "APP_NAME": "nskt-hub",
+    "DH3G_BASE_URL": "https://api.dh3g.vn",
+    "DH3G_COMMUNITY_ID": "44",
+    "SYNC_START_DATE": "2026-09-23"
+    // ACCESS_TEAM_DOMAIN và ACCESS_AUD: điền khi thiết lập Cloudflare Access (xem docs/TRIEN-KHAI.md).
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nskt-hub-db",
+      // Điền mã D1 sau khi chủ dự án tạo cơ sở dữ liệu (xem docs/TRIEN-KHAI.md).
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "15 0 * * *", // 07:15 giờ Việt Nam: lên kế hoạch lấy dữ liệu trong ngày
+      "*/5 * * * *" // mỗi 5 phút: xử lý vài việc trong hàng đợi (trống thì không làm gì)
+    ]
   }
-  // D1 "nskt-hub-db" và cron đồng bộ sẽ được thêm ở Đợt 1.
-  // Khóa dh3g KHÔNG đặt ở đây: nhập dưới dạng secret trên Cloudflare.
+  // Khóa dh3g KHÔNG đặt ở đây: nhập dưới dạng secret DH3G_API_KEY trên Cloudflare.
 }
