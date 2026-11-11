@@ -6,8 +6,10 @@ import { Layout } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
 import { LeaderboardPage } from "./pages/leaderboard";
+import { FlagsPage, loadFlags } from "./pages/flags";
+import { SubmissionDetailPage, loadDetail } from "./pages/submission-detail";
 import { loadLeaderboard } from "./scoring/leaderboard";
-import { nowVN } from "./scoring/run";
+import { nowVN, recomputeScores } from "./scoring/run";
 import { DAYS_AHEAD, RECENT_DAYS_BACK, enqueueRange, planDaily, planFull, workQueue } from "./sync/queue";
 
 const app = new Hono<{ Bindings: Env; Variables: { email: string } }>();
@@ -78,6 +80,50 @@ const NOTICES: Record<string, string> = {
 app.get("/nop-bai", async (c) => {
   const data = await loadBoard(c.env, { bt: c.req.query("bt"), doi: c.req.query("doi"), tt: c.req.query("tt") });
   return c.html(<SubmissionsPage data={data} />);
+});
+
+const DETAIL_NOTICES: Record<string, string> = {
+  "da-sua": "Đã lưu điểm sửa tay. Bảng xếp hạng sẽ cập nhật trong vài phút.",
+  "da-bo": "Đã bỏ điểm sửa tay, câu này quay về điểm tự động.",
+  "sai-so": "Điểm không hợp lệ. Gõ một con số (ví dụ 2 hoặc 1,5), hoặc chữ \"bo\" để bỏ điểm sửa tay.",
+};
+
+app.get("/bai", async (c) => {
+  const d = await loadDetail(c.env.DB, Number(c.req.query("hv")), Number(c.req.query("bt")));
+  if (!d) return c.notFound();
+  return c.html(<SubmissionDetailPage data={d} notice={DETAIL_NOTICES[c.req.query("tb") ?? ""]} />);
+});
+
+app.post("/bai/sua", async (c) => {
+  const f = await c.req.formData();
+  const hv = Number(f.get("hv"));
+  const bt = Number(f.get("bt"));
+  const cau = Number(f.get("cau"));
+  if (![hv, bt, cau].every(Number.isSafeInteger)) return c.text("Yêu cầu không hợp lệ.", 400);
+  const raw = String(f.get("diem") ?? "").trim().toLowerCase().replace(",", ".");
+  const back = (tb: string) => c.redirect(`/bai?hv=${hv}&bt=${bt}&tb=${tb}#p${cau}`, 303);
+  const now = new Date();
+  if (raw === "bo" || raw === "bỏ") {
+    await c.env.DB.prepare("DELETE FROM score_overrides WHERE learner_id=? AND assignment_id=? AND question_index=?").bind(hv, bt, cau).run();
+    await recomputeScores(c.env.DB, now, { learnerId: hv, assignmentId: bt });
+    return back("da-bo");
+  }
+  const earned = Number(raw);
+  if (raw === "" || !Number.isFinite(earned) || earned < 0 || earned > 100) return back("sai-so");
+  await c.env.DB.prepare(
+    `INSERT INTO score_overrides (learner_id, assignment_id, question_index, earned, note, by_email, at) VALUES (?,?,?,?,?,?,?)
+     ON CONFLICT(learner_id, assignment_id, question_index) DO UPDATE SET earned=excluded.earned, by_email=excluded.by_email, at=excluded.at`,
+  )
+    .bind(hv, bt, cau, earned, null, c.get("email"), now.toISOString())
+    .run();
+  await recomputeScores(c.env.DB, now, { learnerId: hv, assignmentId: bt });
+  return back("da-sua");
+});
+
+app.get("/canh-bao", async (c) => {
+  const doi = c.req.query("doi") ?? "";
+  const data = await loadFlags(c.env.DB, doi);
+  return c.html(<FlagsPage lines={data.lines} teams={data.teams} team={data.teams.includes(doi) ? doi : ""} />);
 });
 
 app.get("/du-lieu", async (c) => {

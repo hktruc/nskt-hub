@@ -3,7 +3,7 @@ import { parseAnswers, type Answer } from "../domain/media";
 import { sha256 } from "../dh3g/parse";
 import type { Env } from "../env";
 import { SCORING } from "./config";
-import { aiTasks, scoreSubmission, type AiVerdict } from "./rules";
+import { aiTasks, scoreSubmission, type AiVerdict, type Override } from "./rules";
 import { buildDailySpec, buildWeeklySpec, type AssignmentSpec } from "./spec";
 
 // Chạy theo cron mỗi 5 phút, sau khi lấy dữ liệu dh3g:
@@ -142,7 +142,12 @@ export async function aiTick(env: Env, now: Date, fetchImpl?: typeof fetch): Pro
   return { status: "ran", reviewed, failed };
 }
 
-export async function recomputeScores(db: D1Database, now: Date): Promise<number> {
+/** `only`: tính lại ngay đúng một bài nộp (ví dụ sau khi BTC sửa tay), bỏ qua điều kiện "có thay đổi". */
+export async function recomputeScores(
+  db: D1Database,
+  now: Date,
+  only?: { learnerId: number; assignmentId: number },
+): Promise<number> {
   const today = nowVN(now);
   // Bài đã tới hạn, chưa có điểm hoặc có thay đổi sau lần tính trước (bài nộp, đề, kết quả AI).
   const rows = (
@@ -156,14 +161,31 @@ export async function recomputeScores(db: D1Database, now: Date): Promise<number
          LEFT JOIN ai_reviews r ON r.learner_id = s.learner_id AND r.assignment_id = s.assignment_id
          LEFT JOIN scores sc ON sc.learner_id = s.learner_id AND sc.assignment_id = s.assignment_id
          WHERE a.due_at >= ?1 AND a.due_at <= ?2
-           AND (sc.learner_id IS NULL OR sc.computed_at < s.changed_at OR sc.computed_at < sp.updated_at
-                OR (r.created_at IS NOT NULL AND sc.computed_at < r.created_at))
+           AND (?4 IS NULL OR (s.learner_id = ?4 AND s.assignment_id = ?5))
+           AND (?4 IS NOT NULL OR sc.learner_id IS NULL OR sc.computed_at < s.changed_at OR sc.computed_at < sp.updated_at
+                OR (r.created_at IS NOT NULL AND sc.computed_at < r.created_at)
+                OR EXISTS (SELECT 1 FROM score_overrides o WHERE o.learner_id = s.learner_id
+                           AND o.assignment_id = s.assignment_id AND o.at > sc.computed_at))
          LIMIT ?3`,
       )
-      .bind(SCORING.startDate, today, SCORES_PER_TICK)
+      .bind(SCORING.startDate, today, SCORES_PER_TICK, only?.learnerId ?? null, only?.assignmentId ?? null)
       .all<SubRow & { due_at: string; spec_json: string; ai_json: string | null; ai_hash: string | null; ai_status: string | null }>()
   ).results;
   if (rows.length === 0) return 0;
+
+  const ids = [...new Set(rows.map((r) => r.assignment_id))];
+  const ovRows = (
+    await db
+      .prepare(`SELECT learner_id, assignment_id, question_index, earned, note, by_email FROM score_overrides
+                WHERE assignment_id IN (SELECT value FROM json_each(?))`)
+      .bind(JSON.stringify(ids))
+      .all<{ learner_id: number; assignment_id: number; question_index: number; earned: number; note: string | null; by_email: string }>()
+  ).results;
+  const ov = new Map<string, Override[]>();
+  for (const o of ovRows) {
+    const k = `${o.learner_id}:${o.assignment_id}`;
+    ov.set(k, [...(ov.get(k) ?? []), { index: o.question_index, earned: o.earned, note: o.note, by: o.by_email }]);
+  }
 
   const iso = now.toISOString();
   const stmts = rows.map((r) => {
@@ -175,6 +197,7 @@ export async function recomputeScores(db: D1Database, now: Date): Promise<number
       submittedAt: r.submitted_at,
       dueAt: r.due_at,
       ai,
+      overrides: ov.get(`${r.learner_id}:${r.assignment_id}`) ?? null,
     });
     return db
       .prepare(

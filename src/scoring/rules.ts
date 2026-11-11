@@ -16,9 +16,12 @@ export type QuestionScore = {
   earned: number;
   max: number;
   videos: number;
-  source: "quy-tac" | "ai" | "tam";
+  source: "quy-tac" | "ai" | "tam" | "sua-tay";
   note?: string;
 };
+
+/** Điểm BTC / coach sửa tay cho một câu (ưu tiên hơn AI và quy tắc). */
+export type Override = { index: number; earned: number; note?: string | null; by?: string };
 
 export type SubmissionScore = {
   earned: number;
@@ -84,6 +87,7 @@ export function scoreSubmission(input: {
   submittedAt: string | null;
   dueAt: string;
   ai?: AiVerdict[] | null;
+  overrides?: Override[] | null;
 }): SubmissionScore {
   const { spec, answers } = input;
   const submitted = input.status === "DONE" || input.status === "OVERDUE" || input.status === "LATE";
@@ -147,6 +151,15 @@ export function scoreSubmission(input: {
       } else detail.push(base);
     }
   }
+
+  for (const o of input.overrides ?? []) {
+    const d = detail.find((x) => x.index === o.index);
+    if (!d) continue;
+    d.earned = Math.max(0, Math.min(d.max, o.earned));
+    d.source = "sua-tay";
+    d.note = o.note || (o.by ? `Sửa tay bởi ${o.by}` : "Sửa tay");
+  }
+  provisional = detail.some((d) => d.source === "tam");
 
   const earned = detail.reduce((s, d) => s + d.earned, 0);
   const max = detail.reduce((s, d) => s + d.max, 0);

@@ -12,7 +12,7 @@ const css = `
   --ok-bg:#12342A; --ok-fg:#86EFAC; --warn-bg:#3A2412; --warn-fg:#FDBA74; --bad-bg:#3A1616; --bad-fg:#FCA5A5; } }
 * { box-sizing:border-box; }
 body { margin:0; font:16px/1.55 var(--font); color:var(--fg); background:var(--bg); }
-header { background:var(--card); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; gap:4px 16px; flex-wrap:wrap; align-items:center; }
+header { background:var(--card); border-bottom:1px solid var(--line); padding:6px 16px; display:flex; gap:0 14px; flex-wrap:wrap; align-items:center; }
 header a { color:var(--fg); text-decoration:none; min-height:44px; display:inline-flex; align-items:center; }
 header a.brand { font-weight:700; color:var(--accent); margin-right:auto; }
 main { max-width:960px; margin:0 auto; padding:20px 16px 32px; }
@@ -75,6 +75,27 @@ a.tile { color:inherit; text-decoration:none; }
 .swatch.xanh, .rank-row.xanh { background:var(--g-bg); color:var(--g-fg); }
 .swatch.vang, .rank-row.vang { background:var(--y-bg); color:var(--y-fg); }
 .swatch.do, .rank-row.do { background:var(--r-bg); color:var(--r-fg); }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.qa { list-style:none; margin:16px 0; padding:0; display:flex; flex-direction:column; gap:12px; }
+.qa > li { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; }
+.qa > li.flagged { border-color:var(--bad-fg); }
+.qa summary { cursor:pointer; display:flex; flex-direction:column; gap:2px; list-style:none; }
+.qa summary::-webkit-details-marker { display:none; }
+.qa .qtext { font-weight:600; font-size:.9375rem; }
+.qa .qfull { white-space:pre-wrap; font-size:.875rem; color:var(--muted); }
+.qa .answer { white-space:pre-wrap; overflow-wrap:anywhere; margin:10px 0; }
+.media { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+.btn-media { display:inline-flex; align-items:center; min-height:44px; padding:8px 14px; border-radius:var(--radius); background:var(--soft); border:1px solid var(--line); color:var(--fg); text-decoration:none; font-weight:600; font-size:.9375rem; }
+.btn-media.v::before { content:""; border-left:10px solid #DC2626; border-top:6px solid transparent; border-bottom:6px solid transparent; margin-right:8px; }
+.yt { position:relative; display:block; width:100%; max-width:480px; aspect-ratio:16/9; border-radius:var(--radius); overflow:hidden; background:#111; }
+.yt img { width:100%; height:100%; object-fit:cover; display:block; }
+.yt .play { position:absolute; inset:0; margin:auto; width:64px; height:44px; border-radius:12px; background:#DC2626; }
+.yt .play::after { content:""; position:absolute; left:26px; top:12px; border-left:18px solid #fff; border-top:10px solid transparent; border-bottom:10px solid transparent; }
+.thumbs { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; width:100%; }
+.thumbs img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; display:block; background:var(--soft); }
+.score-row { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; border-top:1px solid var(--line); padding-top:10px; margin-top:8px; }
+.score-row .edit { display:flex; gap:6px; }
+.score-row input { width:5.5em; min-height:44px; font:16px var(--font); border:1px solid var(--line); border-radius:var(--radius); padding:6px 10px; background:var(--card); color:var(--fg); }
 .rank-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
 .rank-row { display:flex; align-items:center; gap:10px; min-height:44px; padding:6px 12px; border-radius:10px; font-size:.9375rem; }
 .rank-row .rank { flex:none; width:2em; text-align:right; font-weight:700; font-variant-numeric:tabular-nums; opacity:.75; }
@@ -107,6 +128,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
             <>
               <a href="/nop-bai">Nộp bài</a>
               <a href="/bang-xep-hang">Xếp hạng</a>
+              <a href="/canh-bao">Cảnh báo</a>
               <a href="/du-lieu">Dữ liệu</a>
             </>
           )}
