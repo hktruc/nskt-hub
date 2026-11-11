@@ -25,10 +25,7 @@ export function LeaderboardPage(props: {
   return (
     <Layout title="Bảng xếp hạng" publicPage>
       <h1>Bảng xếp hạng NSKT2026</h1>
-      <p class="muted small">
-        Cập nhật {formatVN(props.updatedAt)} (giờ Việt Nam). Điểm là phần trăm so với điểm tối đa, bài càng cũ tính càng ít
-        (sau {SCORING.halfLifeWeeks} tuần còn một nửa) — ai cố gắng từ bây giờ vẫn lên được màu xanh.
-      </p>
+      <p class="muted small">Cập nhật {formatVN(props.updatedAt)} (giờ Việt Nam).</p>
       {props.provisional ? (
         <p class="notice small">Một số bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p>
       ) : null}
@@ -68,6 +65,33 @@ export function LeaderboardPage(props: {
           ))}
         </ol>
       )}
+      <section class="rules" aria-label="Cách tính điểm">
+        <h2>Cách tính điểm</h2>
+        <ul>
+          <li>
+            Điểm = <strong>% điểm đạt được</strong> trên điểm tối đa, tính từ 30/09/2026.
+          </li>
+          <li>
+            <strong>Bài ngày:</strong> câu bắt buộc {SCORING.daily.mandatory}đ · câu khuyến khích có video{" "}
+            {SCORING.daily.encouragedVideo}đ, viết đúc kết sâu sắc {SCORING.daily.encouragedDeepText}đ.
+          </li>
+          <li>
+            <strong>Bài tuần:</strong> mỗi video {SCORING.weekly.perVideo}đ · câu bắt buộc {SCORING.weekly.mandatory}đ · góp ý BTC{" "}
+            {SCORING.weekly.idea}đ.
+          </li>
+          <li>
+            <strong>Nộp trễ:</strong> video {SCORING.lateVideo}đ, câu viết một nửa. Trả lời cho có: 0đ.
+          </li>
+          <li>
+            <strong>Bài cũ tính ít dần</strong> (sau {SCORING.halfLifeWeeks} tuần còn một nửa): cố gắng từ hôm nay sẽ lên nhanh.
+          </li>
+          <li>
+            <span class="swatch xanh">Xanh</span> ≥ {SCORING.greenFrom}% · <span class="swatch vang">Vàng</span>{" "}
+            {SCORING.yellowFrom}–{SCORING.greenFrom - 1}% · <span class="swatch do">Đỏ</span> &lt; {SCORING.yellowFrom}%.
+            Bằng điểm: ai nộp video đúng hạn nhiều hơn, sớm hơn xếp trên.
+          </li>
+        </ul>
+      </section>
     </Layout>
   );
 }
