@@ -128,16 +128,3 @@ export function AccountPage(props: { user: User; error?: string; notice?: string
   );
 }
 
-/** Trang tạm cho ban phụng sự cho tới khi có bàn chấm. */
-export function GraderHomePage(props: { user: User }) {
-  return (
-    <Layout title="Bàn chấm" nav="grader">
-      <h1>Bàn chấm bài tuần</h1>
-      <p>Xin chào {props.user.name}.</p>
-      <p>
-        Đội được giao: <strong>{props.user.teams.length ? props.user.teams.map(teamLabel).join(", ") : "chưa có"}</strong>.
-      </p>
-      <p class="notice">Bàn chấm đang được xây dựng, sẽ mở trong đợt tới. Bộ tiêu chí chấm xem ở tài liệu BTC gửi.</p>
-    </Layout>
-  );
-}

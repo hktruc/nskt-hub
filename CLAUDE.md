@@ -66,7 +66,7 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
 | 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Xong. **Đã chạy thật trên Cloudflare từ 12/11/2026** (`https://nskt-hub.hktruc.workers.dev`). |
 | 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). Xong, đã gộp (PR #3 → PR #5). |
-| 3 | Đọc bài và chấm điểm | **3a** (PR #9): trang đọc bài `/bai`, BTC sửa điểm tay từng câu, trang `/canh-bao` — dùng đăng nhập Cloudflare Access. **3b** chưa làm: đăng nhập số điện thoại cho coach / phụng sự, phân công đội. |
+| 3 | Đọc bài và chấm điểm | **3a** (PR #9): `/bai`, sửa điểm tay, `/canh-bao`. **3b** (PR #17): đăng nhập số điện thoại, `/quan-tri` giao đội. **3c**: bàn chấm bài tuần `/cham` (hàng chờ + phiếu chấm theo `docs/TIEU-CHI-CHAM.md`, bảng `item_reviews`, `week_reviews`, `assignment_focus`). Còn: bảng năng lực người chấm, hiện điểm chất lượng trên cửa sổ chi tiết BXH, tiêu chí bài thi. |
 | 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). Xong, đã gộp (PR #4 → PR #5). |
 | 5 | Báo cáo thống kê | Chưa bắt đầu |
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |
@@ -134,7 +134,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 ## Bảo mật
 
 - **Đăng nhập nội bộ** (`src/users/accounts.ts`): số điện thoại + mật khẩu (PBKDF2-SHA256 100.000 vòng), kích hoạt bằng mã một lần 8 ký tự (băm, hết hạn 7 ngày) do admin cấp ở `/quan-tri`. Cookie phiên `nskt_s` (HttpOnly, Secure, SameSite=Lax, 30 ngày), chỉ lưu băm SHA-256 trong `user_sessions`. Sai 5 lần → khóa 15 phút. Cấp mã mới / thu hồi → hủy mọi phiên. Người vào qua Cloudflare Access được coi là admin. Ban phụng sự chỉ vào `/cham`, `/tai-khoan`; `/quan-tri` chỉ admin.
-- `/bang-xep-hang` công khai (không đăng nhập), chỉ hiện hạng, họ tên, đội, %, màu. Bấm tên mở `/bang-xep-hang/hv/<mã>` (cũng công khai, nằm dưới cùng đường dẫn bỏ qua Access): điểm tích lũy theo tuần, số bài đúng hạn / trễ / chưa nộp, số video, thứ hạng hôm nay và 1–3 tuần trước. Không hiện cảnh báo, số điện thoại, email, nội dung bài. Mọi trang khác trừ `/health` phải có mã Cloudflare Access hợp lệ; ứng dụng tự kiểm tra chữ ký và AUD (`src/auth.ts`). Thiếu `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` thì khóa toàn bộ.
+- `/bang-xep-hang` công khai (không đăng nhập), chỉ hiện hạng, họ tên, đội, %, màu. Bấm tên mở `/bang-xep-hang/hv/<mã>` (cũng công khai, nằm dưới cùng đường dẫn bỏ qua Access): điểm tích lũy theo tuần, số bài đúng hạn / trễ / chưa nộp, số video, thứ hạng hôm nay và 1–3 tuần trước. Không hiện cảnh báo, số điện thoại, email, nội dung bài. Mọi trang nội bộ cần đăng nhập số điện thoại, hoặc mã Cloudflare Access hợp lệ (ứng dụng tự kiểm tra chữ ký và AUD, `src/auth.ts`). **Từ 12/11/2026 Cloudflare Access chỉ còn khóa `/quan-tri`** (ứng dụng Access "nskt-hub - Cloudflare Workers", AUD không đổi); các trang khác do ứng dụng tự kiểm tra.
 - `LOCAL_DEV_NO_AUTH=true` chỉ có tác dụng trên localhost; chỉ đặt trong `.dev.vars` (không commit).
 - Thao tác ghi (POST) kiểm tra tiêu đề `Origin`.
 
@@ -160,7 +160,7 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/google/sheets.ts` — đọc Google Sheet bằng tài khoản dịch vụ; `src/attendance/offline.ts` — điểm danh offline
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0006.
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0007.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử

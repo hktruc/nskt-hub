@@ -111,7 +111,7 @@ describe("tài khoản nội bộ", () => {
 
     // Thu hồi: phiên đang mở bị hủy ngay.
     const psCookie = await activateAs("0900000222", codes.ps);
-    expect(await (await call("/cham", { cookie: psCookie })).text()).toContain("Đội 03, Đội 04");
+    expect(await (await call("/tai-khoan", { cookie: psCookie })).text()).toContain("Đội 03, Đội 04");
     await call("/quan-tri/trang-thai", { method: "POST", cookie: admin, body: form({ id: String(ps.id), bat: "0" }) });
     expect((await call("/cham", { cookie: psCookie })).status).toBe(401);
     expect((await call("/dang-nhap", { method: "POST", body: form({ sdt: "0900000222", mk: "matkhau-gia-1" }) })).status).toBe(401);

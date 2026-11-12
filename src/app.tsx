@@ -8,7 +8,10 @@ import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
 import { loadOverview, OverviewPage } from "./pages/overview";
 import { syncOfflineAttendance } from "./attendance/offline";
-import { AccountPage, ActivatePage, ForbiddenPage, GraderHomePage, LoginPage, NeedLoginPage } from "./pages/account";
+import { AccountPage, ActivatePage, ForbiddenPage, LoginPage, NeedLoginPage } from "./pages/account";
+import { QueuePage, SheetPage } from "./pages/grading";
+import { FOCUS_OPTIONS, PROGRESS, SPIRIT } from "./grading/rubric";
+import { allowedTeams, focusOf, gradableAssignments, loadQueue, loadSheet, saveReview, setFocus, validate, type SaveInput } from "./grading/store";
 import { AdminPage, type IssuedCode } from "./pages/admin";
 import {
   AccountError, SESSION_COOKIE, SESSION_MAX_AGE, activate, canUseFullApp, changePassword, createUser, listUsers, login, logout,
@@ -149,8 +152,105 @@ app.post("/tai-khoan/mat-khau", async (c) => {
   }
 });
 
-// ---- Bàn chấm (tạm) ----
-app.get("/cham", (c) => c.html(<GraderHomePage user={c.get("user")} />));
+// ---- Bàn chấm bài tuần ----
+async function queueFor(c: Context<AppEnv>, bt?: string) {
+  const u = c.get("user");
+  const nowVNs = nowVN(new Date());
+  const weeks = await gradableAssignments(c.env.DB, nowVNs);
+  const week = weeks.find((w) => String(w.id) === bt) ?? weeks[0] ?? null;
+  const allowed = allowedTeams(u);
+  const lines = week ? await loadQueue(c.env.DB, week, allowed, nowVNs) : [];
+  const teams = allowed ?? [...new Set(lines.map((l) => l.team))].sort();
+  return { u, weeks, week, lines, teams };
+}
+
+const GRADING_NOTICES: Record<string, string> = {
+  "het-viec": "Đã lưu. Bạn đã chấm hết những bài đang chờ trong mục này.",
+  "trong-tam": "Đã đổi trọng tâm tuần.",
+};
+
+app.get("/cham", async (c) => {
+  const { u, weeks, week, lines, teams } = await queueFor(c, c.req.query("bt"));
+  const doi = c.req.query("doi") ?? "";
+  return c.html(
+    <QueuePage
+      user={u}
+      weeks={weeks}
+      week={week}
+      teams={teams}
+      team={teams.includes(doi) ? doi : ""}
+      filter={c.req.query("loc") ?? ""}
+      lines={lines}
+      focus={week ? await focusOf(c.env.DB, week.id) : ""}
+      notice={GRADING_NOTICES[c.req.query("tb") ?? ""]}
+    />,
+  );
+});
+
+async function sheetFor(c: Context<AppEnv>, hv: number, bt: number) {
+  if (!Number.isSafeInteger(hv) || !Number.isSafeInteger(bt)) return null;
+  const s = await loadSheet(c.env.DB, hv, bt);
+  if (!s) return null;
+  const allowed = allowedTeams(c.get("user"));
+  if (allowed && !allowed.includes(s.learner.team)) return "cam" as const;
+  return s;
+}
+const sheetBack = (bt: number, team: string) => `/cham?bt=${bt}&doi=${team}`;
+
+app.get("/cham/bai", async (c) => {
+  const s = await sheetFor(c, Number(c.req.query("hv")), Number(c.req.query("bt")));
+  if (s === "cam") return c.html(<ForbiddenPage user={c.get("user")} message="Đội này chưa được giao cho bạn chấm." />, 403);
+  if (!s) return c.notFound();
+  return c.html(<SheetPage user={c.get("user")} s={s} back={sheetBack(s.assignment.id, s.learner.team)} notice={c.req.query("tb") === "da-luu" ? "Đã lưu." : undefined} />);
+});
+
+app.post("/cham/luu", async (c) => {
+  const f = await c.req.formData();
+  const draft: Record<string, string> = {};
+  for (const [k, v] of f.entries()) if (typeof v === "string") draft[k] = v;
+  const s = await sheetFor(c, Number(draft.hv), Number(draft.bt));
+  if (s === "cam") return c.html(<ForbiddenPage user={c.get("user")} message="Đội này chưa được giao cho bạn chấm." />, 403);
+  if (!s) return c.notFound();
+  const n = (k: string) => (draft[k] ? Number(draft[k]) : null);
+  const input: SaveInput = {
+    items: s.items.map((it, i) => ({
+      key: it.key,
+      kind: it.kind,
+      a1: n(`a1_${i}`), a2: n(`a2_${i}`), a3: n(`a3_${i}`), a4: n(`a4_${i}`), a5: n(`a5_${i}`),
+      flag: draft[`f_${i}`] && draft[`k${i}`] === it.key ? draft[`f_${i}`]! : null,
+    })),
+    b1: n("b1"),
+    b2: n("b2"),
+    spirit: draft.spirit && draft.spirit in SPIRIT ? draft.spirit : null,
+    progress: draft.progress && draft.progress in PROGRESS ? draft.progress : null,
+    comment: (draft.comment ?? "").slice(0, 2000),
+    featured: draft.featured || null,
+  };
+  // Thẻ trong form phải khớp bài nộp hiện tại (học viên có thể vừa sửa bài).
+  if (s.items.some((it, i) => draft[`k${i}`] !== it.key)) {
+    return c.html(<SheetPage user={c.get("user")} s={s} back={sheetBack(s.assignment.id, s.learner.team)} error="Bài nộp vừa thay đổi trong lúc bạn chấm. Trang đã tải lại bản mới, nhờ bạn chấm lại." />, 409);
+  }
+  const err = validate(input);
+  if (err) return c.html(<SheetPage user={c.get("user")} s={s} draft={draft} error={err} back={sheetBack(s.assignment.id, s.learner.team)} />, 400);
+  await saveReview(c.env.DB, s, input, c.get("user"), c.get("email"), new Date());
+  // Sang người tiếp theo chưa chấm: ưu tiên cùng đội.
+  const week = { id: s.assignment.id, title: s.assignment.title, type: s.assignment.type, due_at: s.assignment.due_at };
+  const lines = await loadQueue(c.env.DB, week, allowedTeams(c.get("user")), nowVN(new Date()));
+  const todo = lines.filter((l) => l.learnerId !== s.learner.id && (l.status === "chua-cham" || l.status === "dang-cham" || l.status === "sua-sau-cham"));
+  const next = todo.find((l) => l.team === s.learner.team) ?? todo[0];
+  return c.redirect(next ? `/cham/bai?hv=${next.learnerId}&bt=${s.assignment.id}` : `/cham?bt=${s.assignment.id}&tb=het-viec`, 303);
+});
+
+app.post("/cham/trong-tam", async (c) => {
+  const u = c.get("user");
+  if (u.role === "phung_su") return c.html(<ForbiddenPage user={u} message="Chỉ coach, BTC, admin đổi được trọng tâm tuần." />, 403);
+  const f = await c.req.formData();
+  const bt = Number(f.get("bt"));
+  const tt = String(f.get("tt") ?? "");
+  if (!Number.isSafeInteger(bt) || !FOCUS_OPTIONS.includes(tt)) return c.text("Yêu cầu không hợp lệ.", 400);
+  await setFocus(c.env.DB, bt, tt, c.get("email"), new Date());
+  return c.redirect(`/cham?bt=${bt}&tb=trong-tam`, 303);
+});
 
 // ---- Quản trị (chỉ admin) ----
 async function adminPage(c: Context<AppEnv>, extra: { issued?: IssuedCode; error?: string; notice?: string } = {}, status: 200 | 400 = 200) {
