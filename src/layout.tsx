@@ -54,6 +54,9 @@ code { font-size:.9em; }
 .pick select { flex:1; min-width:0; min-height:44px; font:15px var(--font); border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; background:var(--card); color:var(--fg); }
 .pick p { margin:6px 0 0; }
 .chips { display:flex; gap:8px; overflow-x:auto; padding:12px 0 4px; margin:0 -16px; padding-left:16px; padding-right:16px; scrollbar-width:none; }
+/* Máy tính: xuống dòng cho thấy hết các nút, không phải kéo ngang. */
+@media (min-width: 640px) { .chips { flex-wrap:wrap; overflow:visible; margin:0; padding-left:0; padding-right:0; } }
+.chips-label { font-size:.8125rem; font-weight:600; color:var(--muted); margin:12px 0 0; }
 .chip { flex:none; display:inline-flex; align-items:center; min-height:40px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--fg); text-decoration:none; font-weight:500; font-size:.9375rem; }
 .chip.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
 a.tile { color:inherit; text-decoration:none; }
@@ -157,7 +160,9 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .q-row { flex-wrap:wrap; }
 .q-row .badge { font-size:.6875rem; padding:1px 8px; }
 .chip .cnt { margin-left:6px; background:var(--bad-bg); color:var(--bad-fg); border-radius:999px; padding:0 6px; font-size:.75rem; font-weight:700; }
-.focus-form { max-width:520px; margin:6px 0 10px; } .focus-form select { flex:1; min-height:44px; border:1px solid var(--line); border-radius:var(--radius); padding:6px 10px; font:15px var(--font); background:var(--card); color:var(--fg); }
+.week-setting { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:8px 12px; margin:8px 0 12px; font-size:.875rem; }
+.week-setting summary { cursor:pointer; font-weight:600; }
+.focus-form { max-width:520px; margin:6px 0 4px; } .focus-form select { flex:1; min-height:44px; border:1px solid var(--line); border-radius:var(--radius); padding:6px 10px; font:15px var(--font); background:var(--card); color:var(--fg); }
 .card-item { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; margin:10px 0; }
 .card-item summary { cursor:pointer; }
 .qline { color:var(--muted); margin:4px 0 8px; }
