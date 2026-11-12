@@ -28,11 +28,13 @@ export function extractItems(answers: Answer[], spec: AssignmentSpec | null): Gr
 
 export type WeekAssignment = { id: number; title: string | null; type: string | null; due_at: string };
 
+/** Bài tuần đã hết hạn và bài tuần đang mở (hạn trong 7 ngày tới): ai nộp sớm là chấm được ngay. */
 export async function gradableAssignments(db: D1Database, nowVN: string): Promise<WeekAssignment[]> {
+  const until = new Date(Date.parse(`${nowVN.slice(0, 19)}Z`) + 7 * 86_400_000).toISOString().slice(0, 19);
   return (
     await db
       .prepare("SELECT id, title, type, due_at FROM assignments WHERE type = 'WEEK' AND due_at >= ? AND due_at <= ? ORDER BY due_at DESC")
-      .bind(SCORING.startDate, nowVN)
+      .bind(SCORING.startDate, until)
       .all<WeekAssignment>()
   ).results;
 }

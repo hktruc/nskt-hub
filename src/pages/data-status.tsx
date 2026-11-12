@@ -47,7 +47,7 @@ const JOB_VI: Record<string, string> = {
   failed: "Lỗi",
 };
 const REPORT_VI: Record<string, string> = { submissions: "Bài nộp", attendance: "Điểm danh" };
-const REASON_VI: Record<string, string> = { daily: "Hàng ngày", full: "Toàn bộ (tự động)", manual: "Bấm tay" };
+const REASON_VI: Record<string, string> = { daily: "Hàng ngày", full: "Toàn bộ (tự động)", manual: "Bấm tay", hourly: "Mỗi giờ (bài đang mở)" };
 
 export async function loadDataStatus(env: Env): Promise<DataStatus> {
   const db = env.DB;
@@ -174,7 +174,7 @@ export function DataStatusPage(props: { status: DataStatus; notice?: string }) {
 
       <h2>Lấy dữ liệu ngay</h2>
       <p class="muted">
-        Ứng dụng tự lấy dữ liệu mỗi sáng lúc 07:15. Hai nút dưới đây chỉ xếp việc vào hàng đợi; dữ liệu sẽ về dần trong
+        Ứng dụng tự lấy dữ liệu mỗi sáng lúc 07:15, và mỗi giờ lấy lại bài nộp của các bài đang mở. Hai nút dưới đây chỉ xếp việc vào hàng đợi; dữ liệu sẽ về dần trong
         vài phút đến vài chục phút.
       </p>
       <form method="post" action="/du-lieu/dong-bo" class="actions">

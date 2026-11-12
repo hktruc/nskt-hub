@@ -163,3 +163,19 @@ describe("xử lý hàng đợi", () => {
     expect(one("SELECT COUNT(*) AS n FROM sync_jobs WHERE status='done'").n).toBe(5);
   });
 });
+
+describe("lấy bài mỗi giờ", () => {
+  it("chỉ xếp bài nộp của 2 ngày trước → 7 ngày tới, không gọi điểm danh; chạy lại không trùng", async () => {
+    const { planHourly } = await import("../src/sync/queue");
+    const { createTestDb } = await import("./helpers/d1");
+    const { testEnv } = await import("./helpers/fixtures");
+    const { d1, raw } = createTestDb();
+    const env = testEnv(d1);
+    const now = new Date("2026-11-12T03:00:00Z"); // 10:00 giờ VN
+    expect(await planHourly(env, now)).toBe(10);
+    const rows = raw.prepare("SELECT report, MIN(from_date) a, MAX(to_date) b, reason FROM sync_jobs GROUP BY report").all();
+    expect(rows).toEqual([{ report: "submissions", a: "2026-11-10", b: "2026-11-19", reason: "hourly" }]);
+    expect(await planHourly(env, now)).toBe(0);
+    expect(await planHourly(testEnv(d1, { DH3G_API_KEY: undefined }), now)).toBe(0);
+  });
+});
