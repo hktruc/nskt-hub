@@ -211,6 +211,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
             <>
               <a href="/">Tổng quan</a>
               <a href="/nop-bai">Nộp bài</a>
+              <a href="/cham">Chấm bài</a>
               <a href="/bang-xep-hang">Xếp hạng</a>
               <a href="/canh-bao">Cảnh báo</a>
               <a href="/du-lieu">Dữ liệu</a>

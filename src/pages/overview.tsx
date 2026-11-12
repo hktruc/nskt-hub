@@ -3,6 +3,7 @@ import { isLearnerTeam, teamCode, teamLabel } from "../domain/teams";
 import type { Env } from "../env";
 import { Layout } from "../layout";
 import { SCORING } from "../scoring/config";
+import { gradableAssignments, loadQueue } from "../grading/store";
 import { loadLeaderboard } from "../scoring/leaderboard";
 import { bucketOf, nowVietnam, shortVN, type Bucket } from "./submissions";
 
@@ -35,6 +36,7 @@ export type Overview = {
   dh3gAt: string | null;
   sheet: { at: string; status: string } | null;
   teams: TeamRow[];
+  grading: { week: { id: number; title: string | null }; todo: number; overdue: number; done: number; submitted: number } | null;
 };
 
 const PRESENT = new Set(["OK", "M", "X", "M1", "CANH_BAO"]);
@@ -104,6 +106,10 @@ export async function loadOverview(env: Env, now = new Date()): Promise<Overview
     };
   });
 
+  const week = (await gradableAssignments(db, nowVN))[0];
+  const queue = week ? await loadQueue(db, week, null, nowVN) : [];
+  const sub = queue.filter((l) => l.status !== "chua-nop");
+  const todoL = sub.filter((l) => l.status !== "da-cham");
   const f = first<{ n: number; w: number | null }>(flags);
   return {
     learners: ranked.length,
@@ -132,6 +138,7 @@ export async function loadOverview(env: Env, now = new Date()): Promise<Overview
     dh3gAt: first<{ at: string | null }>(dh3g)?.at ?? null,
     sheet: first<{ at: string; status: string }>(sheet),
     teams,
+    grading: week ? { week: { id: week.id, title: week.title }, todo: todoL.length, overdue: todoL.filter((l) => l.overdue).length, done: sub.length - todoL.length, submitted: sub.length } : null,
   };
 }
 
@@ -203,6 +210,17 @@ export function OverviewPage(props: { o: Overview }) {
             <div class="small muted">Chưa có dữ liệu điểm danh.</div>
           )}
         </a>
+        {o.grading ? (
+          <a class="tile" href={`/cham?bt=${o.grading.week.id}&loc=chua-cham`}>
+            <div class="lbl">Chấm bài tuần · {(o.grading.week.title ?? "").replace(/\s*\(X10\)\s*/i, "")}</div>
+            <div class="num" style={o.grading.todo ? "color:var(--bad-fg)" : ""}>
+              {o.grading.todo}
+            </div>
+            <div class="small">
+              bài chưa chấm{o.grading.overdue ? ` · ${o.grading.overdue} quá hạn` : ""} · đã chấm {o.grading.done}/{o.grading.submitted}
+            </div>
+          </a>
+        ) : null}
         <a class="tile" href="/canh-bao">
           <div class="lbl">Cảnh báo trả lời đối phó</div>
           <div class="num">{o.flags.week.toLocaleString("vi-VN")}</div>
@@ -256,6 +274,8 @@ export function OverviewPage(props: { o: Overview }) {
       <h2>Đi tới</h2>
       <nav class="ov-links">
         <a href="/nop-bai">Theo dõi nộp bài</a>
+        <a href="/cham">Bàn chấm bài tuần</a>
+        <a href="/cham/nguoi-cham">Năng lực người chấm</a>
         <a href="/bang-xep-hang">Bảng xếp hạng (công khai)</a>
         <a href="/canh-bao">Cảnh báo</a>
         <a href="/du-lieu">Tình trạng dữ liệu</a>
