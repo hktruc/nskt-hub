@@ -11,11 +11,12 @@ export function LeaderboardPage(props: {
   team: string;
   teams: string[];
   provisional: boolean;
+  hasAttendance?: boolean;
   updatedAt: string | null;
 }) {
   const filtered = props.team ? props.ranked.filter((r) => r.team === props.team) : props.ranked;
   // Xem một đội: hạng trong đội, kèm hạng toàn khóa. Bằng điểm thì ngang hạng.
-  const same = (a: Ranked, b: Ranked) => a.percent === b.percent && a.onTimeVideos === b.onTimeVideos && a.avgHoursEarly === b.avgHoursEarly;
+  const same = (a: Ranked, b: Ranked) => a.rank === b.rank; // hạng toàn khóa bằng nhau = bằng điểm mọi tiêu chí
   const list = filtered.map((r) => ({ ...r, shown: 0 }));
   list.forEach((r, i) => {
     const prev = list[i - 1];
@@ -72,7 +73,15 @@ export function LeaderboardPage(props: {
         <h2>Cách tính điểm</h2>
         <ul>
           <li>
-            Điểm = <strong>% điểm đạt được</strong> trên điểm tối đa, tính từ 30/09/2026.
+            Điểm = <strong>{100 - SCORING.attendance.share * 100}% bài tập + {SCORING.attendance.share * 100}% đi học offline</strong>, tính từ 30/09/2026.
+            Mỗi phần là % điểm đạt được trên điểm tối đa.
+            {props.hasAttendance ? null : " Chưa có dữ liệu điểm danh nên hiện tạm tính theo bài tập."}
+          </li>
+          <li>
+            <strong>Đi học offline (thứ Sáu):</strong> đúng giờ, đúng chỗ đủ điểm · muộn {pct(SCORING.attendance.points.M)} · sai vị trí{" "}
+            {pct(SCORING.attendance.points.X)} · muộn và sai vị trí {pct(SCORING.attendance.points.M1)} · không có vị trí{" "}
+            {pct(SCORING.attendance.points.CANH_BAO)} · nghỉ có phép {pct(SCORING.attendance.points.P)} ·{" "}
+            <strong>vắng hoặc học qua Zoom 0đ</strong>.
           </li>
           <li>
             <strong>Bài ngày:</strong> câu bắt buộc {SCORING.daily.mandatory}đ · câu khuyến khích có video{" "}
@@ -86,12 +95,13 @@ export function LeaderboardPage(props: {
             <strong>Nộp trễ:</strong> video {SCORING.lateVideo}đ, câu viết một nửa. Trả lời cho có: 0đ.
           </li>
           <li>
-            <strong>Bài cũ tính ít dần</strong> (sau {SCORING.halfLifeWeeks} tuần còn một nửa): cố gắng từ hôm nay sẽ lên nhanh.
+            <strong>Bài cũ tính ít dần</strong> (sau {SCORING.halfLifeWeeks} tuần còn một nửa; buổi học sau {SCORING.attendance.halfLifeWeeks} tuần):
+            cố gắng từ hôm nay sẽ lên nhanh.
           </li>
           <li>
             <span class="swatch xanh">Xanh</span> ≥ {SCORING.greenFrom}% · <span class="swatch vang">Vàng</span>{" "}
             {SCORING.yellowFrom}–{SCORING.greenFrom - 1}% · <span class="swatch do">Đỏ</span> &lt; {SCORING.yellowFrom}%.
-            Bằng điểm: ai nộp video đúng hạn nhiều hơn, sớm hơn xếp trên.
+            Bằng điểm: ai đi học đúng giờ nhiều buổi hơn, rồi nộp video đúng hạn nhiều hơn, sớm hơn xếp trên.
           </li>
         </ul>
       </section>
@@ -123,6 +133,7 @@ const DIALOG_JS = `(() => {
   });
 })();`;
 
+const pct = (p: number | undefined) => `${Math.round((p ?? 0) * 100)}%`;
 const ddmm = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}`;
 const num = (n: number) => n.toLocaleString("vi-VN", { maximumFractionDigits: 1 });
 
@@ -155,6 +166,16 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
           </button>
         ) : null}
       </div>
+      <div class="hv-parts">
+        <div>
+          <span class="small muted">Bài tập</span>
+          <strong>{d.me.studyPercent.toLocaleString("vi-VN")}%</strong>
+        </div>
+        <div>
+          <span class="small muted">Đi học offline</span>
+          <strong>{d.me.attendancePercent === null ? "—" : `${d.me.attendancePercent.toLocaleString("vi-VN")}%`}</strong>
+        </div>
+      </div>
       {d.provisional ? <p class="muted small">Có bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p> : null}
 
       <h2>Thứ hạng 3 tuần gần nhất</h2>
@@ -179,7 +200,35 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
         </p>
       ) : null}
 
-      <h2>Điểm tích lũy</h2>
+      <h2>Đi học offline</h2>
+      {d.attendance ? (
+        <>
+          <div class="hv-stats">
+            <div>
+              <strong>
+                {d.attendance.present}/{d.attendance.sessions}
+              </strong>
+              <span class="small muted">buổi có mặt</span>
+            </div>
+            <div>
+              <strong>{d.attendance.onTime}</strong>
+              <span class="small muted">đúng giờ</span>
+            </div>
+            <div>
+              <strong>{d.attendance.excused}</strong>
+              <span class="small muted">nghỉ có phép</span>
+            </div>
+            <div>
+              <strong>{d.attendance.absent}</strong>
+              <span class="small muted">vắng</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <p class="muted small">Chưa có dữ liệu điểm danh offline.</p>
+      )}
+
+      <h2>Bài tập tích lũy</h2>
       <div class="hv-stats">
         <div>
           <strong>{d.onTime}</strong>

@@ -19,6 +19,10 @@
     // AI chấm bài: mô hình OpenAI rẻ nhất vừa đủ. Khóa nhập riêng làm secret OPENAI_API_KEY.
     "OPENAI_MODEL": "gpt-5-nano",
     "OPENAI_REASONING_EFFORT": "minimal",
+    // Google Sheet điểm danh offline (CHECK_IN) và danh sách chia thôn (DS_CHIA_THON). Chỉ là id file,
+    // muốn đọc được phải chia sẻ quyền xem cho tài khoản dịch vụ (secret GOOGLE_SERVICE_ACCOUNT_JSON).
+    "SHEET_ATTENDANCE_ID": "12nRGFRi67UkqFmzSZ7d6favIgxLp0ucyuyAH9vDMxYE",
+    "SHEET_ROSTER_ID": "1REe5rdJTf4BZVx03LCVwhrX81LQuLq9uaqHfLx8VuBg",
     // Cloudflare Access (không phải bí mật): ứng dụng "nskt-hub - Cloudflare Workers".
     "ACCESS_TEAM_DOMAIN": "hidden-art-d8b9.cloudflareaccess.com",
     "ACCESS_AUD": "cd04f88badc957f8cecaefefb0e646276500084e90c67baf5557c0eb9070133c"

@@ -14,3 +14,16 @@ Những việc **chỉ chủ dự án làm được** (Claude không có quyền
 Thứ tự an toàn: làm 1–4 trước, kiểm tra trang "Tình trạng dữ liệu" mở được và báo "Chưa nhập khóa dh3g", rồi mới làm bước 5. Khi chưa có khóa, ứng dụng không gọi dh3g.
 
 Sau bước 5: bấm "Tải lại toàn bộ từ đầu khóa" một lần. Dữ liệu về dần, mỗi 5 phút 3 khoảng ngày (khoảng 2 giờ cho lần đầu).
+
+## Nối Google Sheet điểm danh (chủ dự án làm một lần)
+
+Ứng dụng đọc hai file bằng một **tài khoản dịch vụ Google** chỉ có quyền xem: "NSKT2026 - KỶ LUẬT - HỌC VIÊN" (trang `CHECK_IN`) và "NSKT 2026 CHIA THÔN HỌC VIÊN" (trang `DS_CHIA_THON`).
+
+1. Vào https://console.cloud.google.com → chọn hoặc tạo một dự án (ví dụ `nskt-hub`).
+2. Mục **APIs & Services → Library** → tìm **Google Sheets API** → **Enable**.
+3. Mục **IAM & Admin → Service Accounts → Create service account**: đặt tên `nskt-hub-doc-sheet`, bấm **Done** (không cần cấp vai trò nào).
+4. Bấm vào tài khoản vừa tạo → tab **Keys → Add key → Create new key → JSON** → tải về một tệp `.json`. Tệp này là bí mật: không gửi qua chat, không để vào repo.
+5. Cloudflare → Workers & Pages → `nskt-hub` → Settings → Variables and Secrets → **Add** → kiểu **Secret**, tên `GOOGLE_SERVICE_ACCOUNT_JSON`, giá trị: mở tệp `.json` bằng Notepad / TextEdit, chép **toàn bộ** nội dung dán vào → Deploy.
+6. Trong tệp `.json` có dòng `client_email` (dạng `nskt-hub-doc-sheet@….iam.gserviceaccount.com`). Mở **từng file** Google Sheet ở trên → **Chia sẻ** → dán email đó → quyền **Người xem** → bỏ chọn "Thông báo" → Gửi.
+   Nếu Google báo không chia sẻ được ra ngoài tổ chức: quản trị Google Workspace / Drive dùng chung cần cho phép chia sẻ với email này.
+7. Mở `/du-lieu` → mục "Điểm danh offline" → bấm **Đọc lại điểm danh ngay**. Thấy "Thành công · N buổi · ghép được …" là xong; sau đó ứng dụng tự đọc mỗi giờ.

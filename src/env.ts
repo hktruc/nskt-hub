@@ -14,6 +14,11 @@ export type Env = {
   OPENAI_REASONING_EFFORT?: string;
   OPENAI_BASE_URL?: string;
 
+  // Điểm danh offline từ Google Sheet: id file (không bí mật) + khóa tài khoản dịch vụ (secret).
+  SHEET_ATTENDANCE_ID?: string;
+  SHEET_ROSTER_ID?: string;
+  GOOGLE_SERVICE_ACCOUNT_JSON?: string;
+
   // Đăng nhập qua Cloudflare Access.
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;

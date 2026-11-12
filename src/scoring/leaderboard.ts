@@ -18,14 +18,19 @@ export type ScoreRow = {
   provisional: number;
 };
 
+export type AttRow = { learner_id: number; session_day: string; code: string };
+
 export type Ranked = {
   rank: number;
   learnerId: number;
   name: string;
   team: string;
-  percent: number; // 0–100, làm tròn 1 chữ số
+  percent: number; // 0–100, làm tròn 1 chữ số: điểm xếp hạng
+  studyPercent: number; // điểm bài tập
+  attendancePercent: number | null; // điểm đi học offline; null = chưa có buổi nào
   color: Color;
   colorLabel: string;
+  onTimeSessions: number; // số buổi có mặt đúng giờ, đúng chỗ
   onTimeVideos: number;
   avgHoursEarly: number;
 };
@@ -36,7 +41,15 @@ export function weight(dueAt: string, todayVN: string, halfLifeWeeks: number = S
   return Math.pow(0.5, weeks / halfLifeWeeks);
 }
 
-export function rank(rows: ScoreRow[], todayVN: string): { ranked: Ranked[]; provisional: boolean } {
+/** Điểm một buổi offline (0…1); null = không tính buổi đó (PD, ký hiệu lạ). */
+export function sessionPoints(code: string): number | null {
+  const p = SCORING.attendance.points[code];
+  return p === undefined ? null : p;
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+export function rank(rows: ScoreRow[], todayVN: string, att: AttRow[] = []): { ranked: Ranked[]; provisional: boolean } {
   const by = new Map<number, { name: string; team: string; num: number; den: number; vids: number; early: number; earlyN: number }>();
   let provisional = false;
   for (const r of rows) {
@@ -54,8 +67,23 @@ export function rank(rows: ScoreRow[], todayVN: string): { ranked: Ranked[]; pro
     }
     by.set(r.learner_id, e);
   }
+  const attBy = new Map<number, { num: number; den: number; ok: number }>();
+  for (const a of att) {
+    const p = sessionPoints(a.code);
+    if (p === null || a.session_day > todayVN.slice(0, 10)) continue;
+    const w = weight(a.session_day, todayVN, SCORING.attendance.halfLifeWeeks);
+    const e = attBy.get(a.learner_id) ?? { num: 0, den: 0, ok: 0 };
+    e.num += p * w;
+    e.den += w;
+    if (a.code === "OK") e.ok++;
+    attBy.set(a.learner_id, e);
+  }
+  const share = SCORING.attendance.share;
   const list = [...by.entries()].map(([learnerId, e]) => {
-    const percent = e.den > 0 ? Math.round((1000 * e.num) / e.den) / 10 : 0;
+    const study = e.den > 0 ? (100 * e.num) / e.den : 0;
+    const a = attBy.get(learnerId);
+    const attendance = a && a.den > 0 ? (100 * a.num) / a.den : null;
+    const percent = round1(attendance === null ? study : (1 - share) * study + share * attendance);
     const color = colorOf(percent);
     return {
       rank: 0,
@@ -63,14 +91,17 @@ export function rank(rows: ScoreRow[], todayVN: string): { ranked: Ranked[]; pro
       name: e.name,
       team: e.team,
       percent,
+      studyPercent: round1(study),
+      attendancePercent: attendance === null ? null : round1(attendance),
       color,
       colorLabel: COLOR_LABEL[color],
+      onTimeSessions: a?.ok ?? 0,
       onTimeVideos: e.vids,
       avgHoursEarly: e.earlyN ? Math.round((10 * e.early) / e.earlyN) / 10 : 0,
     };
   });
   const cmp = (a: Ranked, b: Ranked) =>
-    b.percent - a.percent || b.onTimeVideos - a.onTimeVideos || b.avgHoursEarly - a.avgHoursEarly;
+    b.percent - a.percent || b.onTimeSessions - a.onTimeSessions || b.onTimeVideos - a.onTimeVideos || b.avgHoursEarly - a.avgHoursEarly;
   list.sort((a, b) => cmp(a, b) || a.name.localeCompare(b.name, "vi"));
   list.forEach((x, i) => {
     const prev = list[i - 1];
@@ -88,10 +119,16 @@ async function loadRows(db: D1Database): Promise<ScoreRow[]> {
   return (await db.prepare(ROWS_SQL).bind(SCORING.startDate).all<ScoreRow>()).results;
 }
 
+async function loadAtt(db: D1Database): Promise<AttRow[]> {
+  return (
+    await db.prepare("SELECT learner_id, session_day, code FROM offline_attendance WHERE session_day >= ?").bind(SCORING.startDate).all<AttRow>()
+  ).results;
+}
+
 export async function loadLeaderboard(db: D1Database, todayVN: string) {
-  const rows = await loadRows(db);
+  const [rows, att] = await Promise.all([loadRows(db), loadAtt(db)]);
   const updated = await db.prepare("SELECT MAX(computed_at) AS at FROM scores").first<{ at: string | null }>();
-  return { ...rank(rows, todayVN), updatedAt: updated?.at ?? null };
+  return { ...rank(rows, todayVN, att), hasAttendance: att.length > 0, updatedAt: updated?.at ?? null };
 }
 
 // ---- Chi tiết một học viên (mở khi bấm vào tên trên bảng xếp hạng) ----
@@ -99,12 +136,16 @@ export async function loadLeaderboard(db: D1Database, todayVN: string) {
 export type Snapshot = { day: string; weeksAgo: number; rank: number | null; total: number; percent: number | null };
 
 /** Thứ hạng của học viên ở hôm nay và 1…`weeks` tuần trước: chỉ tính các bài đã tới hạn ở thời điểm đó. */
-export function rankHistory(rows: ScoreRow[], learnerId: number, todayVN: string, weeks = 3): Snapshot[] {
+export function rankHistory(rows: ScoreRow[], learnerId: number, todayVN: string, weeks = 3, att: AttRow[] = []): Snapshot[] {
   const today = todayVN.slice(0, 10);
   const out: Snapshot[] = [];
   for (let k = weeks; k >= 0; k--) {
     const day = addDays(today, -7 * k);
-    const ranked = rank(k === 0 ? rows : rows.filter((r) => r.due_at.slice(0, 10) <= day), day).ranked;
+    const ranked = rank(
+      k === 0 ? rows : rows.filter((r) => r.due_at.slice(0, 10) <= day),
+      day,
+      att.filter((a) => a.session_day <= day),
+    ).ranked;
     const me = ranked.find((r) => r.learnerId === learnerId);
     out.push({ day, weeksAgo: k, rank: me?.rank ?? null, total: ranked.length, percent: me?.percent ?? null });
   }
@@ -127,6 +168,8 @@ export type LearnerDetail = {
   missing: number;
   videos: number; // video đúng hạn
   provisional: boolean;
+  /** Đi học offline: chỉ số tổng, không liệt kê từng buổi (trang công khai). */
+  attendance: { sessions: number; present: number; onTime: number; late: number; excused: number; absent: number } | null;
 };
 
 type DetailRow = { type: string | null; due_at: string; earned: number; max: number; on_time_videos: number; provisional: number; status: string | null };
@@ -186,8 +229,8 @@ export function summarize(items: DetailRow[], todayVN: string) {
 }
 
 export async function loadLearnerDetail(db: D1Database, learnerId: number, todayVN: string): Promise<LearnerDetail | null> {
-  const rows = await loadRows(db);
-  const { ranked } = rank(rows, todayVN);
+  const [rows, att] = await Promise.all([loadRows(db), loadAtt(db)]);
+  const { ranked } = rank(rows, todayVN, att);
   const me = ranked.find((r) => r.learnerId === learnerId);
   if (!me) return null; // chỉ học viên thuộc 12 đội
   const team = ranked.filter((r) => r.team === me.team);
@@ -207,7 +250,22 @@ export async function loadLearnerDetail(db: D1Database, learnerId: number, today
     total: ranked.length,
     teamRank: 1 + team.filter((r) => r.rank < me.rank).length,
     teamTotal: team.length,
-    history: rankHistory(rows, learnerId, todayVN),
+    history: rankHistory(rows, learnerId, todayVN, 3, att),
     ...summarize(items, todayVN),
+    attendance: summarizeAttendance(att.filter((a) => a.learner_id === learnerId && a.session_day <= todayVN.slice(0, 10))),
+  };
+}
+
+export function summarizeAttendance(mine: AttRow[]): LearnerDetail["attendance"] {
+  const counted = mine.filter((a) => sessionPoints(a.code) !== null);
+  if (counted.length === 0) return null;
+  const n = (...codes: string[]) => counted.filter((a) => codes.includes(a.code)).length;
+  return {
+    sessions: counted.length,
+    present: n("OK", "M", "X", "M1", "CANH_BAO"),
+    onTime: n("OK"),
+    late: n("M", "M1"),
+    excused: n("P"),
+    absent: n("VANG"),
   };
 }
