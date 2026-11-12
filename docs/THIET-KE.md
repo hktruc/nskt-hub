@@ -67,3 +67,9 @@ Thứ tự trên màn hình điện thoại:
 4. Danh sách thẻ bài nộp; bấm vào một thẻ thì mở khối chấm điểm ngay bên dưới.
 
 Phát hiện media: tìm link trong nội dung trả lời, phân loại YouTube / Facebook / TikTok / Google Drive / ảnh hoặc tệp tải lên dh3g (`s3.sunteco.app`) / khác. Không dùng `mediaCount` của dh3g.
+
+## Cập nhật 12/11/2026: nhận diện theo logo "Nhân Sự Kế Thừa 2026"
+
+- Logo ở `public/brand/logo.webp`; biểu tượng tab `favicon-64.png`; biểu tượng "Thêm vào màn hình chính" `apple-touch-icon.png`, `icon-192/512.png`; ảnh xem trước khi chia sẻ link bảng xếp hạng `og-bang-xep-hang.png` (1200×630). Tệp tĩnh phục vụ qua Workers Assets (`wrangler.jsonc` → `assets`).
+- Màu lấy từ logo: **chính `#076A8F`** (xanh dương bánh lái), **phụ `#1D9195`** (xanh ngọc ô 2026), **nhấn `#FB9E20`** (cam "Kế Thừa", dùng cho vạch đánh dấu mục đang mở). Nền `#F3F8FA`, chữ `#0B3B4E`. Chế độ tối: chính `#5BBDE0`, logo đặt trên nền trắng bo góc.
+- Điều hướng: điện thoại có **thanh menu dưới đáy** (Tổng quan · Nộp bài · Chấm bài · Xếp hạng · Thêm); máy tính có menu ngang trên cùng, mục đang mở tô nền. Ban phụng sự chỉ có Bàn chấm · Tài khoản. Biểu tượng nét mảnh kiểu Lucide, vẽ sẵn trong `src/layout.tsx`.

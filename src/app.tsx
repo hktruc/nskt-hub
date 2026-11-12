@@ -46,7 +46,7 @@ app.get("/bang-xep-hang", async (c) => {
   const doi = c.req.query("doi") ?? "";
   c.header("Cache-Control", "public, max-age=300");
   return c.html(
-    <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} hasAttendance={data.hasAttendance} updatedAt={data.updatedAt} />,
+    <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} hasAttendance={data.hasAttendance} updatedAt={data.updatedAt} origin={new URL(c.req.url).origin} />,
   );
 });
 
