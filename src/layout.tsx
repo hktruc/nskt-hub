@@ -133,6 +133,16 @@ dialog.sheet::backdrop { background:rgba(4,32,29,.45); }
 table.weeks { font-size:.8125rem; border:1px solid var(--line); border-radius:var(--radius); border-collapse:separate; border-spacing:0; overflow:hidden; }
 table.weeks th, table.weeks td { padding:6px 8px; }
 table.weeks tr:last-child td { border-bottom:0; }
+.ov-colors { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:inherit; text-decoration:none; }
+.ov-colors .swatch { font-size:.9375rem; padding:6px 14px; }
+.ov-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px; margin:16px 0; }
+.ov-grid .lbl { font-size:.8125rem; }
+.ov-title { font-weight:600; line-height:1.35; margin:2px 0; }
+.ov-teams td, .ov-teams th { white-space:nowrap; }
+.mini { display:inline-block; min-width:1.8em; text-align:center; font-size:.75rem; font-weight:700; padding:1px 6px; border-radius:999px; margin-right:3px; }
+.mini.xanh { background:var(--g-bg); color:var(--g-fg); } .mini.vang { background:var(--y-bg); color:var(--y-fg); } .mini.do { background:var(--r-bg); color:var(--r-fg); }
+.ov-links { display:flex; flex-wrap:wrap; gap:8px; }
+.ov-links a { display:inline-flex; align-items:center; min-height:44px; padding:8px 14px; border-radius:var(--radius); background:var(--card); border:1px solid var(--line); text-decoration:none; font-weight:600; }
 .auth-box { max-width:400px; margin:0 auto; }
 .auth-form { display:flex; flex-direction:column; gap:6px; margin:12px 0; }
 .auth-form label { font-weight:600; font-size:.875rem; margin-top:6px; }
@@ -173,6 +183,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
             </>
           ) : (
             <>
+              <a href="/">Tổng quan</a>
               <a href="/nop-bai">Nộp bài</a>
               <a href="/bang-xep-hang">Xếp hạng</a>
               <a href="/canh-bao">Cảnh báo</a>

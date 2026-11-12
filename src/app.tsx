@@ -6,6 +6,7 @@ import type { Env } from "./env";
 import { Layout } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
+import { loadOverview, OverviewPage } from "./pages/overview";
 import { syncOfflineAttendance } from "./attendance/offline";
 import { AccountPage, ActivatePage, ForbiddenPage, GraderHomePage, LoginPage, NeedLoginPage } from "./pages/account";
 import { AdminPage, type IssuedCode } from "./pages/admin";
@@ -219,27 +220,7 @@ app.post("/quan-tri/doi", async (c) => {
   return c.redirect("/quan-tri?tb=doi", 303);
 });
 
-app.get("/", (c) =>
-  c.html(
-    <Layout title="Trang chủ">
-      <h1>nskt-hub</h1>
-      <p>Web app quản lý học tập NSKT2026 cho BTC. Đang xây dựng.</p>
-      <ul>
-        <li>
-          <a href="/du-lieu">Tình trạng dữ liệu</a>
-        </li>
-        <li>
-          <a href="/nop-bai">Theo dõi nộp bài</a>
-        </li>
-        <li>Đọc bài và chấm điểm — sắp có (Đợt 3)</li>
-        <li>
-          <a href="/bang-xep-hang">Bảng xếp hạng (công khai)</a>
-        </li>
-        <li>Báo cáo thống kê — sắp có (Đợt 5)</li>
-      </ul>
-    </Layout>,
-  ),
-);
+app.get("/", async (c) => c.html(<OverviewPage o={await loadOverview(c.env)} />));
 
 const NOTICES: Record<string, string> = {
   "da-xep": "Đã xếp việc vào hàng đợi. Dữ liệu sẽ về dần; tải lại trang này sau vài phút.",
