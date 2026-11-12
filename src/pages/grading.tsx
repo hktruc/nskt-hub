@@ -65,6 +65,7 @@ export function QueuePage(props: {
       {grader && props.teams.length === 0 ? <p class="warn">Bạn chưa được giao đội nào. Nhờ admin giao đội.</p> : null}
       {props.weeks.length === 0 ? <p class="muted">Chưa có bài tuần nào tới hạn.</p> : null}
 
+      <p class="chips-label">Chọn bài tuần</p>
       <nav class="chips" aria-label="Chọn bài tuần">
         {props.weeks.map((w) => (
           <a class={`chip${w.id === week?.id ? " on" : ""}`} href={link({ bt: w.id, loc: "" })}>
@@ -75,21 +76,31 @@ export function QueuePage(props: {
       {week ? (
         <>
           <p class="muted small">
-            Hạn nộp {shortVN(week.due_at)} · hạn chấm {GRADING.dueDays} ngày sau đó · Trọng tâm tuần (B1): <strong>{props.focus}</strong>
+            Hạn nộp {shortVN(week.due_at)} · cần chấm xong trong {GRADING.dueDays} ngày sau hạn nộp.
           </p>
-          {!grader ? (
-            <form method="post" action="/cham/trong-tam" class="pick-row focus-form">
-              <input type="hidden" name="bt" value={String(week.id)} />
-              <select name="tt" aria-label="Đổi trọng tâm tuần">
-                {FOCUS_OPTIONS.map((f) => (
-                  <option value={f} selected={f === props.focus}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-              <button class="secondary">Đổi trọng tâm</button>
-            </form>
-          ) : null}
+          <details class="week-setting">
+            <summary>
+              Năng lực trọng tâm của tuần này: <span style="color:var(--accent)">{props.focus}</span>
+            </summary>
+            <p class="small muted" style="margin:6px 0">
+              Mỗi bài tuần rèn một năng lực chính theo giai đoạn của hành trình (kể chuyện, soạn bài, đặt câu hỏi…). Người chấm sẽ chấm tiêu chí{" "}
+              <strong>B1</strong> theo đúng năng lực này. Mặc định là "Truyền cảm hứng theo chiều sâu"; khi lớp chuyển sang giai đoạn mới, coach / BTC
+              chọn lại ở đây cho bài tuần tương ứng.
+            </p>
+            {!grader ? (
+              <form method="post" action="/cham/trong-tam" class="pick-row focus-form">
+                <input type="hidden" name="bt" value={String(week.id)} />
+                <select name="tt" aria-label="Chọn năng lực trọng tâm">
+                  {FOCUS_OPTIONS.map((f) => (
+                    <option value={f} selected={f === props.focus}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+                <button class="secondary">Lưu</button>
+              </form>
+            ) : null}
+          </details>
           {!grader ? (
             <p class="small">
               <a href="/cham/nguoi-cham">→ Năng lực người chấm (ai chấm bao nhiêu, đúng hạn, dễ hay khắt khe)</a>
@@ -118,6 +129,8 @@ export function QueuePage(props: {
           </div>
 
           {props.teams.length > 1 ? (
+            <>
+            <p class="chips-label">Lọc theo đội (số đỏ = chưa chấm)</p>
             <nav class="chips" aria-label="Lọc theo đội">
               <a class={`chip${props.team ? "" : " on"}`} href={link({ doi: "" })}>
                 Tất cả đội
@@ -132,6 +145,7 @@ export function QueuePage(props: {
                 );
               })}
             </nav>
+            </>
           ) : null}
           <p class="small">
             Sắp xếp: <a href={link({ loc: "" })}>theo đội</a> · <a href={link({ loc: "diem" })}>điểm cao → thấp</a> ·{" "}
