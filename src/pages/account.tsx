@@ -92,7 +92,7 @@ export function AccountPage(props: { user: User; error?: string; notice?: string
   return (
     <Layout title="Tài khoản" nav={u.role === "phung_su" ? "grader" : "full"}>
       <h1>Tài khoản</h1>
-      {props.notice ? <p class="notice">{props.notice}</p> : null}
+      {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
       <p>
         <strong>{u.name}</strong> · {ROLE_LABEL[u.role]}
         {u.viaAccess ? " (đăng nhập qua Cloudflare Access)" : ` · ${u.phone}`}

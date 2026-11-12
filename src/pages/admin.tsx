@@ -29,7 +29,7 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
           </p>
         </div>
       ) : null}
-      {props.notice ? <p class="notice">{props.notice}</p> : null}
+      {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
       {props.error ? <p class="warn">{props.error}</p> : null}
 
       <h2>Thêm người</h2>

@@ -4,7 +4,7 @@ import type { Env } from "../env";
 import { Layout } from "../layout";
 import { SCORING } from "../scoring/config";
 import { gradableAssignments, loadQueue } from "../grading/store";
-import { loadLeaderboard } from "../scoring/leaderboard";
+import { loadColorTrend, loadLeaderboard } from "../scoring/leaderboard";
 import { bucketOf, nowVietnam, shortVN, type Bucket } from "./submissions";
 
 // Trang chủ cho BTC: nhìn một lần thấy tình hình cả khóa, rồi bấm đi tiếp vào trang chi tiết.
@@ -25,6 +25,7 @@ type TeamRow = {
 export type Overview = {
   learners: number;
   colors: { xanh: number; vang: number; do: number };
+  colorsWeekAgo: { xanh: number; vang: number; do: number } | null;
   avg: number;
   provisional: boolean;
   hasAttendance: boolean;
@@ -44,7 +45,7 @@ const PRESENT = new Set(["OK", "M", "X", "M1", "CANH_BAO"]);
 export async function loadOverview(env: Env, now = new Date()): Promise<Overview> {
   const db = env.DB;
   const nowVN = nowVietnam(now);
-  const lb = await loadLeaderboard(db, nowVN);
+  const [lb, trend] = await Promise.all([loadLeaderboard(db, nowVN), loadColorTrend(db, nowVN)]);
   const ranked = lb.ranked;
   const [lastA, nextA, flags, ai, dh3g, sheet, lastDay] = await db.batch([
     db.prepare("SELECT id, title, type, due_at FROM assignments WHERE due_at <= ? AND due_at >= ? ORDER BY due_at DESC, id DESC LIMIT 1").bind(nowVN, SCORING.startDate),
@@ -118,6 +119,7 @@ export async function loadOverview(env: Env, now = new Date()): Promise<Overview
       vang: ranked.filter((r) => r.color === "vang").length,
       do: ranked.filter((r) => r.color === "do").length,
     },
+    colorsWeekAgo: trend.weekAgo.xanh + trend.weekAgo.vang + trend.weekAgo.do ? trend.weekAgo : null,
     avg: ranked.length ? Math.round((10 * ranked.reduce((a, r) => a + r.percent, 0)) / ranked.length) / 10 : 0,
     provisional: lb.provisional,
     hasAttendance: lb.hasAttendance,
@@ -160,11 +162,22 @@ export function OverviewPage(props: { o: Overview }) {
 
       <h2>Xếp hạng</h2>
       <a class="ov-colors" href="/bang-xep-hang">
-        <span class="swatch xanh">{o.colors.xanh} Xanh</span>
-        <span class="swatch vang">{o.colors.vang} Vàng</span>
-        <span class="swatch do">{o.colors.do} Đỏ</span>
+        {(["xanh", "vang", "do"] as const).map((c) => {
+          const diff = o.colorsWeekAgo ? o.colors[c] - o.colorsWeekAgo[c] : 0;
+          return (
+            <span class={`ov-color ${c}`}>
+              <strong>{o.colors[c]}</strong> {{ xanh: "Xanh", vang: "Vàng", do: "Đỏ" }[c]}
+              {o.colorsWeekAgo && diff !== 0 ? (
+                <span class={`trend ${(c === "do" ? diff < 0 : c === "xanh" ? diff > 0 : false) ? "good" : (c === "do" ? diff > 0 : c === "xanh" ? diff < 0 : false) ? "bad" : ""}`}>
+                  {diff > 0 ? "▲" : "▼"} {Math.abs(diff)}
+                </span>
+              ) : null}
+            </span>
+          );
+        })}
         <span class="muted small">Điểm trung bình {o.avg.toLocaleString("vi-VN")}% →</span>
       </a>
+      {o.colorsWeekAgo ? <p class="muted small" style="margin:4px 0 0">Mũi tên: thay đổi so với 7 ngày trước.</p> : null}
       {o.provisional ? <p class="muted small">Còn {o.aiPending.toLocaleString("vi-VN")} bài đang chờ AI chấm.</p> : null}
 
       <div class="ov-grid">

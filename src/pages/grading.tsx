@@ -63,7 +63,7 @@ export function QueuePage(props: {
   return (
     <Layout title="Bàn chấm" nav={grader ? "grader" : "full"}>
       <h1>Bàn chấm bài tuần</h1>
-      {props.notice ? <p class="notice">{props.notice}</p> : null}
+      {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
       {grader && props.teams.length === 0 ? <p class="warn">Bạn chưa được giao đội nào. Nhờ admin giao đội.</p> : null}
       {props.weeks.length === 0 ? <p class="muted">Chưa có bài tuần nào tới hạn.</p> : null}
 
@@ -285,6 +285,41 @@ function Choice(props: { name: string; legend: string; options: Record<string, s
   );
 }
 
+// Điểm tạm tính ngay khi bấm sao (cùng công thức với máy chủ: 60% phần riêng + 40% B1, B2) và nhắc chỗ còn thiếu.
+const LIVE_JS = `(() => {
+  const f = document.querySelector('.sheet-form'); if (!f) return;
+  const val = (n) => { const x = f.querySelector('input[name="' + n + '"]:checked'); return x ? x.value : null; };
+  const avg = (a) => a.length ? a.reduce((p, q) => p + q, 0) / a.length : null;
+  const cards = [...f.querySelectorAll('input[name^="t"][type=hidden]')].map((h) => ({ i: h.name.slice(1), kind: h.value }));
+  const keys = (c) => c.kind === 'video' ? ['a1','a2','a3','a4'] : ['a5'];
+  function calc() {
+    let done = 0; const own = [];
+    for (const c of cards) {
+      if (val('f_' + c.i)) { done++; continue; }
+      const xs = keys(c).map((k) => val(k + '_' + c.i)).filter(Boolean).map(Number);
+      if (xs.length === keys(c).length) { done++; own.push(avg(xs)); }
+    }
+    const common = avg(['b1','b2'].map(val).filter(Boolean).map(Number));
+    const o = avg(own);
+    const sc = o === null && common === null ? null : o === null ? common : common === null ? o : ${GRADING.itemsShare} * o + ${1 - GRADING.itemsShare} * common;
+    document.getElementById('live-cards').textContent = 'Thẻ đã chấm: ' + done + '/' + cards.length;
+    const q = sc === null ? '' : sc >= ${GRADING.goodFrom} ? ' · Tốt' : sc >= ${GRADING.okFrom} ? ' · Khá' : ' · Cần kèm';
+    document.getElementById('live-score').textContent = 'Điểm tạm tính: ' + (sc === null ? '—' : sc.toFixed(1).replace('.', ',') + '★' + q);
+  }
+  f.addEventListener('change', calc); calc();
+  f.addEventListener('submit', (e) => {
+    const need = [];
+    for (const c of cards) if (!val('f_' + c.i)) keys(c).forEach((k) => { if (!val(k + '_' + c.i)) need.push(k + '_' + c.i); });
+    ['b1','b2','spirit','progress'].forEach((k) => { if (!val(k)) need.push(k); });
+    if (!need.length) return;
+    e.preventDefault();
+    const el = f.querySelector('input[name="' + need[0] + '"]').closest('fieldset');
+    f.querySelectorAll('fieldset.missing').forEach((x) => x.classList.remove('missing'));
+    need.forEach((n) => f.querySelector('input[name="' + n + '"]').closest('fieldset').classList.add('missing'));
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+})();`;
+
 export type SheetDraft = Record<string, string>;
 
 export function SheetPage(props: { user: User; s: SheetData; error?: string; draft?: SheetDraft; notice?: string; back: string }) {
@@ -308,7 +343,7 @@ export function SheetPage(props: { user: User; s: SheetData; error?: string; dra
         {teamLabel(s.learner.team)} · {s.assignment.title} · nộp {shortVN(s.submittedAt)}
         {s.status === "OVERDUE" || s.status === "LATE" ? " (trễ)" : ""}
       </p>
-      {props.notice ? <p class="notice">{props.notice}</p> : null}
+      {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
       {s.review ? (
         <p class="notice small">
           Đã chấm: <strong>{fmt(s.review.score)}★</strong> · {s.review.grader_label} · {shortVN(s.review.updated_at.slice(0, 19))} (giờ máy chủ). Lưu lại sẽ
@@ -427,6 +462,10 @@ export function SheetPage(props: { user: User; s: SheetData; error?: string; dra
         ) : null}
 
         <div class="sheet-bar">
+          <div class="live" aria-live="polite">
+            <span id="live-cards">Thẻ đã chấm: —</span>
+            <strong id="live-score">Điểm tạm tính: —</strong>
+          </div>
           <a class="btn secondary-btn" href={props.back}>
             Để sau
           </a>
@@ -435,7 +474,7 @@ export function SheetPage(props: { user: User; s: SheetData; error?: string; dra
       </form>
       <script
         dangerouslySetInnerHTML={{
-          __html: `document.querySelectorAll('.qc-btn').forEach(b=>b.addEventListener('click',()=>{const t=document.querySelector('textarea[name=comment]');t.value=(t.value.trim()?t.value.trim()+'. ':'')+b.dataset.q;t.focus();}));`,
+          __html: `document.querySelectorAll('.qc-btn').forEach(b=>b.addEventListener('click',()=>{const t=document.querySelector('textarea[name=comment]');t.value=(t.value.trim()?t.value.trim()+'. ':'')+b.dataset.q;t.focus();}));` + LIVE_JS,
         }}
       />
     </Layout>

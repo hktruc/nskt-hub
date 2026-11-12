@@ -165,7 +165,24 @@ table.weeks { font-size:.8125rem; border:1px solid var(--line); border-radius:va
 table.weeks th, table.weeks td { padding:6px 8px; }
 table.weeks tr:last-child td { border-bottom:0; }
 .ov-colors { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:inherit; text-decoration:none; }
-.ov-colors .swatch { font-size:.9375rem; padding:6px 14px; }
+.ov-color { display:inline-flex; align-items:baseline; gap:6px; padding:8px 14px; border-radius:14px; font-size:.9375rem; box-shadow:var(--shadow); }
+.ov-color strong { font-size:1.375rem; font-variant-numeric:tabular-nums; }
+.ov-color.xanh { background:var(--g-bg); color:var(--g-fg); } .ov-color.vang { background:var(--y-bg); color:var(--y-fg); } .ov-color.do { background:var(--r-bg); color:var(--r-fg); }
+.trend { font-size:.75rem; font-weight:700; opacity:.85; } .trend.good { color:#15803D; } .trend.bad { color:#B91C1C; }
+@media (prefers-color-scheme: dark) { .trend.good { color:#86EFAC; } .trend.bad { color:#FCA5A5; } }
+/* Bảng theo đội: thành thẻ trên điện thoại */
+@media (max-width: 640px) {
+  .ov-teams thead { display:none; }
+  .ov-teams, .ov-teams tbody { display:block; }
+  .ov-teams tr { display:grid; grid-template-columns:1fr auto; gap:2px 10px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .ov-teams td { border:0; padding:0; text-align:left !important; }
+  .ov-teams td:nth-child(2) { text-align:right !important; font-size:1.0625rem; }
+  .ov-teams td:nth-child(4)::before { content:"Nộp bài gần nhất: "; color:var(--muted); font-size:.8125rem; }
+  .ov-teams td:nth-child(5)::before { content:"Có mặt: "; color:var(--muted); font-size:.8125rem; }
+  .ov-teams td:nth-child(4), .ov-teams td:nth-child(5) { font-size:.875rem; }
+  .ov-teams + * { margin-top:0; }
+  .scroll:has(.ov-teams) { overflow:visible; }
+}
 .ov-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px; margin:16px 0; }
 .ov-grid .lbl { font-size:.8125rem; }
 .ov-title { font-weight:600; line-height:1.35; margin:2px 0; }
@@ -210,6 +227,11 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .qc-btn { min-height:32px; padding:2px 10px; font-size:.75rem; background:transparent; color:var(--accent); border:1px dashed var(--accent); }
 .written { margin:8px 0; } .written .answer { white-space:pre-wrap; font-size:.9375rem; background:var(--soft); border-radius:8px; padding:8px 10px; margin:0; }
 .sheet-bar { position:sticky; bottom:0; display:flex; gap:8px; padding:10px 0; background:var(--bg); border-top:1px solid var(--line); margin-top:12px; }
+.sheet-bar { flex-wrap:wrap; }
+.sheet-bar .live { flex-basis:100%; display:flex; justify-content:space-between; gap:8px; font-size:.8125rem; color:var(--muted); }
+.sheet-bar .live strong { color:var(--fg); }
+.crit.missing { background:var(--bad-bg); border-radius:10px; padding:10px 8px 8px; margin-left:-8px; margin-right:-8px; }
+.crit.missing legend::after { content:" — chưa chọn"; color:var(--bad-fg); font-weight:600; font-size:.8125rem; }
 .sheet-bar button { flex:2; } .secondary-btn { flex:1; justify-content:center; background:var(--soft); color:var(--fg); border:1px solid var(--line); }
 .g-stats { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:6px; font-size:.875rem; }
 .qweeks { display:flex; flex-wrap:wrap; gap:4px; } .qweeks .mini { font-size:.8125rem; padding:2px 8px; }
@@ -254,6 +276,11 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
   .sheet-body::before { content:""; display:block; width:40px; height:4px; border-radius:4px; background:var(--line); margin:-4px auto 10px; }
 }
 @keyframes sheet-up { from { transform:translateY(40px); opacity:.6; } to { transform:none; opacity:1; } }
+/* Thông báo nổi sau khi lưu: hiện ở đáy màn hình rồi tự ẩn. */
+.toast { width:max-content; position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:40; margin:0; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 8px 24px rgba(11,59,78,.22); font-weight:600; animation:toast-in .25s ease-out, toast-out .4s ease-in 4s forwards; }
+@media (min-width: 760px) { .toast { bottom:24px; } }
+@keyframes toast-in { from { opacity:0; transform:translate(-50%, 12px); } to { opacity:1; transform:translate(-50%, 0); } }
+@keyframes toast-out { to { opacity:0; transform:translate(-50%, 12px); visibility:hidden; } }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
