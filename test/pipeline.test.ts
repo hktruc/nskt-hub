@@ -100,5 +100,8 @@ describe("bảng xếp hạng theo đội", () => {
     expect(html).toContain("#4 khóa");
     expect(html.match(/class="rank">(\d+)</g)).toEqual(['class="rank">1<', 'class="rank">1<', 'class="rank">3<']);
     expect(html).not.toContain("HV 1<");
+    // Bục Top 3 và thanh tỷ lệ màu (đội có 3 người).
+    expect(html).toContain('class="podium"');
+    expect(html).toContain('class="dist"');
   });
 });

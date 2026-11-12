@@ -213,6 +213,47 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .sheet-bar button { flex:2; } .secondary-btn { flex:1; justify-content:center; background:var(--soft); color:var(--fg); border:1px solid var(--line); }
 .g-stats { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:6px; font-size:.875rem; }
 .qweeks { display:flex; flex-wrap:wrap; gap:4px; } .qweeks .mini { font-size:.8125rem; padding:2px 8px; }
+/* ---- Bảng xếp hạng công khai ---- */
+.bxh-hero { background:linear-gradient(135deg, #076A8F, #1D9195); color:#fff; border-radius:18px; padding:18px 18px 14px; margin:0 0 6px; box-shadow:var(--shadow); }
+.bxh-hero h1 { color:#fff; margin:0 0 2px; font-size:1.625rem; }
+.bxh-hero .eyebrow { margin:0; font-size:.75rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--orange); }
+.bxh-hero p.small { margin:0 0 12px; opacity:.9; }
+.dist { display:flex; height:12px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.25); gap:2px; }
+.dist span { display:block; } .seg-xanh { background:#4ADE80; } .seg-vang { background:#FACC15; } .seg-do { background:#F87171; }
+.dist-legend { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; }
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
+.dot.xanh { background:#4ADE80; } .dot.vang { background:#FACC15; } .dot.do { background:#F87171; }
+.podium { display:grid; grid-template-columns:1fr 1.15fr 1fr; gap:8px; align-items:end; margin:12px auto 10px; max-width:620px; }
+.pod { display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:12px 8px 10px; border-radius:16px; text-decoration:none; color:inherit; box-shadow:var(--shadow); border:1px solid rgba(0,0,0,.04); min-width:0; }
+.pod-1 { padding-top:18px; padding-bottom:16px; }
+.pod .medal { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-weight:800; color:#fff; margin-bottom:4px; }
+.pod-1 .medal { background:linear-gradient(135deg,#F7C948,#E09F00); width:42px; height:42px; font-size:1.125rem; }
+.pod-2 .medal { background:linear-gradient(135deg,#C9D3DA,#8FA0AB); } .pod-3 .medal { background:linear-gradient(135deg,#E8A273,#B8693A); }
+.pod .pname { font-weight:700; font-size:.875rem; line-height:1.25; max-width:100%; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.pod .pteam { font-size:.6875rem; opacity:.8; } .pod .ppct { font-weight:800; font-size:1.0625rem; font-variant-numeric:tabular-nums; }
+.pod.xanh { background:var(--g-bg); color:var(--g-fg); } .pod.vang { background:var(--y-bg); color:var(--y-fg); } .pod.do { background:var(--r-bg); color:var(--r-fg); }
+.search { position:sticky; top:68px; z-index:5; display:flex; align-items:center; gap:10px; background:var(--bg); padding:6px 0 8px; }
+.search input { flex:1; min-height:44px; border:1px solid var(--line); border-radius:999px; padding:8px 16px 8px 40px; font:16px var(--font); color:var(--fg); background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%234B6573' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='m13 13 4 4'/%3E%3C/svg%3E") no-repeat 14px center; }
+.rank-list > li[hidden] { display:none; }
+/* Cửa sổ chi tiết: biểu đồ */
+.rank-chart { width:100%; height:auto; max-height:110px; display:block; margin:2px 0 8px; }
+.rank-chart .grid { stroke:var(--line); stroke-dasharray:3 4; } .rank-chart .lbl { font-size:9px; fill:var(--muted); }
+.rank-chart .line { fill:none; stroke:var(--accent); stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round; }
+.rank-chart .pt { fill:var(--card); stroke:var(--accent); stroke-width:2; } .rank-chart .pt.now { fill:var(--orange); stroke:var(--orange); }
+.wbars { display:flex; align-items:flex-end; gap:6px; height:130px; padding:6px 2px 0; margin:6px 0 4px; }
+.wbar { flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; min-width:0; }
+.wbar .wv { font-size:.625rem; font-weight:700; color:var(--muted); margin-bottom:2px; }
+.wbar .wb { width:100%; max-width:30px; border-radius:6px 6px 2px 2px; }
+.wbar .wb.xanh { background:#4ADE80; } .wbar .wb.vang { background:#FACC15; } .wbar .wb.do { background:#F87171; }
+.wbar .wl { font-size:.625rem; color:var(--muted); margin-top:3px; white-space:nowrap; }
+.weeks-table summary { cursor:pointer; color:var(--accent); font-weight:600; margin:4px 0; }
+/* Điện thoại: cửa sổ chi tiết trượt lên từ đáy */
+@media (max-width: 640px) {
+  dialog.sheet { width:100%; max-width:100%; margin:auto 0 0; border-radius:18px 18px 0 0; max-height:90vh; }
+  dialog.sheet[open] { animation:sheet-up .22s ease-out; }
+  .sheet-body::before { content:""; display:block; width:40px; height:4px; border-radius:4px; background:var(--line); margin:-4px auto 10px; }
+}
+@keyframes sheet-up { from { transform:translateY(40px); opacity:.6; } to { transform:none; opacity:1; } }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
@@ -294,9 +335,16 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
       <body class={withNav ? "has-bottom" : ""}>
         <header class="top">
           <div class="top-in">
-            <a href={props.publicPage ? "/bang-xep-hang" : grader ? "/cham" : "/"} class="brand" aria-label="Nhân Sự Kế Thừa 2026 – trang chủ">
-              <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
-            </a>
+            {props.publicPage ? (
+              // Người xem công khai: logo chỉ là hình, không dẫn vào khu nội bộ.
+              <span class="brand">
+                <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+              </span>
+            ) : (
+              <a href={grader ? "/cham" : "/"} class="brand" aria-label="Nhân Sự Kế Thừa 2026 – trang chủ">
+                <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+              </a>
+            )}
             {withNav ? (
               <nav class="nav-top" aria-label="Menu chính">
                 {main.map((n) => (

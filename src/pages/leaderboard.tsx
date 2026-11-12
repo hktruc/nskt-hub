@@ -14,6 +14,8 @@ export function LeaderboardPage(props: {
   hasAttendance?: boolean;
   updatedAt: string | null;
   origin?: string;
+  /** Người đã đăng nhập (BTC, coach, ban phụng sự): thấy đủ menu và logo về trang chủ. */
+  viewerNav?: "full" | "grader";
 }) {
   const filtered = props.team ? props.ranked.filter((r) => r.team === props.team) : props.ranked;
   // Xem một đội: hạng trong đội, kèm hạng toàn khóa. Bằng điểm thì ngang hạng.
@@ -27,7 +29,8 @@ export function LeaderboardPage(props: {
   return (
     <Layout
       title="Bảng xếp hạng"
-      publicPage
+      publicPage={!props.viewerNav}
+      nav={props.viewerNav}
       og={
         props.origin
           ? {
@@ -39,8 +42,34 @@ export function LeaderboardPage(props: {
           : undefined
       }
     >
-      <h1>Bảng xếp hạng NSKT2026</h1>
-      <p class="muted small">Cập nhật {formatVN(props.updatedAt)} (giờ Việt Nam).</p>
+      <section class="bxh-hero">
+        <p class="eyebrow">Cá Chép Vượt Long Môn</p>
+        <h1>Bảng xếp hạng</h1>
+        <p class="small">
+          {props.team ? `${teamLabel(props.team)} · ` : ""}
+          {list.length} học viên · cập nhật {formatVN(props.updatedAt)}
+        </p>
+        {list.length ? (
+          <div class="dist" role="img" aria-label={`${count("xanh")} xanh, ${count("vang")} vàng, ${count("do")} đỏ`}>
+            {(["xanh", "vang", "do"] as const).map((c) =>
+              count(c) ? <span class={`seg-${c}`} style={`flex:${count(c)}`} /> : null,
+            )}
+          </div>
+        ) : null}
+        <div class="dist-legend small">
+          <span>
+            <i class="dot xanh" />≥ {SCORING.greenFrom}%: <strong>{count("xanh")}</strong>
+          </span>
+          <span>
+            <i class="dot vang" />
+            {SCORING.yellowFrom}–{SCORING.greenFrom - 1}%: <strong>{count("vang")}</strong>
+          </span>
+          <span>
+            <i class="dot do" />
+            &lt; {SCORING.yellowFrom}%: <strong>{count("do")}</strong>
+          </span>
+        </div>
+      </section>
       {props.provisional ? (
         <p class="notice small">Một số bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p>
       ) : null}
@@ -56,15 +85,25 @@ export function LeaderboardPage(props: {
         ))}
       </nav>
 
-      <div class="legend" aria-label="Chú thích màu">
-        <span class="swatch xanh">≥ {SCORING.greenFrom}% · {count("xanh")} người</span>
-        <span class="swatch vang">
-          {SCORING.yellowFrom}–{SCORING.greenFrom - 1}% · {count("vang")} người
-        </span>
-        <span class="swatch do">
-          &lt; {SCORING.yellowFrom}% · {count("do")} người
-        </span>
-      </div>
+      {list.length >= 3 ? (
+        <div class="podium" aria-label="Ba người dẫn đầu">
+          {[list[1]!, list[0]!, list[2]!].map((r, i) => (
+            <a class={`pod pod-${[2, 1, 3][i]} ${r.color}`} href={`/bang-xep-hang/hv/${r.learnerId}`} data-hv="">
+              <span class="medal">{r.shown}</span>
+              <span class="pname">{r.name}</span>
+              <span class="pteam">{props.team ? `#${r.rank} khóa` : teamLabel(r.team)}</span>
+              <span class="ppct">{r.percent.toLocaleString("vi-VN")}%</span>
+            </a>
+          ))}
+        </div>
+      ) : null}
+
+      {list.length > 8 ? (
+        <div class="search">
+          <input id="tim" type="search" placeholder="Tìm tên của bạn…" aria-label="Tìm theo tên" autocomplete="off" />
+          <span id="tim-kq" class="small muted" />
+        </div>
+      ) : null}
 
       {list.length === 0 ? (
         <p class="muted">Chưa có điểm.</p>
@@ -72,7 +111,7 @@ export function LeaderboardPage(props: {
         <ol class="rank-list">
           {list.map((r) => (
             <li>
-              <a class={`rank-row ${r.color}`} href={`/bang-xep-hang/hv/${r.learnerId}`} data-hv="" title="Bấm để xem chi tiết">
+              <a class={`rank-row ${r.color}`} href={`/bang-xep-hang/hv/${r.learnerId}`} data-hv="" data-name={r.name} title="Bấm để xem chi tiết">
                 <span class="rank">{r.shown}</span>
                 <span class="name">{r.name}</span>
                 <span class="team">{props.team ? `#${r.rank} khóa` : teamLabel(r.team)}</span>
@@ -122,7 +161,7 @@ export function LeaderboardPage(props: {
       <dialog id="hv" class="sheet" aria-label="Chi tiết học viên">
         <div class="sheet-body" />
       </dialog>
-      <script dangerouslySetInnerHTML={{ __html: DIALOG_JS }} />
+      <script dangerouslySetInnerHTML={{ __html: DIALOG_JS + SEARCH_JS }} />
     </Layout>
   );
 }
@@ -148,6 +187,20 @@ const DIALOG_JS = `(() => {
 })();`;
 
 const pct = (p: number | undefined) => `${Math.round((p ?? 0) * 100)}%`;
+// Tìm tên: không phân biệt dấu, hoa thường.
+const SEARCH_JS = `(() => {
+  const q = document.getElementById("tim"); if (!q) return;
+  const norm = (s) => s.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "d").toLowerCase().trim();
+  const rows = [...document.querySelectorAll(".rank-list > li")];
+  const pod = document.querySelector(".podium"), kq = document.getElementById("tim-kq");
+  q.addEventListener("input", () => {
+    const v = norm(q.value); let n = 0;
+    rows.forEach((li) => { const a = li.querySelector("[data-name]"); const ok = !v || norm(a.dataset.name).includes(v); li.hidden = !ok; if (ok) n++; });
+    if (pod) pod.hidden = !!v;
+    kq.textContent = v ? (n ? n + " người" : "Không tìm thấy") : "";
+  });
+})();`;
+
 const ddmm = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}`;
 const num = (n: number) => n.toLocaleString("vi-VN", { maximumFractionDigits: 1 });
 
@@ -157,6 +210,48 @@ function Move(props: { from: number | null; to: number | null }) {
   if (d > 0) return <span class="mv up">▲ {d}</span>;
   if (d < 0) return <span class="mv down">▼ {-d}</span>;
   return <span class="mv same">=</span>;
+}
+
+/** Đường thứ hạng: hạng 1 ở trên cùng. Vẽ sẵn SVG trên máy chủ, không cần thư viện. */
+function RankChart(props: { d: LearnerDetail }) {
+  const pts = props.d.history;
+  const ranks = pts.map((h) => h.rank).filter((r): r is number => r !== null);
+  if (ranks.length < 2) return null;
+  const total = Math.max(...pts.map((h) => h.total), ...ranks);
+  const W = 300, H = 90, px = 22, py = 14;
+  const x = (i: number) => px + (i * (W - 2 * px)) / (pts.length - 1);
+  const y = (r: number) => py + ((r - 1) * (H - 2 * py)) / Math.max(1, total - 1);
+  const coords = pts.map((h, i) => (h.rank === null ? null : ([x(i), y(h.rank)] as const))).filter((c): c is readonly [number, number] => c !== null);
+  const path = coords.map(([cx, cy], i) => `${i ? "L" : "M"}${cx.toFixed(1)},${cy.toFixed(1)}`).join(" ");
+  return (
+    <svg class="rank-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Biểu đồ thứ hạng 3 tuần gần nhất (càng cao càng tốt)">
+      <line x1={px} y1={py} x2={W - px} y2={py} class="grid" />
+      <line x1={px} y1={H - py} x2={W - px} y2={H - py} class="grid" />
+      <text x="2" y={py + 4} class="lbl">#1</text>
+      <text x="2" y={H - py + 4} class="lbl">#{total}</text>
+      <path d={path} class="line" />
+      {coords.map(([cx, cy], i) => (
+        <circle cx={cx} cy={cy} r={i === coords.length - 1 ? 5 : 3.5} class={i === coords.length - 1 ? "pt now" : "pt"} />
+      ))}
+    </svg>
+  );
+}
+
+/** Cột % điểm từng tuần (8 tuần gần nhất, cũ → mới). */
+function WeekBars(props: { weeks: LearnerDetail["weeks"] }) {
+  const ws = props.weeks.slice(0, 8).reverse();
+  if (ws.length === 0) return null;
+  return (
+    <div class="wbars" role="img" aria-label="Điểm bài tập theo tuần">
+      {ws.map((w) => (
+        <div class="wbar" title={`${ddmm(w.from)}–${ddmm(w.to)}: ${w.percent}%`}>
+          <span class="wv">{w.percent}%</span>
+          <span class={`wb ${w.percent >= SCORING.greenFrom ? "xanh" : w.percent >= SCORING.yellowFrom ? "vang" : "do"}`} style={`height:${Math.max(4, w.percent)}%`} />
+          <span class="wl">{ddmm(w.from)}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** Nội dung chi tiết: dùng cho cả cửa sổ bật lên lẫn trang riêng. */
@@ -193,6 +288,7 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
       {d.provisional ? <p class="muted small">Có bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p> : null}
 
       <h2>Thứ hạng 3 tuần gần nhất</h2>
+      <RankChart d={d} />
       <ol class="hist">
         {d.history.map((h, i) => (
           <li class={h.weeksAgo === 0 ? "now" : ""}>
@@ -301,40 +397,43 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
         ))}
       </p>
 
-      <table class="weeks">
-        <thead>
-          <tr>
-            <th>Tuần</th>
-            <th class="r">Điểm</th>
-            <th class="r">%</th>
-            <th class="r">Đang tính</th>
-          </tr>
-        </thead>
-        <tbody>
-          {d.weeks.map((w) => (
+      <WeekBars weeks={d.weeks} />
+      <details class="weeks-table">
+        <summary class="small">Xem bảng số theo tuần</summary>
+        <table class="weeks">
+          <thead>
             <tr>
-              <td>
-                {ddmm(w.from)}–{ddmm(w.to)}
-              </td>
-              <td class="r">
-                {num(w.earned)}/{num(w.max)}
-              </td>
-              <td class="r">{w.percent}%</td>
-              <td class="r">{w.weightPct}%</td>
+              <th>Tuần</th>
+              <th class="r">Điểm</th>
+              <th class="r">%</th>
+              <th class="r">Đang tính</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p class="muted small">
-        "Đang tính": bài càng cũ càng tính ít (sau {SCORING.halfLifeWeeks} tuần còn một nửa). Thứ hạng các tuần trước tính theo các bài đã tới hạn lúc đó.
-      </p>
+          </thead>
+          <tbody>
+            {d.weeks.map((w) => (
+              <tr>
+                <td>
+                  {ddmm(w.from)}–{ddmm(w.to)}
+                </td>
+                <td class="r">
+                  {num(w.earned)}/{num(w.max)}
+                </td>
+                <td class="r">{w.percent}%</td>
+                <td class="r">{w.weightPct}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p class="muted small">"Đang tính": bài càng cũ càng tính ít (sau {SCORING.halfLifeWeeks} tuần còn một nửa).</p>
+      </details>
+      <p class="muted small">Cột màu: % điểm bài tập mỗi tuần. Thứ hạng các tuần trước tính theo các bài đã tới hạn lúc đó.</p>
     </div>
   );
 }
 
-export function LearnerDetailPage(props: { d: LearnerDetail }) {
+export function LearnerDetailPage(props: { d: LearnerDetail; viewerNav?: "full" | "grader" }) {
   return (
-    <Layout title={props.d.me.name} publicPage>
+    <Layout title={props.d.me.name} publicPage={!props.viewerNav} nav={props.viewerNav}>
       <p class="small">
         <a href="/bang-xep-hang">← Bảng xếp hạng</a>
       </p>
