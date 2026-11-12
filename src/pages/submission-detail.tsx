@@ -143,7 +143,7 @@ export function SubmissionDetailPage(props: { data: DetailData; notice?: string 
         {teamLabel(team)} · {row.title} · hạn {shortVN(row.due_at)}
         {row.submitted_at ? ` · nộp ${shortVN(row.submitted_at)}` : ""}
       </p>
-      {props.notice ? <p class="notice">{props.notice}</p> : null}
+      {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
 
       <div class="tiles">
         <div class="tile">

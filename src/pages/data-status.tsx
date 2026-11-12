@@ -124,7 +124,7 @@ export function DataStatusPage(props: { status: DataStatus; notice?: string }) {
   return (
     <Layout title="Tình trạng dữ liệu">
       <h1>Tình trạng dữ liệu</h1>
-      {props.notice ? <p class="notice">{props.notice}</p> : null}
+      {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
 
       {!s.hasKey ? (
         <p class="warn">

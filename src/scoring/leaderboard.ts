@@ -273,3 +273,17 @@ export function summarizeAttendance(mine: AttRow[]): LearnerDetail["attendance"]
     absent: n("VANG"),
   };
 }
+
+/** Số người Xanh / Vàng / Đỏ hôm nay và 7 ngày trước (để trang tổng quan hiện mũi tên thay đổi). */
+export async function loadColorTrend(db: D1Database, todayVN: string) {
+  const [rows, att] = await Promise.all([loadRows(db), loadAtt(db)]);
+  const day = addDays(todayVN.slice(0, 10), -7);
+  const count = (r: Ranked[]) => ({
+    xanh: r.filter((x) => x.color === "xanh").length,
+    vang: r.filter((x) => x.color === "vang").length,
+    do: r.filter((x) => x.color === "do").length,
+  });
+  return {
+    weekAgo: count(rank(rows.filter((r) => r.due_at.slice(0, 10) <= day), day, att.filter((a) => a.session_day <= day)).ranked),
+  };
+}
