@@ -130,4 +130,19 @@ describe("tài khoản nội bộ", () => {
     expect(out.headers.get("location")).toBe("/dang-nhap?tb=da-xuat");
     expect((await call("/du-lieu", { cookie })).status).toBe(401);
   });
+
+  it("bảng xếp hạng: người xem công khai không có menu, logo không bấm được; người đăng nhập thấy đủ menu", async () => {
+    const { codes, call, activateAs } = await setup();
+    const pub = await call("/bang-xep-hang");
+    const html = await pub.text();
+    expect(html).not.toContain('class="nav-top"');
+    expect(html).not.toContain('class="brand" aria-label');
+    expect(pub.headers.get("cache-control")).toContain("public");
+    const cookie = await activateAs("0900000111", codes.coach);
+    const mine = await call("/bang-xep-hang", { cookie });
+    const h2 = await mine.text();
+    expect(h2).toContain('class="nav-top"');
+    expect(h2).toContain('<a href="/" class="brand"');
+    expect(mine.headers.get("cache-control")).toBe("private, no-store");
+  });
 });

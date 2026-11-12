@@ -40,13 +40,32 @@ const safeNext = (n: string | undefined | null) => (n && n.startsWith("/") && !n
 app.get("/health", (c) => c.json({ ok: true, app: c.env.APP_NAME }));
 
 // Bảng xếp hạng công khai (chủ dự án quyết định 11/11/2026): chỉ họ tên, đội, điểm, màu.
+/** Trang công khai: người đã đăng nhập thì thấy đủ menu; người xem công khai thì không. */
+async function publicViewer(c: Context<AppEnv>): Promise<"full" | "grader" | undefined> {
+  const token = getCookie(c, SESSION_COOKIE);
+  const u = token ? await sessionUser(c.env.DB, token, new Date()) : null;
+  // Bản cho người đăng nhập không được lưu đệm chung với bản công khai.
+  c.header("Cache-Control", u ? "private, no-store" : "public, max-age=300");
+  c.header("Vary", "Cookie");
+  return u ? (canUseFullApp(u) ? "full" : "grader") : undefined;
+}
+
 app.get("/bang-xep-hang", async (c) => {
   const data = await loadLeaderboard(c.env.DB, nowVN(new Date()));
   const teams = [...new Set(data.ranked.map((r) => r.team))].sort();
   const doi = c.req.query("doi") ?? "";
-  c.header("Cache-Control", "public, max-age=300");
+  const viewerNav = await publicViewer(c);
   return c.html(
-    <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} hasAttendance={data.hasAttendance} updatedAt={data.updatedAt} origin={new URL(c.req.url).origin} />,
+    <LeaderboardPage
+      ranked={data.ranked}
+      team={teams.includes(doi) ? doi : ""}
+      teams={teams}
+      provisional={data.provisional}
+      hasAttendance={data.hasAttendance}
+      updatedAt={data.updatedAt}
+      origin={new URL(c.req.url).origin}
+      viewerNav={viewerNav}
+    />,
   );
 });
 
@@ -55,8 +74,11 @@ app.get("/bang-xep-hang/hv/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const d = Number.isSafeInteger(id) ? await loadLearnerDetail(c.env.DB, id, nowVN(new Date())) : null;
   if (!d) return c.text("Không tìm thấy học viên trên bảng xếp hạng.", 404);
-  c.header("Cache-Control", "public, max-age=300");
-  return c.html(c.req.query("p") ? <LearnerDetailView d={d} inDialog /> : <LearnerDetailPage d={d} />);
+  if (c.req.query("p")) {
+    c.header("Cache-Control", "public, max-age=300");
+    return c.html(<LearnerDetailView d={d} inDialog />);
+  }
+  return c.html(<LearnerDetailPage d={d} viewerNav={await publicViewer(c)} />);
 });
 
 // ---- Đăng nhập bằng số điện thoại (không cần đã đăng nhập) ----

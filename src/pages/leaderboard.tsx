@@ -14,6 +14,8 @@ export function LeaderboardPage(props: {
   hasAttendance?: boolean;
   updatedAt: string | null;
   origin?: string;
+  /** Người đã đăng nhập (BTC, coach, ban phụng sự): thấy đủ menu và logo về trang chủ. */
+  viewerNav?: "full" | "grader";
 }) {
   const filtered = props.team ? props.ranked.filter((r) => r.team === props.team) : props.ranked;
   // Xem một đội: hạng trong đội, kèm hạng toàn khóa. Bằng điểm thì ngang hạng.
@@ -27,7 +29,8 @@ export function LeaderboardPage(props: {
   return (
     <Layout
       title="Bảng xếp hạng"
-      publicPage
+      publicPage={!props.viewerNav}
+      nav={props.viewerNav}
       og={
         props.origin
           ? {
@@ -428,9 +431,9 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
   );
 }
 
-export function LearnerDetailPage(props: { d: LearnerDetail }) {
+export function LearnerDetailPage(props: { d: LearnerDetail; viewerNav?: "full" | "grader" }) {
   return (
-    <Layout title={props.d.me.name} publicPage>
+    <Layout title={props.d.me.name} publicPage={!props.viewerNav} nav={props.viewerNav}>
       <p class="small">
         <a href="/bang-xep-hang">← Bảng xếp hạng</a>
       </p>

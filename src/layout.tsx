@@ -335,9 +335,16 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
       <body class={withNav ? "has-bottom" : ""}>
         <header class="top">
           <div class="top-in">
-            <a href={props.publicPage ? "/bang-xep-hang" : grader ? "/cham" : "/"} class="brand" aria-label="Nhân Sự Kế Thừa 2026 – trang chủ">
-              <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
-            </a>
+            {props.publicPage ? (
+              // Người xem công khai: logo chỉ là hình, không dẫn vào khu nội bộ.
+              <span class="brand">
+                <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+              </span>
+            ) : (
+              <a href={grader ? "/cham" : "/"} class="brand" aria-label="Nhân Sự Kế Thừa 2026 – trang chủ">
+                <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+              </a>
+            )}
             {withNav ? (
               <nav class="nav-top" aria-label="Menu chính">
                 {main.map((n) => (
