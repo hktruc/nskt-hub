@@ -47,11 +47,20 @@ export function headerDay(h: string, startYear = Number(SCORING.startDate.slice(
 export type CheckInRecord = { resident: string; day: string; code: AttCode };
 
 /** Đọc trang CHECK_IN. Cột "KHAI GIANG" không có ngày nên không tính (điểm tính từ 30/09). */
-export function parseCheckIn(rows: string[][]): { residents: string[]; records: CheckInRecord[] } {
+/** Khóa so tên: chữ thường, gộp khoảng trắng. `loose`: bỏ cả dấu tiếng Việt. */
+export function nameKey(name: string, loose = false): string {
+  let s = name.normalize("NFC").toLowerCase().replace(/\s+/g, " ").trim();
+  if (loose) s = s.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d");
+  return s;
+}
+
+export function parseCheckIn(rows: string[][]): { residents: string[]; records: CheckInRecord[]; names: Map<string, string> } {
   const hi = rows.findIndex((r) => r.some((c) => norm(c) === "mã cư dân"));
   if (hi < 0) throw new SheetsError('Trang CHECK_IN không có cột "Mã Cư Dân".');
   const header = rows[hi]!;
   const col = header.findIndex((c) => norm(c) === "mã cư dân");
+  const cName = header.findIndex((c) => norm(c) === "họ và tên" || norm(c) === "họ tên");
+  const names = new Map<string, string>();
   const dayCols = header.map((h, i) => ({ i, day: headerDay(h) })).filter((x): x is { i: number; day: string } => x.day !== null);
   const residents: string[] = [];
   const records: CheckInRecord[] = [];
@@ -59,12 +68,13 @@ export function parseCheckIn(rows: string[][]): { residents: string[]; records: 
     const resident = (r[col] ?? "").trim().toUpperCase();
     if (!/^T\d{4}$/.test(resident)) continue;
     residents.push(resident);
+    if (cName >= 0 && r[cName]) names.set(resident, r[cName]!);
     for (const { i, day } of dayCols) {
       const code = normalizeCode(r[i] ?? "");
       if (code) records.push({ resident, day, code });
     }
   }
-  return { residents, records };
+  return { residents, records, names };
 }
 
 /** Đọc trang DS_CHIA_THON: Mã Cư Dân → số điện thoại. */
@@ -87,7 +97,7 @@ export function parseRoster(rows: string[][]): Map<string, string> {
 export type SyncResult =
   | { status: "chua-cau-hinh" }
   | { status: "loi"; message: string }
-  | { status: "ok"; sessions: number; residents: number; matched: number; unmatched: string[]; rows: number };
+  | { status: "ok"; sessions: number; residents: number; matched: number; unmatched: string[]; byName: string[]; rows: number };
 
 export const CHECKIN_RANGE = "CHECK_IN!A1:AZ400";
 export const ROSTER_RANGE = "DS_CHIA_THON!A1:Z400";
@@ -97,7 +107,7 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
   if (!sa || !env.SHEET_ATTENDANCE_ID || !env.SHEET_ROSTER_ID) return { status: "chua-cau-hinh" };
   const iso = now.toISOString();
   const log = (r: SyncResult) =>
-    env.DB.prepare("INSERT INTO sheet_syncs (at, status, sessions, rows_total, matched, unmatched_json, message) VALUES (?,?,?,?,?,?,?)")
+    env.DB.prepare("INSERT INTO sheet_syncs (at, status, sessions, rows_total, matched, unmatched_json, by_name_json, message) VALUES (?,?,?,?,?,?,?,?)")
       .bind(
         iso,
         r.status,
@@ -105,6 +115,7 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
         r.status === "ok" ? r.residents : null,
         r.status === "ok" ? r.matched : null,
         r.status === "ok" ? JSON.stringify(r.unmatched) : null,
+        r.status === "ok" ? JSON.stringify(r.byName) : null,
         r.status === "loi" ? r.message : null,
       )
       .run();
@@ -114,12 +125,13 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
       readRange(token, env.SHEET_ATTENDANCE_ID, CHECKIN_RANGE, fetchImpl),
       readRange(token, env.SHEET_ROSTER_ID, ROSTER_RANGE, fetchImpl),
     ]);
-    const { residents, records } = parseCheckIn(checkIn);
+    const { residents, records, names } = parseCheckIn(checkIn);
     const phoneOf = parseRoster(roster);
     const learners = (
-      await env.DB.prepare("SELECT l.id, l.phone, t.name AS team_name FROM learners l LEFT JOIN teams t ON t.id = l.team_id").all<{
+      await env.DB.prepare("SELECT l.id, l.phone, l.full_name, t.name AS team_name FROM learners l LEFT JOIN teams t ON t.id = l.team_id").all<{
         id: number;
         phone: string | null;
+        full_name: string | null;
         team_name: string | null;
       }>()
     ).results;
@@ -129,12 +141,39 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
       // Ưu tiên người thuộc 12 đội khi trùng số.
       if (p && (!byPhone.has(p) || isLearnerTeam(teamCode(l.team_name)))) byPhone.set(p, l.id);
     }
+    // 1) Ghép theo số điện thoại (định danh chính thức).
     const learnerOf = new Map<string, number>();
-    const unmatched: string[] = [];
+    const pending: string[] = [];
     for (const res of new Set(residents)) {
       const id = byPhone.get(phoneOf.get(res) ?? "");
-      if (id === undefined) unmatched.push(res);
+      if (id === undefined) pending.push(res);
       else learnerOf.set(res, id);
+    }
+    // 2) Còn lại: ghép theo họ tên, CHỈ trong cùng đội (T03xx ↔ Đội Cá Chép 03), chỉ với người dh3g
+    //    chưa được ghép, và chỉ khi có đúng một người trùng tên (chủ dự án cho phép 12/11/2026:
+    //    một số học viên đăng nhập dh3g bằng số cũ từ các khóa trước).
+    const taken = new Set(learnerOf.values());
+    const byName: string[] = [];
+    const unmatched: string[] = [];
+    for (const res of pending) {
+      const name = names.get(res);
+      const team = res.slice(0, 3);
+      let id: number | undefined;
+      for (const loose of [false, true]) {
+        if (!name) break;
+        const key = nameKey(name, loose);
+        const cands = learners.filter(
+          (l) => !taken.has(l.id) && teamCode(l.team_name) === team && l.full_name && nameKey(l.full_name, loose) === key,
+        );
+        if (cands.length === 1) id = cands[0]!.id;
+        if (cands.length > 0) break; // trùng nhiều người: không đoán
+      }
+      if (id === undefined) unmatched.push(res);
+      else {
+        learnerOf.set(res, id);
+        taken.add(id);
+        byName.push(res);
+      }
     }
     const today = vietnamDay(now);
     const keep = records.filter((r) => r.day >= SCORING.startDate && r.day <= today && learnerOf.has(r.resident));
@@ -157,6 +196,7 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
       residents: new Set(residents).size,
       matched: learnerOf.size,
       unmatched: unmatched.sort(),
+      byName: byName.sort(),
       rows: rows.length,
     };
     await log(result);

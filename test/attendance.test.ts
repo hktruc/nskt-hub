@@ -124,7 +124,7 @@ describe("đồng bộ điểm danh từ Google Sheet", () => {
     const { env, raw } = await setup();
     const g = fakeGoogle();
     const r = await syncOfflineAttendance(env, NOW, g.fetchImpl);
-    expect(r).toEqual({ status: "ok", sessions: 4, residents: 3, matched: 2, unmatched: ["T0201"], rows: 8 });
+    expect(r).toEqual({ status: "ok", sessions: 4, residents: 3, matched: 2, unmatched: ["T0201"], byName: [], rows: 8 });
     expect(raw.prepare("SELECT code, COUNT(*) n FROM offline_attendance WHERE learner_id = 12 GROUP BY code ORDER BY code").all()).toEqual([
       { code: "CANH_BAO", n: 1 }, { code: "P", n: 1 }, { code: "VANG", n: 1 }, { code: "X", n: 1 },
     ]);
@@ -140,6 +140,28 @@ describe("đồng bộ điểm danh từ Google Sheet", () => {
     expect(detail).toContain("2/4"); // có mặt 2/4 buổi (⚠️ và X); vắng 1, có phép 1
     expect(detail).not.toContain("0900000002");
     expect(detail).not.toContain("T0102");
+  });
+
+  it("số điện thoại khác dh3g: ghép theo họ tên, chỉ trong cùng đội và chỉ khi trùng đúng một người", async () => {
+    const { env, raw } = await setup();
+    const iso = "2026-11-01T00:00:00Z";
+    raw.prepare("INSERT INTO teams (id, name, first_seen_at, last_seen_at) VALUES (2, 'Đội Cá Chép 02', ?, ?)").run(iso, iso);
+    // Người Giả Ba (T0201) đăng nhập dh3g bằng số cũ; tên trên dh3g viết hoa, không dấu cách thừa.
+    raw.prepare("INSERT INTO learners (id, full_name, phone, team_id, first_seen_at, last_seen_at) VALUES (21, 'NGƯỜI GIẢ  BA', '0911111111', 2, ?, ?)").run(iso, iso);
+    // Trùng tên nhưng khác đội: không được ghép.
+    raw.prepare("INSERT INTO learners (id, full_name, phone, team_id, first_seen_at, last_seen_at) VALUES (31, 'Người Giả Một', '0922222222', 1, ?, ?)").run(iso, iso);
+    const r = await syncOfflineAttendance(env, NOW, fakeGoogle().fetchImpl);
+    expect(r).toMatchObject({ status: "ok", matched: 3, unmatched: [], byName: ["T0201"] });
+    expect(raw.prepare("SELECT COUNT(*) n FROM offline_attendance WHERE learner_id = 21").get()).toEqual({ n: 4 });
+    expect(raw.prepare("SELECT COUNT(*) n FROM offline_attendance WHERE learner_id = 31").get()).toEqual({ n: 0 });
+
+    // Hai người cùng tên trong đội: không đoán.
+    raw.prepare("INSERT INTO learners (id, full_name, phone, team_id, first_seen_at, last_seen_at) VALUES (22, 'Nguoi Gia Ba', '0933333333', 2, ?, ?)").run(iso, iso);
+    raw.prepare("INSERT INTO learners (id, full_name, phone, team_id, first_seen_at, last_seen_at) VALUES (23, 'Người Giả Ba', '0944444444', 2, ?, ?)").run(iso, iso);
+    const r2 = await syncOfflineAttendance(env, NOW, fakeGoogle().fetchImpl);
+    expect(r2).toMatchObject({ status: "ok", unmatched: ["T0201"], byName: [] });
+    const page = await (await app.fetch(new Request("http://localhost/du-lieu"), { ...env, LOCAL_DEV_NO_AUTH: "true" })).text();
+    expect(page).toContain("T0201");
   });
 
   it("file chưa chia sẻ cho tài khoản dịch vụ: ghi lỗi dễ hiểu, giữ nguyên dữ liệu cũ", async () => {

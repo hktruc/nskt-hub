@@ -41,6 +41,7 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Cloudflare: gói **Workers Paid**; chạy ở địa chỉ miễn phí **`nskt-hub.<tài-khoản>.workers.dev`** (không dùng tên miền riêng). |
 | 2026-11-12 | **Đi học offline chiếm 50% điểm xếp hạng** (50% bài tập + 50% đi học). Mỗi buổi: ✅ 100%, M 70%, X 60%, M1 40%, ⚠️ 50%, P 30%, ❌ (kể cả học qua Zoom) 0%; **bỏ qua PD**. Buổi cũ mờ dần chậm hơn: **nửa đời 6 tuần**. Đồng điểm: ai đi học đúng giờ nhiều buổi hơn xếp trên, rồi mới tới video. Bảng công khai chỉ hiện tổng (có mặt X/Y buổi), không liệt kê từng buổi. |
 | 2026-11-12 | Ghép điểm danh: trang `CHECK_IN` (Mã Cư Dân) → trang `DS_CHIA_THON` cùng file chia thôn (Mã Cư Dân → SĐT) → học viên dh3g theo SĐT. Đọc bằng tài khoản dịch vụ Google chỉ có quyền xem. |
+| 2026-11-12 | Danh sách Google Sheet là chuẩn; một số học viên đăng nhập dh3g bằng số điện thoại cũ. **Cho phép ghép theo họ tên khi số điện thoại không khớp** — Claude giới hạn: chỉ trong cùng đội, chỉ với người dh3g chưa ghép được bằng số, chỉ khi trùng đúng một người (so có dấu, rồi không dấu). Danh sách ghép theo tên hiện ở `/du-lieu` để BTC xem lại. |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -158,7 +159,7 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/google/sheets.ts` — đọc Google Sheet bằng tài khoản dịch vụ; `src/attendance/offline.ts` — điểm danh offline
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001, 0002, 0003, 0004.
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001, 0002, 0003, 0004, 0005.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử

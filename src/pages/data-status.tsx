@@ -28,7 +28,7 @@ export type DataStatus = {
   offline: {
     configured: boolean;
     rows: number;
-    last: { at: string; status: string; sessions: number | null; rows_total: number | null; matched: number | null; unmatched_json: string | null; message: string | null } | null;
+    last: { at: string; status: string; sessions: number | null; rows_total: number | null; matched: number | null; unmatched_json: string | null; by_name_json: string | null; message: string | null } | null;
   };
 };
 
@@ -65,7 +65,7 @@ export async function loadDataStatus(env: Env): Promise<DataStatus> {
       db.prepare("SELECT * FROM sync_jobs WHERE error IS NOT NULL ORDER BY id DESC LIMIT 1"),
       db.prepare("SELECT * FROM sync_jobs WHERE status IN ('done','failed') ORDER BY finished_at DESC, id DESC LIMIT 20"),
       count("offline_attendance"),
-      db.prepare("SELECT at, status, sessions, rows_total, matched, unmatched_json, message FROM sheet_syncs ORDER BY id DESC LIMIT 1"),
+      db.prepare("SELECT at, status, sessions, rows_total, matched, unmatched_json, by_name_json, message FROM sheet_syncs ORDER BY id DESC LIMIT 1"),
     ]);
   const n = (r: D1Result | undefined) => Number((r?.results[0] as { n?: number } | undefined)?.n ?? 0);
   const q = Object.fromEntries(((queue?.results ?? []) as { status: string; n: number }[]).map((r) => [r.status, r.n]));
@@ -209,6 +209,7 @@ function OfflineSection(props: { o: DataStatus["offline"] }) {
   const { o } = props;
   const last = o.last;
   const unmatched: string[] = last?.unmatched_json ? (JSON.parse(last.unmatched_json) as string[]) : [];
+  const byName: string[] = last?.by_name_json ? (JSON.parse(last.by_name_json) as string[]) : [];
   return (
     <>
       <p class="muted">
@@ -240,9 +241,15 @@ function OfflineSection(props: { o: DataStatus["offline"] }) {
       ) : (
         <p class="muted">Chưa đọc lần nào.</p>
       )}
+      {byName.length ? (
+        <p class="notice small">
+          Ghép theo họ tên trong cùng đội ({byName.length} người, vì số điện thoại trong file khác số đăng nhập dh3g): {byName.join(", ")}.
+          BTC nên xem lại các người này một lần cho chắc.
+        </p>
+      ) : null}
       {unmatched.length ? (
         <p class="warn small">
-          Chưa ghép được {unmatched.length} Mã Cư Dân (không tìm thấy số điện thoại trong DS_CHIA_THON, hoặc số đó không có trên dh3g):{" "}
+          Chưa ghép được {unmatched.length} Mã Cư Dân (số điện thoại không khớp dh3g và cũng không tìm được đúng một người cùng tên trong đội):{" "}
           {unmatched.join(", ")}. Những người này đang chỉ được tính điểm bài tập.
         </p>
       ) : null}
