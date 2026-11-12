@@ -169,8 +169,8 @@ describe("bàn chấm", () => {
   it("trang năng lực người chấm: coach xem được, ban phụng sự thì không", async () => {
     const { call, psCookie, coachCookie } = await setup();
     await call("/cham/luu", { method: "POST", cookie: psCookie, body: fullSheet() });
-    expect((await call("/cham/nguoi-cham", { cookie: psCookie })).status).toBe(403);
-    const html = await (await call("/cham/nguoi-cham", { cookie: coachCookie })).text();
+    expect((await call("/bao-cao/nguoi-cham", { cookie: psCookie })).status).toBe(403);
+    const html = await (await call("/bao-cao/nguoi-cham", { cookie: coachCookie })).text();
     expect(html).toContain("Phụng Sự Giả");
     expect(html).toContain("Đội 03");
     expect(html).toMatch(/<strong>1<\/strong> bài/);

@@ -11,6 +11,9 @@ import { syncOfflineAttendance } from "./attendance/offline";
 import { AccountPage, ActivatePage, ForbiddenPage, LoginPage, NeedLoginPage } from "./pages/account";
 import { QueuePage, SheetPage } from "./pages/grading";
 import { GradersPage } from "./pages/graders";
+import { CourseReport, DailyReportPage, ExamReportPage, SessionReportPage, WeeklyReportPage } from "./pages/reports";
+import { assignmentReport, courseByWeek, loadRoster, mondayOf, sessionReport } from "./reports/data";
+import { SCORING } from "./scoring/config";
 import { loadGraderStats } from "./grading/stats";
 import { FOCUS_OPTIONS, PROGRESS, SPIRIT } from "./grading/rubric";
 import { allowedTeams, focusOf, gradableAssignments, loadQueue, loadSheet, saveReview, setFocus, validate, type SaveInput } from "./grading/store";
@@ -266,7 +269,33 @@ app.post("/cham/luu", async (c) => {
   return c.redirect(next ? `/cham/bai?hv=${next.learnerId}&bt=${s.assignment.id}` : `/cham?bt=${s.assignment.id}&tb=het-viec`, 303);
 });
 
-app.get("/cham/nguoi-cham", async (c) => {
+app.get("/cham/nguoi-cham", (c) => c.redirect("/bao-cao/nguoi-cham", 301));
+
+// ---- Báo cáo thống kê (coach, BTC, admin) ----
+app.get("/bao-cao", async (c) => {
+  const [weeks, roster] = await Promise.all([courseByWeek(c.env.DB), loadRoster(c.env.DB)]);
+  return c.html(<CourseReport weeks={weeks} learners={roster.length} />);
+});
+app.get("/bao-cao/buoi-hoc", async (c) => c.html(<SessionReportPage r={await sessionReport(c.env.DB, c.req.query("ngay"))} />));
+app.get("/bao-cao/bai-ngay", async (c) => {
+  const today = vietnamDay(new Date());
+  const weeks: string[] = [];
+  for (let w = mondayOf(today); w >= mondayOf(SCORING.startDate); w = addDays(w, -7)) weeks.push(w);
+  const week = weeks.includes(c.req.query("tuan") ?? "") ? c.req.query("tuan")! : weeks[0]!;
+  const [{ lines, perLearner }, roster] = await Promise.all([
+    assignmentReport(c.env.DB, "NORMAL", { from: week, to: addDays(week, 6) }),
+    loadRoster(c.env.DB),
+  ]);
+  const missing = roster
+    .map((l) => ({ l, n: perLearner.get(l.id)?.missing ?? 0 }))
+    .filter((m) => m.n >= 3)
+    .sort((a, b) => b.n - a.n);
+  return c.html(<DailyReportPage weeks={weeks} week={week} lines={lines} missing={missing} />);
+});
+app.get("/bao-cao/bai-tuan", async (c) => c.html(<WeeklyReportPage lines={(await assignmentReport(c.env.DB, "WEEK")).lines} />));
+app.get("/bao-cao/bai-thi", async (c) => c.html(<ExamReportPage lines={(await assignmentReport(c.env.DB, "EXAM")).lines} />));
+
+app.get("/bao-cao/nguoi-cham", async (c) => {
   const u = c.get("user");
   if (u.role === "phung_su") return c.html(<ForbiddenPage user={u} message="Trang này dành cho coach, BTC, admin." />, 403);
   const { graders, overall } = await loadGraderStats(c.env.DB);

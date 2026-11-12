@@ -288,7 +288,7 @@ export function OverviewPage(props: { o: Overview }) {
       <nav class="ov-links">
         <a href="/nop-bai">Theo dõi nộp bài</a>
         <a href="/cham">Bàn chấm bài tuần</a>
-        <a href="/cham/nguoi-cham">Năng lực người chấm</a>
+        <a href="/bao-cao">Báo cáo thống kê</a>
         <a href="/bang-xep-hang">Bảng xếp hạng (công khai)</a>
         <a href="/canh-bao">Cảnh báo</a>
         <a href="/du-lieu">Tình trạng dữ liệu</a>

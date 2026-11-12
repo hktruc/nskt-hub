@@ -160,7 +160,7 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/google/sheets.ts` — đọc Google Sheet bằng tài khoản dịch vụ; `src/attendance/offline.ts` — điểm danh offline
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0007.
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0008.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử
