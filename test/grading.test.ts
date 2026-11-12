@@ -190,4 +190,18 @@ describe("bàn chấm", () => {
     expect(html).toContain('/cham/bai?hv=31&amp;bt=901');
     expect((await call("/cham/bai?hv=31&bt=901", { cookie: coachCookie })).status).toBe(200);
   });
+
+  it("hiện 3 nút tuần gần nhất, các tuần trước nữa nằm trong danh sách xổ xuống", async () => {
+    const { raw, call, coachCookie } = await setup();
+    const iso = "2026-11-01T00:00:00Z";
+    for (const [id, d] of [[897, "2026-10-18"], [898, "2026-10-25"], [899, "2026-11-01"]] as const) {
+      raw.prepare("INSERT INTO assignments (id, title, type, due_at, first_seen_at, last_seen_at) VALUES (?, ?, 'WEEK', ?, ?, ?)").run(id, `Bài tuần ${id} (X10)`, `${d}T23:00:00`, iso, iso);
+    }
+    const html = await (await call("/cham", { cookie: coachCookie })).text();
+    const nav = html.slice(html.indexOf('aria-label="Chọn bài tuần"'), html.indexOf("</nav>", html.indexOf('aria-label="Chọn bài tuần"')));
+    expect((nav.match(/class="chip/g) ?? []).length).toBe(3);
+    expect(html).toContain('<option value="897">Bài tuần 897');
+    const old = await (await call("/cham?bt=897", { cookie: coachCookie })).text();
+    expect(old).toContain('<option value="897" selected="">');
+  });
 });

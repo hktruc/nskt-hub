@@ -17,6 +17,7 @@ const STATUS: Record<QueueLine["status"], [string, string]> = {
   "sua-sau-cham": ["Học viên sửa bài sau khi chấm", "warn"],
   "chua-nop": ["Chưa nộp", ""],
 };
+const weekName = (w: WeekAssignment) => (w.title ?? "").replace(/\s*\(X10\)\s*/i, "").slice(0, 28) || `Bài ${w.id}`;
 const fmt = (n: number | null) => (n === null ? "—" : n.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 
 export function QueuePage(props: {
@@ -68,13 +69,29 @@ export function QueuePage(props: {
 
       <p class="chips-label">Chọn bài tuần</p>
       <nav class="chips" aria-label="Chọn bài tuần">
-        {props.weeks.map((w) => (
+        {props.weeks.slice(0, 3).map((w) => (
           <a class={`chip${w.id === week?.id ? " on" : ""}`} href={link({ bt: w.id, loc: "" })}>
-            {(w.title ?? "").replace(/\s*\(X10\)\s*/i, "").slice(0, 28) || `Bài ${w.id}`}
+            {weekName(w)}
             {props.nowVN && w.due_at.slice(0, 19) > props.nowVN ? " · đang mở" : ""}
           </a>
         ))}
       </nav>
+      {props.weeks.length > 3 ? (
+        <form method="get" action="/cham" class="pick-row older-weeks">
+          <select name="bt" aria-label="Các tuần trước" onchange="this.form.submit()">
+            <option value="">Các tuần trước…</option>
+            {props.weeks.slice(3).map((w) => (
+              <option value={String(w.id)} selected={w.id === week?.id}>
+                {weekName(w)} · hạn {shortVN(w.due_at).slice(0, 5)}
+              </option>
+            ))}
+          </select>
+          {props.team ? <input type="hidden" name="doi" value={props.team} /> : null}
+          <noscript>
+            <button class="secondary">Xem</button>
+          </noscript>
+        </form>
+      ) : null}
       {week ? (
         <>
           <p class="muted small">

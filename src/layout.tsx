@@ -56,6 +56,8 @@ code { font-size:.9em; }
 .chips { display:flex; gap:8px; overflow-x:auto; padding:12px 0 4px; margin:0 -16px; padding-left:16px; padding-right:16px; scrollbar-width:none; }
 /* Máy tính: xuống dòng cho thấy hết các nút, không phải kéo ngang. */
 @media (min-width: 640px) { .chips { flex-wrap:wrap; overflow:visible; margin:0; padding-left:0; padding-right:0; } }
+.older-weeks { max-width:420px; margin:8px 0 0; } .older-weeks select { flex:1; min-height:44px; border:1px solid var(--line); border-radius:999px; padding:6px 14px; font:15px var(--font); background:var(--card); color:var(--fg); }
+.older-weeks select.on, .older-weeks select:has(option:checked:not([value=""])) { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
 .chips-label { font-size:.8125rem; font-weight:600; color:var(--muted); margin:12px 0 0; }
 .chip { flex:none; display:inline-flex; align-items:center; min-height:40px; padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--fg); text-decoration:none; font-weight:500; font-size:.9375rem; }
 .chip.on { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
