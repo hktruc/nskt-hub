@@ -1,4 +1,5 @@
 import { addDays } from "../dates";
+import { loadLearnerQuality, type LearnerQuality } from "../grading/stats";
 import { isLearnerTeam, teamCode } from "../domain/teams";
 import { COLOR_LABEL, SCORING, colorOf, type Color } from "./config";
 
@@ -170,6 +171,8 @@ export type LearnerDetail = {
   provisional: boolean;
   /** Đi học offline: chỉ số tổng, không liệt kê từng buổi (trang công khai). */
   attendance: { sessions: number; present: number; onTime: number; late: number; excused: number; absent: number } | null;
+  /** Chất lượng bài tuần do coach / ban phụng sự chấm (không ảnh hưởng xếp hạng). */
+  quality: LearnerQuality | null;
 };
 
 type DetailRow = { type: string | null; due_at: string; earned: number; max: number; on_time_videos: number; provisional: number; status: string | null };
@@ -253,6 +256,7 @@ export async function loadLearnerDetail(db: D1Database, learnerId: number, today
     history: rankHistory(rows, learnerId, todayVN, 3, att),
     ...summarize(items, todayVN),
     attendance: summarizeAttendance(att.filter((a) => a.learner_id === learnerId && a.session_day <= todayVN.slice(0, 10))),
+    quality: await loadLearnerQuality(db, learnerId),
   };
 }
 

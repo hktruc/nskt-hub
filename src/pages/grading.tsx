@@ -90,6 +90,11 @@ export function QueuePage(props: {
               <button class="secondary">Đổi trọng tâm</button>
             </form>
           ) : null}
+          {!grader ? (
+            <p class="small">
+              <a href="/cham/nguoi-cham">→ Năng lực người chấm (ai chấm bao nhiêu, đúng hạn, dễ hay khắt khe)</a>
+            </p>
+          ) : null}
 
           <div class="tiles">
             <a class={`tile${props.filter === "chua-cham" ? " on" : ""}`} href={link({ loc: "chua-cham" })}>

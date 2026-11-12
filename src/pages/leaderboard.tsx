@@ -228,6 +228,37 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
         <p class="muted small">Chưa có dữ liệu điểm danh offline.</p>
       )}
 
+      <h2>Chất lượng bài tuần</h2>
+      {d.quality ? (
+        <>
+          <p class="small">
+            Coach và ban phụng sự chấm (thang 5★, không tính vào xếp hạng): trung bình <strong>{d.quality.avg === null ? "—" : `${d.quality.avg.toLocaleString("vi-VN")}★`}</strong>
+            {d.quality.strongest ? (
+              <>
+                {" "}
+                · mạnh nhất: <strong>{d.quality.strongest}</strong>
+              </>
+            ) : null}
+            {d.quality.weakest ? (
+              <>
+                {" "}
+                · cần cải thiện: <strong>{d.quality.weakest}</strong>
+              </>
+            ) : null}
+            .
+          </p>
+          <div class="qweeks">
+            {d.quality.weeks.map((w) => (
+              <span class={`mini ${w.quality ? { tot: "xanh", kha: "vang", "can-kem": "do" }[w.quality] : ""}`} title={w.title}>
+                {w.score === null ? "—" : `${w.score.toLocaleString("vi-VN")}★`}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p class="muted small">Chưa có bài tuần nào được chấm.</p>
+      )}
+
       <h2>Bài tập tích lũy</h2>
       <div class="hv-stats">
         <div>

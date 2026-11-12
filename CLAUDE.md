@@ -66,7 +66,7 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | 0 | Nền: khung dự án, CLAUDE.md, kiểm thử, CI | Xong (đã gộp 2026-11-11) |
 | 1 | Lấy dữ liệu dh3g + trang "Tình trạng dữ liệu" + cron hàng ngày | Xong. **Đã chạy thật trên Cloudflare từ 12/11/2026** (`https://nskt-hub.hktruc.workers.dev`). |
 | 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). Xong, đã gộp (PR #3 → PR #5). |
-| 3 | Đọc bài và chấm điểm | **3a** (PR #9): `/bai`, sửa điểm tay, `/canh-bao`. **3b** (PR #17): đăng nhập số điện thoại, `/quan-tri` giao đội. **3c**: bàn chấm bài tuần `/cham` (hàng chờ + phiếu chấm theo `docs/TIEU-CHI-CHAM.md`, bảng `item_reviews`, `week_reviews`, `assignment_focus`). Còn: bảng năng lực người chấm, hiện điểm chất lượng trên cửa sổ chi tiết BXH, tiêu chí bài thi. |
+| 3 | Đọc bài và chấm điểm | **3a** (PR #9): `/bai`, sửa điểm tay, `/canh-bao`. **3b** (PR #17): đăng nhập số điện thoại, `/quan-tri` giao đội. **3c**: bàn chấm bài tuần `/cham` (hàng chờ + phiếu chấm theo `docs/TIEU-CHI-CHAM.md`, bảng `item_reviews`, `week_reviews`, `assignment_focus`). **3d**: `/cham/nguoi-cham` (năng lực người chấm: số bài, % đúng hạn, điểm TB, dễ / khắt khe so với mặt bằng ±0,5★ khi ≥ 5 bài), cửa sổ chi tiết BXH có mục "Chất lượng bài tuần" (TB sao, năng lực mạnh / yếu, các tuần gần nhất; không tên người chấm, không nhận xét). Còn: tiêu chí bài thi. |
 | 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). Xong, đã gộp (PR #4 → PR #5). |
 | 5 | Báo cáo thống kê | Chưa bắt đầu |
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |

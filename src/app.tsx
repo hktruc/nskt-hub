@@ -10,6 +10,8 @@ import { loadOverview, OverviewPage } from "./pages/overview";
 import { syncOfflineAttendance } from "./attendance/offline";
 import { AccountPage, ActivatePage, ForbiddenPage, LoginPage, NeedLoginPage } from "./pages/account";
 import { QueuePage, SheetPage } from "./pages/grading";
+import { GradersPage } from "./pages/graders";
+import { loadGraderStats } from "./grading/stats";
 import { FOCUS_OPTIONS, PROGRESS, SPIRIT } from "./grading/rubric";
 import { allowedTeams, focusOf, gradableAssignments, loadQueue, loadSheet, saveReview, setFocus, validate, type SaveInput } from "./grading/store";
 import { AdminPage, type IssuedCode } from "./pages/admin";
@@ -239,6 +241,16 @@ app.post("/cham/luu", async (c) => {
   const todo = lines.filter((l) => l.learnerId !== s.learner.id && (l.status === "chua-cham" || l.status === "dang-cham" || l.status === "sua-sau-cham"));
   const next = todo.find((l) => l.team === s.learner.team) ?? todo[0];
   return c.redirect(next ? `/cham/bai?hv=${next.learnerId}&bt=${s.assignment.id}` : `/cham?bt=${s.assignment.id}&tb=het-viec`, 303);
+});
+
+app.get("/cham/nguoi-cham", async (c) => {
+  const u = c.get("user");
+  if (u.role === "phung_su") return c.html(<ForbiddenPage user={u} message="Trang này dành cho coach, BTC, admin." />, 403);
+  const { graders, overall } = await loadGraderStats(c.env.DB);
+  const rows = (await c.env.DB.prepare("SELECT user_id, team_code FROM grader_teams ORDER BY team_code").all<{ user_id: number; team_code: string }>()).results;
+  const teamsOf = new Map<number, string[]>();
+  for (const r of rows) teamsOf.set(r.user_id, [...(teamsOf.get(r.user_id) ?? []), r.team_code]);
+  return c.html(<GradersPage graders={graders} overall={overall} teamsOf={teamsOf} />);
 });
 
 app.post("/cham/trong-tam", async (c) => {
