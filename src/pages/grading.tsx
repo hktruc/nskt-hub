@@ -20,6 +20,7 @@ const STATUS: Record<QueueLine["status"], [string, string]> = {
 const fmt = (n: number | null) => (n === null ? "—" : n.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 
 export function QueuePage(props: {
+  nowVN?: string;
   user: User;
   weeks: WeekAssignment[];
   week: WeekAssignment | null;
@@ -70,6 +71,7 @@ export function QueuePage(props: {
         {props.weeks.map((w) => (
           <a class={`chip${w.id === week?.id ? " on" : ""}`} href={link({ bt: w.id, loc: "" })}>
             {(w.title ?? "").replace(/\s*\(X10\)\s*/i, "").slice(0, 28) || `Bài ${w.id}`}
+            {props.nowVN && w.due_at.slice(0, 19) > props.nowVN ? " · đang mở" : ""}
           </a>
         ))}
       </nav>
@@ -77,6 +79,9 @@ export function QueuePage(props: {
         <>
           <p class="muted small">
             Hạn nộp {shortVN(week.due_at)} · cần chấm xong trong {GRADING.dueDays} ngày sau hạn nộp.
+            {props.nowVN && week.due_at.slice(0, 19) > props.nowVN
+              ? " Bài đang mở: ai nộp rồi là chấm được ngay; bài nộp mới được lấy về mỗi giờ."
+              : ""}
           </p>
           <details class="week-setting">
             <summary>

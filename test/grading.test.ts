@@ -175,4 +175,19 @@ describe("bàn chấm", () => {
     expect(html).toContain("Đội 03");
     expect(html).toMatch(/<strong>1<\/strong> bài/);
   });
+
+  it("bài tuần đang mở (chưa tới hạn) cũng hiện trên bàn chấm, ai nộp rồi chấm được ngay", async () => {
+    const { raw, call, coachCookie } = await setup();
+    const iso = "2026-11-01T00:00:00Z";
+    const due = new Date(Date.now() + 7 * 3_600_000 + 86_400_000).toISOString().slice(0, 19); // mai, giờ VN
+    raw.prepare("INSERT INTO assignments (id, title, type, due_at, first_seen_at, last_seen_at) VALUES (901, 'Bài tuần 06 (X10)', 'WEEK', ?, ?, ?)").run(due, iso, iso);
+    raw.prepare(
+      "INSERT INTO submissions (learner_id, assignment_id, status, submitted_at, answers_json, answers_hash, content_hash, first_seen_at, changed_at, last_seen_at) VALUES (31, 901, 'DONE', ?, ?, 'x', 'c', ?, ?, ?)",
+    ).run(due, answers(["https://youtu.be/ddddddddddd"], ""), iso, iso, iso);
+    const html = await (await call("/cham", { cookie: coachCookie })).text();
+    expect(html).toContain("Bài tuần 06 · đang mở");
+    expect(html).toContain("Bài đang mở");
+    expect(html).toContain('/cham/bai?hv=31&amp;bt=901');
+    expect((await call("/cham/bai?hv=31&bt=901", { cookie: coachCookie })).status).toBe(200);
+  });
 });

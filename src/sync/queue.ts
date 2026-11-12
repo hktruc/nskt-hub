@@ -20,7 +20,9 @@ export const JOBS_PER_TICK = 3;
 export const MAX_ATTEMPTS = 3;
 const STUCK_AFTER_MS = 10 * 60_000;
 
-export type Reason = "daily" | "full" | "manual";
+export type Reason = "daily" | "full" | "manual" | "hourly";
+/** Mỗi giờ lấy lại bài nộp của các bài có hạn từ 2 ngày trước đến 7 ngày tới (bài đang mở), để bàn chấm có bài mới kịp thời. */
+export const HOURLY_DAYS_BACK = 2;
 
 export type Job = {
   id: number;
@@ -37,13 +39,14 @@ export async function enqueueRange(
   to: string,
   reason: Reason,
   now: Date,
+  opts: { attendance?: boolean } = {},
 ): Promise<number> {
   if (from > to) return 0;
   const iso = now.toISOString();
   const sql = `INSERT OR IGNORE INTO sync_jobs (report, from_date, to_date, reason, enqueued_at) VALUES (?,?,?,?,?)`;
   const stmts = [
     ...windows(from, to, SUBMISSION_WINDOW_DAYS).map((w) => db.prepare(sql).bind("submissions", w.from, w.to, reason, iso)),
-    ...windows(from, to, ATTENDANCE_WINDOW_DAYS).map((w) => db.prepare(sql).bind("attendance", w.from, w.to, reason, iso)),
+    ...(opts.attendance === false ? [] : windows(from, to, ATTENDANCE_WINDOW_DAYS).map((w) => db.prepare(sql).bind("attendance", w.from, w.to, reason, iso))),
   ];
   let added = 0;
   for (let i = 0; i < stmts.length; i += 50) {
@@ -63,6 +66,14 @@ export async function planDaily(env: Env, now: Date): Promise<{ added: number; f
   const from = full || recentFrom < env.SYNC_START_DATE ? env.SYNC_START_DATE : recentFrom;
   const added = await enqueueRange(env.DB, from, addDays(today, DAYS_AHEAD), full ? "full" : "daily", now);
   return { added, full };
+}
+
+/** Mỗi giờ: chỉ bài nộp của các bài đang mở / vừa hết hạn (không gọi điểm danh dh3g). */
+export async function planHourly(env: Env, now: Date): Promise<number> {
+  if (!env.DH3G_API_KEY) return 0;
+  const today = vietnamDay(now);
+  const from = addDays(today, -HOURLY_DAYS_BACK);
+  return enqueueRange(env.DB, from < env.SYNC_START_DATE ? env.SYNC_START_DATE : from, addDays(today, DAYS_AHEAD), "hourly", now, { attendance: false });
 }
 
 export async function planFull(env: Env, now: Date): Promise<number> {

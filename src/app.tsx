@@ -176,6 +176,7 @@ app.get("/cham", async (c) => {
   const doi = c.req.query("doi") ?? "";
   return c.html(
     <QueuePage
+      nowVN={nowVN(new Date())}
       user={u}
       weeks={weeks}
       week={week}
