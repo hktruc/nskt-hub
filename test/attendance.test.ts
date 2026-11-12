@@ -174,3 +174,20 @@ describe("đồng bộ điểm danh từ Google Sheet", () => {
     expect(raw.prepare("SELECT status FROM sheet_syncs ORDER BY id DESC LIMIT 1").get()).toEqual({ status: "loi" });
   });
 });
+
+describe("trang tình trạng dữ liệu", () => {
+  it("chỉ đếm học viên và đội thuộc 12 đội; người khác trong cộng đồng đếm riêng", async () => {
+    const { env, raw } = await setup();
+    const iso = "2026-11-01T00:00:00Z";
+    raw.prepare("INSERT INTO teams (id, name, first_seen_at, last_seen_at) VALUES (99, 'BTC', ?, ?)").run(iso, iso);
+    raw.prepare("INSERT INTO learners (id, full_name, team_id, first_seen_at, last_seen_at) VALUES (90, 'Người BTC', 99, ?, ?)").run(iso, iso);
+    raw.prepare("INSERT INTO learners (id, full_name, team_id, first_seen_at, last_seen_at) VALUES (91, 'Người đã nghỉ', NULL, ?, ?)").run(iso, iso);
+    await syncOfflineAttendance(env, new Date("2026-11-12T01:00:00Z"), fakeGoogle().fetchImpl);
+    const html = await (await app.fetch(new Request("http://localhost/du-lieu"), { ...env, LOCAL_DEV_NO_AUTH: "true" })).text();
+    const tile = (label: string) => html.match(new RegExp(`<div class="num">([\\d.]+)</div><div class="lbl">${label.replace(/[()]/g, "\\$&")}`))?.[1];
+    expect(tile("Học viên (12 đội)")).toBe("2");
+    expect(tile("Người khác trong cộng đồng dh3g")).toBe("2");
+    expect(tile("Đội học viên")).toBe("1"); // đội BTC không tính
+    expect(tile("Buổi học offline")).toBe("4");
+  });
+});
