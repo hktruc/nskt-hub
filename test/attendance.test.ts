@@ -174,3 +174,17 @@ describe("đồng bộ điểm danh từ Google Sheet", () => {
     expect(raw.prepare("SELECT status FROM sheet_syncs ORDER BY id DESC LIMIT 1").get()).toEqual({ status: "loi" });
   });
 });
+
+describe("trang tổng quan", () => {
+  it("hiện màu, buổi học gần nhất và bảng theo đội; chỉ BTC xem được", async () => {
+    const { env } = await setup();
+    await syncOfflineAttendance(env, new Date("2026-11-12T01:00:00Z"), fakeGoogle().fetchImpl);
+    const html = await (await app.fetch(new Request("http://localhost/"), { ...env, LOCAL_DEV_NO_AUTH: "true" })).text();
+    expect(html).toContain("Tổng quan NSKT2026");
+    expect(html).toContain("Buổi học offline gần nhất · 30/10");
+    expect(html).toContain('href="/bang-xep-hang?doi=T01"');
+    expect(html).not.toContain("0900000001");
+    // Không đăng nhập thì không vào được.
+    expect((await app.fetch(new Request("https://nskt-hub.invalid/"), env)).status).toBe(503);
+  });
+});
