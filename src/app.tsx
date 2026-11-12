@@ -11,8 +11,8 @@ import { syncOfflineAttendance } from "./attendance/offline";
 import { AccountPage, ActivatePage, ForbiddenPage, LoginPage, NeedLoginPage } from "./pages/account";
 import { QueuePage, SheetPage } from "./pages/grading";
 import { GradersPage } from "./pages/graders";
-import { CourseReport, DailyReportPage, ExamReportPage, SessionReportPage, WeeklyReportPage } from "./pages/reports";
-import { assignmentReport, courseByWeek, loadRoster, mondayOf, sessionReport } from "./reports/data";
+import { CourseReport, DailyReportPage, ExamReportPage, LearnerSummaryPage, PeerReportPage, SessionReportPage, WeeklyReportPage } from "./pages/reports";
+import { assignmentReport, courseByWeek, learnerSummary, loadRoster, mondayOf, peerReport, sessionReport } from "./reports/data";
 import { SCORING } from "./scoring/config";
 import { loadGraderStats } from "./grading/stats";
 import { FOCUS_OPTIONS, PROGRESS, SPIRIT } from "./grading/rubric";
@@ -293,6 +293,15 @@ app.get("/bao-cao/bai-ngay", async (c) => {
   return c.html(<DailyReportPage weeks={weeks} week={week} lines={lines} missing={missing} />);
 });
 app.get("/bao-cao/bai-tuan", async (c) => c.html(<WeeklyReportPage lines={(await assignmentReport(c.env.DB, "WEEK")).lines} />));
+app.get("/bao-cao/cham-cheo", async (c) => c.html(<PeerReportPage r={await peerReport(c.env.DB)} />));
+app.get("/bao-cao/hoc-vien", async (c) => {
+  const now = nowVN(new Date());
+  const [lb, peer] = await Promise.all([loadLeaderboard(c.env.DB, now), peerReport(c.env.DB)]);
+  const rows = await learnerSummary(c.env.DB, now, lb.ranked, peer);
+  const teams = [...new Set(rows.map((r) => r.l.team))].sort();
+  const doi = c.req.query("doi") ?? "";
+  return c.html(<LearnerSummaryPage rows={rows} team={teams.includes(doi) ? doi : ""} teams={teams} sort={c.req.query("sx") ?? "diem"} asc={c.req.query("tang") === "1"} />);
+});
 app.get("/bao-cao/bai-thi", async (c) => c.html(<ExamReportPage lines={(await assignmentReport(c.env.DB, "EXAM")).lines} />));
 
 app.get("/bao-cao/nguoi-cham", async (c) => {

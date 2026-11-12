@@ -1,7 +1,7 @@
 import type { Child } from "hono/jsx";
 import { teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
-import type { AssignmentLine, AttCounts, Learner, SessionReport, WeekRow } from "../reports/data";
+import type { AssignmentLine, AttCounts, Learner, LearnerRow, PeerReport, SessionReport, WeekRow } from "../reports/data";
 import { shortVN } from "./submissions";
 
 // Báo cáo thống kê (BTC, coach, admin): toàn khóa, buổi học offline, bài ngày, bài tuần, bài thi, người chấm.
@@ -12,6 +12,8 @@ const TABS = [
   ["/bao-cao/bai-ngay", "Bài tập ngày"],
   ["/bao-cao/bai-tuan", "Bài tập tuần"],
   ["/bao-cao/bai-thi", "Bài thi"],
+  ["/bao-cao/cham-cheo", "Chấm chéo"],
+  ["/bao-cao/hoc-vien", "Từng học viên"],
   ["/bao-cao/nguoi-cham", "Người chấm"],
 ] as const;
 
@@ -482,6 +484,223 @@ export function ExamReportPage(props: { lines: AssignmentLine[] }) {
           <p class="muted small">Bài thi chưa có tiêu chí chấm; báo cáo này chỉ thống kê nộp bài.</p>
         </>
       )}
+    </ReportShell>
+  );
+}
+
+// ---------- Chấm chéo ----------
+function Names(props: { title: string; list: Learner[] }) {
+  return (
+    <details class="card-item">
+      <summary>
+        <strong>
+          {props.title} ({props.list.length})
+        </strong>
+      </summary>
+      {props.list.length ? (
+        <ul class="plist">
+          {props.list.map((l) => (
+            <li>
+              {l.name} <span class="muted small">· {teamLabel(l.team)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="muted small">Không có ai.</p>
+      )}
+    </details>
+  );
+}
+
+export function PeerReportPage(props: { r: PeerReport }) {
+  const { r } = props;
+  const maxW = Math.max(1, ...r.byWeek.map((w) => w.n));
+  return (
+    <ReportShell tab="/bao-cao/cham-cheo" title="Báo cáo chấm chéo">
+      <p class="muted small">Học viên nhận xét, chấm điểm bài của nhau trên dh3g (thang 0–100), tính từ 30/09/2026.</p>
+      <div class="tiles">
+        <div class="tile">
+          <div class="lbl">Tổng lượt chấm chéo</div>
+          <div class="num">{r.total.toLocaleString("vi-VN")}</div>
+          <div class="small muted">TB {r.learners ? (r.total / r.learners).toFixed(1).replace(".", ",") : 0} lượt / học viên</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Học viên có chấm chéo bài bạn</div>
+          <div class="num">
+            {r.givers}/{r.learners}
+          </div>
+          <div class="small muted">{pct(r.givers, r.learners)}%</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Học viên được bạn chấm chéo</div>
+          <div class="num">
+            {r.receivers}/{r.learners}
+          </div>
+          <div class="small muted">{pct(r.receivers, r.learners)}%</div>
+        </div>
+        <div class="tile">
+          <div class="lbl">Điểm chấm chéo TB</div>
+          <div class="num">{r.avgGrade ?? "—"}</div>
+          <div class="small muted">thang 100</div>
+        </div>
+      </div>
+
+      <h2>Theo đội</h2>
+      <div class="scroll">
+        <table class="rtable">
+          <thead>
+            <tr>
+              <th>Đội</th>
+              <th>Thành viên có chấm</th>
+              <th class="r">Lượt chấm (cho bạn khác)</th>
+              <th class="r">Lượt được chấm</th>
+              <th class="r">TB / người</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.byTeam.map((t) => (
+              <tr>
+                <td>{teamLabel(t.team)}</td>
+                <td>
+                  <Meter v={pct(t.activeGivers, t.members)} />
+                </td>
+                <td class="r">{t.given}</td>
+                <td class="r">{t.received}</td>
+                <td class="r">{t.members ? (t.given / t.members).toFixed(1).replace(".", ",") : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Theo tuần</h2>
+      <div class="scroll">
+        <table class="rtable">
+          <tbody>
+            {r.byWeek.map((w) => (
+              <tr>
+                <td>Tuần {ddmm(w.from)}</td>
+                <td style="width:70%">
+                  <span class="hbar" style={`width:${Math.max(2, (100 * w.n) / maxW)}%`} />
+                </td>
+                <td class="r">{w.n}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Danh sách</h2>
+      <details class="card-item" open>
+        <summary>
+          <strong>Chấm chéo nhiều nhất ({r.top.length})</strong>
+        </summary>
+        <ol class="plist">
+          {r.top.map((t) => (
+            <li>
+              {t.l.name} <span class="muted small">· {teamLabel(t.l.team)} · {t.given} lượt</span>
+            </li>
+          ))}
+        </ol>
+      </details>
+      <Names title="Chưa chấm chéo cho ai" list={r.never} />
+      <Names title="Chưa được ai chấm chéo" list={r.notReceived} />
+      <p class="muted small">Chấm chéo offline (file "NSKT2026 - CHẤM CHÉO BÀI TẬP") chưa đưa vào: cần chia sẻ quyền xem file cho tài khoản dịch vụ.</p>
+    </ReportShell>
+  );
+}
+
+// ---------- Từng học viên ----------
+const SORTS: [string, string, (a: LearnerRow, b: LearnerRow) => number][] = [
+  ["diem", "Điểm BXH", (a, b) => (b.percent ?? -1) - (a.percent ?? -1)],
+  ["di-hoc", "Đi học", (a, b) => pct(b.attPresent, b.attTotal) - pct(a.attPresent, a.attTotal)],
+  ["bai-ngay", "Bài ngày", (a, b) => pct(b.dailyOnTime, b.dailyTotal) - pct(a.dailyOnTime, a.dailyTotal)],
+  ["bai-tuan", "Bài tuần", (a, b) => pct(b.weeklyDone, b.weeklyTotal) - pct(a.weeklyDone, a.weeklyTotal)],
+  ["cham-cheo", "Chấm chéo", (a, b) => b.given - a.given],
+  ["chat-luong", "Chất lượng", (a, b) => (b.quality ?? -1) - (a.quality ?? -1)],
+  ["canh-bao", "Cảnh báo", (a, b) => b.flags - a.flags],
+];
+
+export function LearnerSummaryPage(props: { rows: LearnerRow[]; team: string; teams: string[]; sort: string; asc: boolean }) {
+  const sorter = SORTS.find((x) => x[0] === props.sort) ?? SORTS[0]!;
+  let rows = props.rows.filter((r) => !props.team || r.l.team === props.team).sort((a, b) => sorter[2](a, b) || a.l.name.localeCompare(b.l.name, "vi"));
+  if (props.asc) rows = rows.reverse();
+  const link = (o: { doi?: string; sx?: string; tang?: boolean }) => {
+    const q = new URLSearchParams();
+    const doi = o.doi ?? props.team;
+    if (doi) q.set("doi", doi);
+    q.set("sx", o.sx ?? props.sort);
+    if (o.tang) q.set("tang", "1");
+    return `/bao-cao/hoc-vien?${q}`;
+  };
+  const head = (key: string, label: string) => (
+    <th class="r">
+      <a href={link({ sx: key, tang: props.sort === key && !props.asc })} class={props.sort === key ? "on" : ""}>
+        {label}
+        {props.sort === key ? (props.asc ? " ▲" : " ▼") : ""}
+      </a>
+    </th>
+  );
+  const frac = (a: number, b: number) => (b ? `${pct(a, b)}%` : "—");
+  return (
+    <ReportShell tab="/bao-cao/hoc-vien" title="Tổng hợp từng học viên">
+      <nav class="chips" aria-label="Lọc theo đội">
+        <a class={`chip${props.team ? "" : " on"}`} href={link({ doi: "" })}>
+          Toàn khóa
+        </a>
+        {props.teams.map((t) => (
+          <a class={`chip${props.team === t ? " on" : ""}`} href={link({ doi: t })}>
+            {teamLabel(t)}
+          </a>
+        ))}
+      </nav>
+      <p class="muted small">Bấm tên cột để sắp xếp (bấm lần nữa để đảo chiều). Dòng tô màu theo bảng xếp hạng. Bấm tên học viên để xem chi tiết.</p>
+      <div class="scroll">
+        <table class="rtable lsum">
+          <thead>
+            <tr>
+              <th>Học viên</th>
+              {head("diem", "Điểm BXH")}
+              {head("di-hoc", "Đi học")}
+              {head("bai-ngay", "Bài ngày đúng hạn")}
+              {head("bai-tuan", "Bài tuần đã nộp")}
+              {head("cham-cheo", "Chấm chéo cho / nhận")}
+              {head("chat-luong", "Chất lượng")}
+              {head("canh-bao", "Cảnh báo")}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr class={r.color ? `rk-${r.color}` : ""}>
+                <td>
+                  <a href={`/bang-xep-hang/hv/${r.l.id}`}>{r.l.name}</a>
+                  <div class="small muted">{teamLabel(r.l.team)}</div>
+                </td>
+                <td class="r">
+                  <strong>{r.percent === null ? "—" : `${r.percent.toLocaleString("vi-VN")}%`}</strong>
+                </td>
+                <td class="r">
+                  {frac(r.attPresent, r.attTotal)} <span class="muted small">({r.attPresent}/{r.attTotal})</span>
+                </td>
+                <td class="r">
+                  {frac(r.dailyOnTime, r.dailyTotal)} <span class="muted small">({r.dailyOnTime}/{r.dailyTotal})</span>
+                </td>
+                <td class="r">
+                  {r.weeklyDone}/{r.weeklyTotal}
+                </td>
+                <td class="r">
+                  {r.given} / {r.received}
+                </td>
+                <td class="r">{r.quality === null ? "—" : `${r.quality.toLocaleString("vi-VN")}★`}</td>
+                <td class="r">{r.flags ? <span class="badge bad">{r.flags}</span> : "0"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">
+        Đi học: số buổi có mặt / số buổi có điểm danh (không tính PD). Bài ngày: nộp đúng hạn / số bài đã tới hạn. Cảnh báo: số bài có câu trả lời đối phó (xem ở trang Cảnh báo).
+      </p>
     </ReportShell>
   );
 }
