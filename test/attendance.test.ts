@@ -9,7 +9,7 @@ import { json, testEnv } from "./helpers/fixtures";
 const CHECK_IN = [
   ["Mã Thôn", "Mã Cư Dân", "Họ và Tên", "Khu Vực", "KHAI GIANG", "09-10", "16-10", "23-10", "30-10", "13-11", "Σ ✅"],
   ["T01", "T0101", "Người Giả Một", "Hà Nội", "❌", "✅", "M", "✅️", "PD", "", "3"],
-  ["T01", "T0102", "Người Giả Hai", "Hà Nội", "✅", "❌", "P", "⚠️", "X", "", "0"],
+  ["T01", "T0102", "Người Giả Hai", "HCM", "✅", "❌", "P", "⚠️", "X", "", "0"],
   ["T02", "T0201", "Người Giả Ba", "Hà Nội", "✅", "✅", "✅", "✅", "✅", "", "5"],
 ];
 const ROSTER = [
@@ -203,5 +203,27 @@ describe("trang tình trạng dữ liệu", () => {
     expect(tile("Người khác trong cộng đồng dh3g")).toBe("2");
     expect(tile("Đội học viên")).toBe("1"); // đội BTC không tính
     expect(tile("Buổi học offline")).toBe("4");
+  });
+});
+
+describe("báo cáo", () => {
+  it("buổi học offline: tách đầu HN / đầu SG theo cột Khu Vực, liệt kê người vắng", async () => {
+    const { env } = await setup();
+    await syncOfflineAttendance(env, new Date("2026-11-12T01:00:00Z"), fakeGoogle().fetchImpl);
+    const dev = { ...env, LOCAL_DEV_NO_AUTH: "true" };
+    const html = await (await app.fetch(new Request("http://localhost/bao-cao/buoi-hoc?ngay=2026-10-09"), dev)).text();
+    // 09/10: T0101 (HN) ✅, T0102 (SG) ❌
+    expect(html).toMatch(/<td>Có mặt \(điểm danh\)<\/td><td class="r">1<\/td><td class="r">0<\/td>/);
+    expect(html).toContain("Vắng không phép (1)");
+    expect(html).toContain("đầu SG");
+    for (const p of ["/bao-cao", "/bao-cao/bai-ngay", "/bao-cao/bai-tuan", "/bao-cao/bai-thi", "/bao-cao/nguoi-cham"]) {
+      expect((await app.fetch(new Request(`http://localhost${p}`), dev)).status).toBe(200);
+    }
+    expect((await app.fetch(new Request("https://nskt-hub.invalid/bao-cao"), env)).status).toBe(503);
+  });
+
+  it("vùng: Hà Nội, Miền Bắc → HN; HCM, Miền Nam → SG", async () => {
+    const { regionOf } = await import("../src/attendance/offline");
+    expect(["Hà Nội", "Miền Bắc", "HCM", "Miền Nam", "Hà Nam", ""].map(regionOf)).toEqual(["HN", "HN", "SG", "SG", "KHAC", "KHAC"]);
   });
 });

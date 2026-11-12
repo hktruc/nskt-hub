@@ -125,7 +125,7 @@ export function QueuePage(props: {
           </details>
           {!grader ? (
             <p class="small">
-              <a href="/cham/nguoi-cham">→ Năng lực người chấm (ai chấm bao nhiêu, đúng hạn, dễ hay khắt khe)</a>
+              <a href="/bao-cao/nguoi-cham">→ Năng lực người chấm (ai chấm bao nhiêu, đúng hạn, dễ hay khắt khe)</a>
             </p>
           ) : null}
 

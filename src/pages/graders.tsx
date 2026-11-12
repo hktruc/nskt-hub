@@ -1,6 +1,6 @@
 import { formatVN } from "../dates";
 import { teamLabel } from "../domain/teams";
-import { Layout } from "../layout";
+import { ReportShell } from "./reports";
 import type { GraderStat } from "../grading/stats";
 
 // Năng lực chấm của ban phụng sự (và coach) — chỉ coach, BTC, admin xem.
@@ -8,11 +8,8 @@ import type { GraderStat } from "../grading/stats";
 export function GradersPage(props: { graders: GraderStat[]; overall: number | null; teamsOf: Map<number, string[]> }) {
   const f = (n: number | null) => (n === null ? "—" : n.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
   return (
-    <Layout title="Năng lực người chấm">
-      <p class="small">
-        <a href="/cham">← Bàn chấm</a>
-      </p>
-      <h1>Năng lực người chấm</h1>
+    <ReportShell tab="/bao-cao/nguoi-cham" title="Năng lực người chấm">
+      <h2>Năng lực người chấm</h2>
       <p class="muted small">
         Điểm trung bình cả khóa: <strong>{f(props.overall)}★</strong>. Người cho điểm cao hơn mặt bằng từ 0,5★ trở lên (đã chấm ít nhất 5 bài) bị đánh
         dấu <span class="badge warn">Chấm dễ</span>, thấp hơn từ 0,5★ là <span class="badge warn">Chấm khắt khe</span>. "Đúng hạn" = chấm trong 3 ngày
@@ -51,6 +48,6 @@ export function GradersPage(props: { graders: GraderStat[]; overall: number | nu
           </li>
         ))}
       </ul>
-    </Layout>
+    </ReportShell>
   );
 }

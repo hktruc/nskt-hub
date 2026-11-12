@@ -46,6 +46,14 @@ export function headerDay(h: string, startYear = Number(SCORING.startDate.slice(
 
 export type CheckInRecord = { resident: string; day: string; code: AttCode };
 
+/** "Hà Nội", "Miền Bắc" → HN; "HCM", "Miền Nam" → SG. */
+export function regionOf(raw: string | undefined): "HN" | "SG" | "KHAC" {
+  const s = (raw ?? "").normalize("NFC").toLowerCase();
+  if (/hcm|hồ chí minh|sài gòn|sai gon|miền nam|mien nam/.test(s)) return "SG";
+  if (/hà nội|ha noi|miền bắc|bắc/.test(s)) return "HN";
+  return "KHAC";
+}
+
 /** Đọc trang CHECK_IN. Cột "KHAI GIANG" không có ngày nên không tính (điểm tính từ 30/09). */
 /** Khóa so tên: chữ thường, gộp khoảng trắng. `loose`: bỏ cả dấu tiếng Việt. */
 export function nameKey(name: string, loose = false): string {
@@ -54,13 +62,15 @@ export function nameKey(name: string, loose = false): string {
   return s;
 }
 
-export function parseCheckIn(rows: string[][]): { residents: string[]; records: CheckInRecord[]; names: Map<string, string> } {
+export function parseCheckIn(rows: string[][]): { residents: string[]; records: CheckInRecord[]; names: Map<string, string>; regions: Map<string, "HN" | "SG" | "KHAC"> } {
   const hi = rows.findIndex((r) => r.some((c) => norm(c) === "mã cư dân"));
   if (hi < 0) throw new SheetsError('Trang CHECK_IN không có cột "Mã Cư Dân".');
   const header = rows[hi]!;
   const col = header.findIndex((c) => norm(c) === "mã cư dân");
   const cName = header.findIndex((c) => norm(c) === "họ và tên" || norm(c) === "họ tên");
   const names = new Map<string, string>();
+  const cRegion = header.findIndex((c) => norm(c) === "khu vực" || norm(c) === "khu vuc");
+  const regions = new Map<string, "HN" | "SG" | "KHAC">();
   const dayCols = header.map((h, i) => ({ i, day: headerDay(h) })).filter((x): x is { i: number; day: string } => x.day !== null);
   const residents: string[] = [];
   const records: CheckInRecord[] = [];
@@ -69,12 +79,13 @@ export function parseCheckIn(rows: string[][]): { residents: string[]; records: 
     if (!/^T\d{4}$/.test(resident)) continue;
     residents.push(resident);
     if (cName >= 0 && r[cName]) names.set(resident, r[cName]!);
+    if (cRegion >= 0) regions.set(resident, regionOf(r[cRegion]));
     for (const { i, day } of dayCols) {
       const code = normalizeCode(r[i] ?? "");
       if (code) records.push({ resident, day, code });
     }
   }
-  return { residents, records, names };
+  return { residents, records, names, regions };
 }
 
 /** Đọc trang DS_CHIA_THON: Mã Cư Dân → số điện thoại. */
@@ -125,7 +136,7 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
       readRange(token, env.SHEET_ATTENDANCE_ID, CHECKIN_RANGE, fetchImpl),
       readRange(token, env.SHEET_ROSTER_ID, ROSTER_RANGE, fetchImpl),
     ]);
-    const { residents, records, names } = parseCheckIn(checkIn);
+    const { residents, records, names, regions } = parseCheckIn(checkIn);
     const phoneOf = parseRoster(roster);
     const learners = (
       await env.DB.prepare("SELECT l.id, l.phone, l.full_name, t.name AS team_name FROM learners l LEFT JOIN teams t ON t.id = l.team_id").all<{
@@ -177,14 +188,14 @@ export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: type
     }
     const today = vietnamDay(now);
     const keep = records.filter((r) => r.day >= SCORING.startDate && r.day <= today && learnerOf.has(r.resident));
-    const rows = keep.map((r) => [learnerOf.get(r.resident)!, r.day, r.code, r.resident]);
+    const rows = keep.map((r) => [learnerOf.get(r.resident)!, r.day, r.code, r.resident, regions.get(r.resident) ?? "KHAC"]);
     // Thay toàn bộ trong một lượt để không bao giờ còn nửa cũ nửa mới.
     const stmts = [env.DB.prepare("DELETE FROM offline_attendance")];
     for (let i = 0; i < rows.length; i += 500) {
       stmts.push(
         env.DB.prepare(
-          `INSERT OR REPLACE INTO offline_attendance (learner_id, session_day, code, resident_code, synced_at)
-           SELECT json_extract(value,'$[0]'), json_extract(value,'$[1]'), json_extract(value,'$[2]'), json_extract(value,'$[3]'), ?
+          `INSERT OR REPLACE INTO offline_attendance (learner_id, session_day, code, resident_code, region, synced_at)
+           SELECT json_extract(value,'$[0]'), json_extract(value,'$[1]'), json_extract(value,'$[2]'), json_extract(value,'$[3]'), json_extract(value,'$[4]'), ?
            FROM json_each(?)`,
         ).bind(iso, JSON.stringify(rows.slice(i, i + 500))),
       );

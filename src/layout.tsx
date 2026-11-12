@@ -281,6 +281,13 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 @media (min-width: 760px) { .toast { bottom:24px; } }
 @keyframes toast-in { from { opacity:0; transform:translate(-50%, 12px); } to { opacity:1; transform:translate(-50%, 0); } }
 @keyframes toast-out { to { opacity:0; transform:translate(-50%, 12px); visibility:hidden; } }
+/* ---- Báo cáo ---- */
+.rtable td, .rtable th { white-space:nowrap; } .rtable td { vertical-align:middle; }
+.sbar { display:flex; width:140px; height:10px; border-radius:999px; overflow:hidden; background:var(--soft); gap:1px; vertical-align:middle; }
+.s-ok { background:#22C55E; } .s-mid { background:#FACC15; } .s-bad { background:#F87171; } .s-empty { background:var(--soft); }
+.meter { display:inline-flex; align-items:center; gap:8px; } .meter .sbar { width:110px; } .meter b { font-variant-numeric:tabular-nums; font-size:.875rem; min-width:3em; }
+.rlegend { display:flex; align-items:center; gap:4px 10px; flex-wrap:wrap; } .sq { display:inline-block; width:10px; height:10px; border-radius:3px; }
+.plist { list-style:none; margin:8px 0 0; padding:0; columns:2 220px; } .plist li { padding:3px 0; break-inside:avoid; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
@@ -311,8 +318,8 @@ const MAIN_NAV: NavItem[] = [
   { href: "/bang-xep-hang", label: "Xếp hạng", icon: "trophy" },
 ];
 const MORE_NAV: NavItem[] = [
+  { href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" },
   { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },
-  { href: "/cham/nguoi-cham", label: "Năng lực người chấm", icon: "chart" },
   { href: "/du-lieu", label: "Dữ liệu", icon: "db" },
   { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
   { href: "/quan-tri", label: "Quản trị (admin)", icon: "shield" },
