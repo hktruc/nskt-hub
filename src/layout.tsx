@@ -119,6 +119,9 @@ dialog.sheet::backdrop { background:rgba(4,32,29,.45); }
 .hv-name { font-weight:700; font-size:1.0625rem; line-height:1.3; }
 .hv-pct { font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; }
 .hv-head .close { min-height:40px; min-width:40px; padding:0; background:transparent; border:0; color:inherit; font-size:1.125rem; }
+.hv-parts { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
+.hv-parts div { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; }
+.hv-parts strong { font-variant-numeric:tabular-nums; }
 .hist { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; }
 .hist li { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 6px; display:flex; flex-direction:column; align-items:center; text-align:center; line-height:1.35; }
 .hist li.now { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }

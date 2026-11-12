@@ -1,5 +1,6 @@
 import app from "./app";
 import type { Env } from "./env";
+import { isHourlySlot, syncOfflineAttendance } from "./attendance/offline";
 import { scoringTick } from "./scoring/run";
 import { DAILY_CRON, planDaily, workQueue } from "./sync/queue";
 
@@ -14,6 +15,10 @@ export default {
     } else {
       ctx.waitUntil(
         (async () => {
+          if (isHourlySlot(now)) {
+            const a = await syncOfflineAttendance(env, now);
+            if (a.status !== "chua-cau-hinh") console.log("điểm danh offline:", JSON.stringify(a));
+          }
           const r = await workQueue(env, now);
           if (r.done > 0 || r.failed > 0) console.log("sync: xử lý hàng đợi", JSON.stringify(r));
           const s = await scoringTick(env, now);

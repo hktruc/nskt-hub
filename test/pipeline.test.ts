@@ -78,7 +78,7 @@ describe("chuỗi chấm điểm", () => {
       const html = await res.text();
       expect(html).toContain("Học Viên A");
       expect(html).toContain("Thứ hạng 3 tuần gần nhất");
-      expect(html).toContain("Điểm tích lũy");
+      expect(html).toContain("Bài tập tích lũy");
       expect(html).not.toContain("0000000001");
       expect(html).not.toContain("example.invalid");
       expect(html).not.toContain("Cảnh báo");
@@ -93,7 +93,7 @@ describe("bảng xếp hạng theo đội", () => {
   it("xem một đội thì hiện hạng trong đội kèm hạng toàn khóa", async () => {
     const { LeaderboardPage } = await import("../src/pages/leaderboard");
     const mk = (id: number, team: string, percent: number, rank: number) => ({
-      rank, learnerId: id, name: `HV ${id}`, team, percent, color: "vang" as const, colorLabel: "Vàng", onTimeVideos: 0, avgHoursEarly: 0,
+      rank, learnerId: id, name: `HV ${id}`, team, percent, studyPercent: percent, attendancePercent: null, color: "vang" as const, colorLabel: "Vàng", onTimeSessions: 0, onTimeVideos: 0, avgHoursEarly: 0,
     });
     const ranked = [mk(1, "T01", 90, 1), mk(2, "T02", 80, 2), mk(3, "T02", 80, 2), mk(4, "T02", 70, 4)];
     const html = String(LeaderboardPage({ ranked, team: "T02", teams: ["T01", "T02"], provisional: false, updatedAt: null }));

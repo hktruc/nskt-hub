@@ -15,6 +15,16 @@ export const SCORING = {
   lateVideo: 2,
   /** Nộp trễ: câu trả lời bằng chữ (kể cả ảnh) được bấy nhiêu phần điểm; AI vẫn kiểm tra nội dung. */
   lateTextFactor: 0.5,
+
+  /** Đi học offline (chủ dự án chốt 12/11/2026): chiếm một nửa điểm xếp hạng. */
+  attendance: {
+    /** Phần của điểm đi học trong điểm xếp hạng; phần còn lại là điểm bài tập. */
+    share: 0.5,
+    /** Buổi học cách đây `halfLifeWeeks` tuần chỉ còn tính một nửa (chậm hơn bài tập vì không học bù được). */
+    halfLifeWeeks: 6,
+    /** Điểm mỗi buổi theo ký hiệu (1 = đủ). PD và ký hiệu lạ: không tính buổi đó. */
+    points: { OK: 1, M: 0.7, X: 0.6, M1: 0.4, CANH_BAO: 0.5, P: 0.3, VANG: 0 } as Record<string, number>,
+  },
 } as const;
 
 export type Color = "xanh" | "vang" | "do";

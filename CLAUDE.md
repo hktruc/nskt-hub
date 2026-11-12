@@ -39,6 +39,8 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-11 | Nguồn danh sách học viên ↔ số điện thoại: Google Sheet **"NSKT 2026 CHIA THÔN HỌC VIÊN"** (tab `DS_HV` chỉ có 6 số cuối; tab `DS_CHIA_THON` và `DS_UP_DH3G` có đủ số, `DS_UP_DH3G` có cả Team Code và mã dh3g). |
 | 2026-11-11 | **Tiếp tục dùng khóa dh3g hiện tại** (đội chủ dự án quyết định), dù khóa đang có trong file Google Sheet "NSKT 2026 CHIA THÔN HỌC VIÊN". |
 | 2026-11-11 | Cloudflare: gói **Workers Paid**; chạy ở địa chỉ miễn phí **`nskt-hub.<tài-khoản>.workers.dev`** (không dùng tên miền riêng). |
+| 2026-11-12 | **Đi học offline chiếm 50% điểm xếp hạng** (50% bài tập + 50% đi học). Mỗi buổi: ✅ 100%, M 70%, X 60%, M1 40%, ⚠️ 50%, P 30%, ❌ (kể cả học qua Zoom) 0%; **bỏ qua PD**. Buổi cũ mờ dần chậm hơn: **nửa đời 6 tuần**. Đồng điểm: ai đi học đúng giờ nhiều buổi hơn xếp trên, rồi mới tới video. Bảng công khai chỉ hiện tổng (có mặt X/Y buổi), không liệt kê từng buổi. |
+| 2026-11-12 | Ghép điểm danh: trang `CHECK_IN` (Mã Cư Dân) → trang `DS_CHIA_THON` cùng file chia thôn (Mã Cư Dân → SĐT) → học viên dh3g theo SĐT. Đọc bằng tài khoản dịch vụ Google chỉ có quyền xem. |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -51,8 +53,8 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 - Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
 - Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%** (ngưỡng xanh đã chốt 80%).
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
-- Cách nskt-hub đọc hai Google Sheet hằng ngày (Claude đề xuất: tài khoản dịch vụ Google chỉ có quyền xem).
-- Ký hiệu `PD` trong file điểm danh nghĩa là gì (trang hướng dẫn chưa ghi).
+- Chủ dự án tạo tài khoản dịch vụ Google, nhập secret `GOOGLE_SERVICE_ACCOUNT_JSON`, chia sẻ quyền xem hai file (điểm danh, chia thôn) — chặn việc điểm danh chạy thật.
+- Buổi khai giảng 29/09 có tính điểm danh không (hiện không tính, cho thống nhất với bài tập).
 - Ai phân công phụng sự vào đội (chỉ admin, hay cả coach); điểm phụng sự chấm có cần coach duyệt không.
 - Bàn chấm bài có hai khu vực: khu vực 1 cho phụng sự / coach chấm; **khu vực 2 chủ dự án chưa mô tả**.
 
@@ -98,7 +100,8 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 - **Điểm danh offline** (`CHECK_IN`): mỗi dòng một học viên (Mã Thôn, Mã Cư Dân, họ tên, khu vực), mỗi cột một buổi: KHAI GIANG rồi các thứ Sáu 09/10 → 25/12. Ký hiệu: ✅ đúng giờ đúng chỗ, X đúng giờ sai vị trí, ⚠️ không có vị trí / dùng chung máy, M muộn, M1 muộn + sai vị trí, P nghỉ có phép, PD (chưa rõ), ❌ vắng không phép. Giờ check-in đúng giờ 17:00–18:30, muộn 18:30–19:30 (buổi khai giảng 15:00–16:30).
 - **Chấm chéo offline** (`CHAM_CHEO_LOG`): mỗi dòng một lượt chấm — người chấm, người được chấm (Mã Cư Dân), mã đợt, tóm tắt, 4 tiêu chí 1–5 sao kèm nhận xét: Sơ đồ, Thuyết phục, Phản biện, Đặt câu hỏi; điểm TB. Có dòng thử của BTC (mã `BTC..`, thôn `TEST`) — phải loại. Mã đợt chưa thống nhất (`CC-T1` ở `DOT_CHAM`, `CC-20260925` ở `TONG_HOP`).
-- Hai file chưa có số điện thoại. Ghép thử theo họ tên chỉ khớp chắc chắn ~80% → không ghép theo tên.
+- Hai file chưa có số điện thoại. Ghép thử theo họ tên chỉ khớp chắc chắn ~80% → không ghép theo tên. Điểm danh ghép qua `DS_CHIA_THON` (có Mã Cư Dân + SĐT); `DS_UP_DH3G` cũng có SĐT, Team Code + Code = Mã Cư Dân.
+- **Đã tích hợp điểm danh** (`src/attendance/offline.ts`, đọc qua `src/google/sheets.ts`): mỗi giờ (lượt cron 5 phút đầu giờ) hoặc bấm nút ở `/du-lieu`. Mỗi lần thay toàn bộ bảng `offline_attendance`; nhật ký ở `sheet_syncs` (chỉ lưu Mã Cư Dân chưa ghép được, không lưu tên/SĐT). Cột "KHAI GIANG" không có ngày nên không tính; chỉ tính buổi từ 30/09 tới hôm nay. Người chưa ghép được chỉ tính điểm bài tập.
 
 ## Nguồn dữ liệu dh3g (đã đối chiếu với dữ liệu thật ngày 2026-11-11)
 
@@ -152,9 +155,10 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/sync/queue.ts` — lên kế hoạch và xử lý hàng đợi đồng bộ
 - `src/scoring/` — quy tắc điểm (`config`, `spec`, `rules`), chạy định kỳ (`run`), bảng xếp hạng (`leaderboard`)
 - `src/ai/openai.ts` — gọi OpenAI chấm câu cần đọc hiểu
+- `src/google/sheets.ts` — đọc Google Sheet bằng tài khoản dịch vụ; `src/attendance/offline.ts` — điểm danh offline
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001, 0002, 0003.
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001, 0002, 0003, 0004.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử

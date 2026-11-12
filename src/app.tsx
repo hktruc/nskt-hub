@@ -5,6 +5,7 @@ import type { Env } from "./env";
 import { Layout } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
+import { syncOfflineAttendance } from "./attendance/offline";
 import { LeaderboardPage, LearnerDetailPage, LearnerDetailView } from "./pages/leaderboard";
 import { FlagsPage, loadFlags } from "./pages/flags";
 import { SubmissionDetailPage, loadDetail } from "./pages/submission-detail";
@@ -24,7 +25,7 @@ app.get("/bang-xep-hang", async (c) => {
   const doi = c.req.query("doi") ?? "";
   c.header("Cache-Control", "public, max-age=300");
   return c.html(
-    <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} updatedAt={data.updatedAt} />,
+    <LeaderboardPage ranked={data.ranked} team={teams.includes(doi) ? doi : ""} teams={teams} provisional={data.provisional} hasAttendance={data.hasAttendance} updatedAt={data.updatedAt} />,
   );
 });
 
@@ -137,7 +138,9 @@ app.get("/canh-bao", async (c) => {
 
 app.get("/du-lieu", async (c) => {
   const status = await loadDataStatus(c.env);
-  return c.html(<DataStatusPage status={status} notice={NOTICES[c.req.query("tb") ?? ""]} />);
+  return c.html(
+    <DataStatusPage status={status} notice={NOTICES[c.req.query("tb") ?? ""] ?? SHEET_NOTICES[c.req.query("dd") ?? ""]} />,
+  );
 });
 
 app.post("/du-lieu/dong-bo", async (c) => {
@@ -158,6 +161,17 @@ app.post("/du-lieu/dong-bo", async (c) => {
     );
   }
   return c.redirect(`/du-lieu?tb=${added > 0 ? "da-xep" : "khong-co-gi-moi"}`, 303);
+});
+
+const SHEET_NOTICES: Record<string, string> = {
+  ok: "Đã đọc lại điểm danh offline từ Google Sheet.",
+  "chua-cau-hinh": "Chưa nối được Google Sheet: thiếu khóa tài khoản dịch vụ Google (xem hướng dẫn bên dưới).",
+  loi: "Đọc Google Sheet bị lỗi, xem chi tiết ở mục Điểm danh offline.",
+};
+
+app.post("/du-lieu/diem-danh", async (c) => {
+  const r = await syncOfflineAttendance(c.env, new Date());
+  return c.redirect(`/du-lieu?dd=${r.status}#diem-danh`, 303);
 });
 
 app.notFound((c) =>

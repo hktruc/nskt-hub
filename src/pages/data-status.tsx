@@ -25,6 +25,11 @@ export type DataStatus = {
   lastSuccess: string | null;
   lastError: JobRow | null;
   recent: JobRow[];
+  offline: {
+    configured: boolean;
+    rows: number;
+    last: { at: string; status: string; sessions: number | null; rows_total: number | null; matched: number | null; unmatched_json: string | null; message: string | null } | null;
+  };
 };
 
 const STATUS_VI: Record<string, string> = {
@@ -46,7 +51,7 @@ const REASON_VI: Record<string, string> = { daily: "Hàng ngày", full: "Toàn b
 export async function loadDataStatus(env: Env): Promise<DataStatus> {
   const db = env.DB;
   const count = (t: string) => db.prepare(`SELECT COUNT(*) AS n FROM ${t}`);
-  const [learners, teams, assignments, submissions, sessions, attendances, byStatus, queue, last, lastError, recent] =
+  const [learners, teams, assignments, submissions, sessions, attendances, byStatus, queue, last, lastError, recent, offRows, offLast] =
     await db.batch([
       count("learners"),
       count("teams"),
@@ -59,6 +64,8 @@ export async function loadDataStatus(env: Env): Promise<DataStatus> {
       db.prepare("SELECT MAX(finished_at) AS at FROM sync_jobs WHERE status='done'"),
       db.prepare("SELECT * FROM sync_jobs WHERE error IS NOT NULL ORDER BY id DESC LIMIT 1"),
       db.prepare("SELECT * FROM sync_jobs WHERE status IN ('done','failed') ORDER BY finished_at DESC, id DESC LIMIT 20"),
+      count("offline_attendance"),
+      db.prepare("SELECT at, status, sessions, rows_total, matched, unmatched_json, message FROM sheet_syncs ORDER BY id DESC LIMIT 1"),
     ]);
   const n = (r: D1Result | undefined) => Number((r?.results[0] as { n?: number } | undefined)?.n ?? 0);
   const q = Object.fromEntries(((queue?.results ?? []) as { status: string; n: number }[]).map((r) => [r.status, r.n]));
@@ -77,6 +84,11 @@ export async function loadDataStatus(env: Env): Promise<DataStatus> {
     lastSuccess: ((last?.results[0] as { at?: string | null } | undefined)?.at ?? null) as string | null,
     lastError: ((lastError?.results[0] as JobRow | undefined) ?? null),
     recent: (recent?.results ?? []) as JobRow[],
+    offline: {
+      configured: Boolean(env.GOOGLE_SERVICE_ACCOUNT_JSON && env.SHEET_ATTENDANCE_ID && env.SHEET_ROSTER_ID),
+      rows: n(offRows),
+      last: ((offLast?.results[0] as DataStatus["offline"]["last"] | undefined) ?? null),
+    },
   };
 }
 
@@ -165,6 +177,9 @@ export function DataStatusPage(props: { status: DataStatus; notice?: string }) {
         </button>
       </form>
 
+      <h2 id="diem-danh">Điểm danh offline (Google Sheet)</h2>
+      <OfflineSection o={s.offline} />
+
       <h2>20 lần gọi dh3g gần nhất</h2>
       {s.recent.length === 0 ? (
         <p class="muted">Chưa có lần nào.</p>
@@ -187,5 +202,53 @@ export function DataStatusPage(props: { status: DataStatus; notice?: string }) {
         </ul>
       )}
     </Layout>
+  );
+}
+
+function OfflineSection(props: { o: DataStatus["offline"] }) {
+  const { o } = props;
+  const last = o.last;
+  const unmatched: string[] = last?.unmatched_json ? (JSON.parse(last.unmatched_json) as string[]) : [];
+  return (
+    <>
+      <p class="muted">
+        Đọc trang <code>CHECK_IN</code> của file "NSKT2026 - KỶ LUẬT - HỌC VIÊN" mỗi giờ, ghép với học viên dh3g qua số điện thoại ở trang{" "}
+        <code>DS_CHIA_THON</code> (file "NSKT 2026 CHIA THÔN HỌC VIÊN").
+      </p>
+      {!o.configured ? (
+        <div class="warn">
+          <p style="margin:0 0 6px">
+            <strong>Chưa nối được Google Sheet.</strong> Cần làm một lần:
+          </p>
+          <ol style="margin:0;padding-left:20px">
+            <li>Tạo tài khoản dịch vụ Google (chỉ để đọc), tải tệp khóa JSON.</li>
+            <li>
+              Trên Cloudflare, nhập nội dung tệp đó làm secret <code>GOOGLE_SERVICE_ACCOUNT_JSON</code>.
+            </li>
+            <li>Chia sẻ hai file Google Sheet trên cho email của tài khoản dịch vụ, quyền <strong>Người xem</strong>.</li>
+          </ol>
+        </div>
+      ) : null}
+      {last ? (
+        <p>
+          Lần đọc gần nhất: <strong>{formatVN(last.at)}</strong> ·{" "}
+          <span class={`badge ${last.status === "ok" ? "ok" : "bad"}`}>{last.status === "ok" ? "Thành công" : "Lỗi"}</span>
+          {last.status === "ok"
+            ? ` · ${last.sessions ?? 0} buổi · ghép được ${last.matched ?? 0}/${last.rows_total ?? 0} học viên · ${o.rows.toLocaleString("vi-VN")} lượt điểm danh.`
+            : ` · ${last.message ?? ""}`}
+        </p>
+      ) : (
+        <p class="muted">Chưa đọc lần nào.</p>
+      )}
+      {unmatched.length ? (
+        <p class="warn small">
+          Chưa ghép được {unmatched.length} Mã Cư Dân (không tìm thấy số điện thoại trong DS_CHIA_THON, hoặc số đó không có trên dh3g):{" "}
+          {unmatched.join(", ")}. Những người này đang chỉ được tính điểm bài tập.
+        </p>
+      ) : null}
+      <form method="post" action="/du-lieu/diem-danh" class="actions">
+        <button class="secondary">Đọc lại điểm danh ngay</button>
+      </form>
+    </>
   );
 }
