@@ -42,6 +42,8 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-12 | **Đi học offline chiếm 50% điểm xếp hạng** (50% bài tập + 50% đi học). Mỗi buổi: ✅ 100%, M 70%, X 60%, M1 40%, ⚠️ 50%, P 30%, ❌ (kể cả học qua Zoom) 0%; **bỏ qua PD**. Buổi cũ mờ dần chậm hơn: **nửa đời 6 tuần**. Đồng điểm: ai đi học đúng giờ nhiều buổi hơn xếp trên, rồi mới tới video. Bảng công khai chỉ hiện tổng (có mặt X/Y buổi), không liệt kê từng buổi. |
 | 2026-11-12 | Ghép điểm danh: trang `CHECK_IN` (Mã Cư Dân) → trang `DS_CHIA_THON` cùng file chia thôn (Mã Cư Dân → SĐT) → học viên dh3g theo SĐT. Đọc bằng tài khoản dịch vụ Google chỉ có quyền xem. |
 | 2026-11-12 | Danh sách Google Sheet là chuẩn; một số học viên đăng nhập dh3g bằng số điện thoại cũ. **Cho phép ghép theo họ tên khi số điện thoại không khớp** — Claude giới hạn: chỉ trong cùng đội, chỉ với người dh3g chưa ghép được bằng số, chỉ khi trùng đúng một người (so có dấu, rồi không dấu). Danh sách ghép theo tên hiện ở `/du-lieu` để BTC xem lại. |
+| 2026-11-12 | **Chấm bài (người chấm):** chỉ chấm **bài tuần** và **bài thi** (tiêu chí bài thi bổ sung sau); **không chấm bài ngày**. Bộ tiêu chí ở `docs/TIEU-CHI-CHAM.md`: tầng A chấm riêng từng video (A1–A4) và từng sơ đồ ảnh/PDF (A5), tầng B chấm chung cả tuần (B1 trọng tâm tuần, B2 chiều sâu phần viết, B3 tinh thần, B4 so tuần trước, B5 nhận xét, B6 đề cử). Điểm tuần = 60% phần riêng + 40% (B1, B2); màu ≥4 / 3–3,9 / <3. Hạn chấm 3 ngày sau hạn nộp. B1 mặc định theo thứ tự tuần, BTC đổi được. |
+| 2026-11-12 | **Admin giao đội** cho ban phụng sự; **không cần coach duyệt**; kết quả chấm của từng người phụng sự hiện cho coach/BTC. Học viên không vào trang chấm. Điểm chấm **không ảnh hưởng BXH**; cửa sổ chi tiết (công khai) chỉ hiện điểm sao + năng lực mạnh/yếu, không tên người chấm, không nhận xét chữ. Mục "khu vực 2" bỏ. |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -51,13 +53,11 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 
 ## Còn chờ chủ dự án quyết
 
-- Tiêu chí chấm và thang điểm cho từng loại bài (thường / tuần / thi) — chặn Đợt 3.
+- Tiêu chí chấm **bài thi** (bài tuần đã chốt 12/11).
 - Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%** (ngưỡng xanh đã chốt 80%).
 - Định nghĩa "kỷ luật" và các chỉ số cần có trong báo cáo — chặn Đợt 5.
 - Chủ dự án tạo tài khoản dịch vụ Google, nhập secret `GOOGLE_SERVICE_ACCOUNT_JSON`, chia sẻ quyền xem hai file (điểm danh, chia thôn) — chặn việc điểm danh chạy thật.
 - Buổi khai giảng 29/09 có tính điểm danh không (hiện không tính, cho thống nhất với bài tập).
-- Ai phân công phụng sự vào đội (chỉ admin, hay cả coach); điểm phụng sự chấm có cần coach duyệt không.
-- Bàn chấm bài có hai khu vực: khu vực 1 cho phụng sự / coach chấm; **khu vực 2 chủ dự án chưa mô tả**.
 
 ## Tiến độ
 
@@ -133,6 +133,7 @@ Chỉ tính các bài có hạn nộp **sau 29/09/2026**.
 
 ## Bảo mật
 
+- **Đăng nhập nội bộ** (`src/users/accounts.ts`): số điện thoại + mật khẩu (PBKDF2-SHA256 100.000 vòng), kích hoạt bằng mã một lần 8 ký tự (băm, hết hạn 7 ngày) do admin cấp ở `/quan-tri`. Cookie phiên `nskt_s` (HttpOnly, Secure, SameSite=Lax, 30 ngày), chỉ lưu băm SHA-256 trong `user_sessions`. Sai 5 lần → khóa 15 phút. Cấp mã mới / thu hồi → hủy mọi phiên. Người vào qua Cloudflare Access được coi là admin. Ban phụng sự chỉ vào `/cham`, `/tai-khoan`; `/quan-tri` chỉ admin.
 - `/bang-xep-hang` công khai (không đăng nhập), chỉ hiện hạng, họ tên, đội, %, màu. Bấm tên mở `/bang-xep-hang/hv/<mã>` (cũng công khai, nằm dưới cùng đường dẫn bỏ qua Access): điểm tích lũy theo tuần, số bài đúng hạn / trễ / chưa nộp, số video, thứ hạng hôm nay và 1–3 tuần trước. Không hiện cảnh báo, số điện thoại, email, nội dung bài. Mọi trang khác trừ `/health` phải có mã Cloudflare Access hợp lệ; ứng dụng tự kiểm tra chữ ký và AUD (`src/auth.ts`). Thiếu `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` thì khóa toàn bộ.
 - `LOCAL_DEV_NO_AUTH=true` chỉ có tác dụng trên localhost; chỉ đặt trong `.dev.vars` (không commit).
 - Thao tác ghi (POST) kiểm tra tiêu đề `Origin`.
@@ -159,7 +160,7 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/google/sheets.ts` — đọc Google Sheet bằng tài khoản dịch vụ; `src/attendance/offline.ts` — điểm danh offline
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001, 0002, 0003, 0004, 0005.
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0006.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử
