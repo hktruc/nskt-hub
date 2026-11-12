@@ -1,5 +1,6 @@
 import { formatVN } from "../dates";
 import type { Env } from "../env";
+import { isLearnerTeam, teamCode } from "../domain/teams";
 import { Layout } from "../layout";
 
 type JobRow = {
@@ -51,14 +52,15 @@ const REASON_VI: Record<string, string> = { daily: "Hàng ngày", full: "Toàn b
 export async function loadDataStatus(env: Env): Promise<DataStatus> {
   const db = env.DB;
   const count = (t: string) => db.prepare(`SELECT COUNT(*) AS n FROM ${t}`);
-  const [learners, teams, assignments, submissions, sessions, attendances, byStatus, queue, last, lastError, recent, offRows, offLast] =
+  const [learners, teams, assignments, submissions, offSessions, byStatus, queue, last, lastError, recent, offRows, offLast] =
     await db.batch([
-      count("learners"),
-      count("teams"),
+      // Học viên của khóa = người thuộc 12 đội "Cá Chép 01…12". Những người còn lại trong cộng đồng dh3g
+      // là BTC, coach, người đã nghỉ, người được cho vào xem.
+      db.prepare("SELECT t.name AS team_name, COUNT(*) AS n FROM learners l LEFT JOIN teams t ON t.id = l.team_id GROUP BY t.name"),
+      db.prepare("SELECT name FROM teams"),
       count("assignments"),
       count("submissions"),
-      count("sessions"),
-      count("attendances"),
+      db.prepare("SELECT COUNT(DISTINCT session_day) AS n FROM offline_attendance"),
       db.prepare("SELECT COALESCE(status, '?') AS status, COUNT(*) AS n FROM submissions GROUP BY status ORDER BY n DESC"),
       db.prepare("SELECT status, COUNT(*) AS n FROM sync_jobs WHERE status != 'done' GROUP BY status"),
       db.prepare("SELECT MAX(finished_at) AS at FROM sync_jobs WHERE status='done'"),
@@ -68,16 +70,21 @@ export async function loadDataStatus(env: Env): Promise<DataStatus> {
       db.prepare("SELECT at, status, sessions, rows_total, matched, unmatched_json, by_name_json, message FROM sheet_syncs ORDER BY id DESC LIMIT 1"),
     ]);
   const n = (r: D1Result | undefined) => Number((r?.results[0] as { n?: number } | undefined)?.n ?? 0);
+  const byTeam = (learners?.results ?? []) as { team_name: string | null; n: number }[];
+  const all = byTeam.reduce((a, r) => a + r.n, 0);
+  const inTeams = byTeam.filter((r) => isLearnerTeam(teamCode(r.team_name))).reduce((a, r) => a + r.n, 0);
+  const teamCount = ((teams?.results ?? []) as { name: string | null }[]).filter((t) => isLearnerTeam(teamCode(t.name))).length;
   const q = Object.fromEntries(((queue?.results ?? []) as { status: string; n: number }[]).map((r) => [r.status, r.n]));
   return {
     hasKey: Boolean(env.DH3G_API_KEY),
     counts: [
-      { label: "Học viên", value: n(learners) },
-      { label: "Đội", value: n(teams) },
+      { label: "Học viên (12 đội)", value: inTeams },
+      { label: "Người khác trong cộng đồng dh3g (BTC, coach, đã nghỉ…)", value: all - inTeams },
+      { label: "Đội học viên", value: teamCount },
       { label: "Bài tập", value: n(assignments) },
       { label: "Bài nộp (kể cả chưa nộp)", value: n(submissions) },
-      { label: "Buổi học", value: n(sessions) },
-      { label: "Lượt điểm danh", value: n(attendances) },
+      { label: "Buổi học offline", value: n(offSessions) },
+      { label: "Lượt điểm danh offline", value: n(offRows) },
     ],
     byStatus: (byStatus?.results ?? []) as { status: string; n: number }[],
     queue: { pending: q.pending ?? 0, running: q.running ?? 0, failed: q.failed ?? 0 },

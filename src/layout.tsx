@@ -143,10 +143,21 @@ table.weeks tr:last-child td { border-bottom:0; }
 .mini.xanh { background:var(--g-bg); color:var(--g-fg); } .mini.vang { background:var(--y-bg); color:var(--y-fg); } .mini.do { background:var(--r-bg); color:var(--r-fg); }
 .ov-links { display:flex; flex-wrap:wrap; gap:8px; }
 .ov-links a { display:inline-flex; align-items:center; min-height:44px; padding:8px 14px; border-radius:var(--radius); background:var(--card); border:1px solid var(--line); text-decoration:none; font-weight:600; }
+.auth-box { max-width:400px; margin:0 auto; }
+.auth-form { display:flex; flex-direction:column; gap:6px; margin:12px 0; }
+.auth-form label { font-weight:600; font-size:.875rem; margin-top:6px; }
+.auth-form input, .auth-form select, .admin-actions select { min-height:44px; font:16px var(--font); border:1px solid var(--line); border-radius:var(--radius); padding:8px 12px; background:var(--card); color:var(--fg); }
+.auth-form button { margin-top:10px; }
+a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16px; border-radius:var(--radius); background:var(--accent); color:var(--on-accent); text-decoration:none; font-weight:600; }
+.code-box .code { font:700 1.75rem/1.2 ui-monospace, monospace; letter-spacing:.08em; margin:0; }
+.admin-new { max-width:420px; }
+.admin-actions { margin-top:8px; } .admin-actions summary { cursor:pointer; color:var(--accent); font-weight:600; }
+.team-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:4px 8px; margin-bottom:8px; }
+.tchk { display:flex; align-items:center; gap:6px; min-height:36px; font-size:.875rem; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
-export function Layout(props: { title: string; children?: Child; publicPage?: boolean }) {
+export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader" }) {
   return (
     <html lang="vi">
       <head>
@@ -162,16 +173,22 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
       </head>
       <body>
         <header>
-          <a href={props.publicPage ? "/bang-xep-hang" : "/"} class="brand">
+          <a href={props.publicPage ? "/bang-xep-hang" : props.nav === "grader" ? "/cham" : "/"} class="brand">
             nskt-hub
           </a>
-          {props.publicPage ? null : (
+          {props.publicPage ? null : props.nav === "grader" ? (
+            <>
+              <a href="/cham">Bàn chấm</a>
+              <a href="/tai-khoan">Tài khoản</a>
+            </>
+          ) : (
             <>
               <a href="/">Tổng quan</a>
               <a href="/nop-bai">Nộp bài</a>
               <a href="/bang-xep-hang">Xếp hạng</a>
               <a href="/canh-bao">Cảnh báo</a>
               <a href="/du-lieu">Dữ liệu</a>
+              <a href="/tai-khoan">Tài khoản</a>
             </>
           )}
         </header>
