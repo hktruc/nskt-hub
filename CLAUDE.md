@@ -68,7 +68,7 @@ Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
 | 2 | Bảng theo dõi nộp bài (`/nop-bai`): theo bài, theo đội, theo tình trạng, đếm video/ảnh | Mã xong; đã chạy với dữ liệu thật (140 học viên 12 đội, 44 bài, ~2.830 video). Xong, đã gộp (PR #3 → PR #5). |
 | 3 | Đọc bài và chấm điểm | **3a** (PR #9): `/bai`, sửa điểm tay, `/canh-bao`. **3b** (PR #17): đăng nhập số điện thoại, `/quan-tri` giao đội. **3c**: bàn chấm bài tuần `/cham` (hàng chờ + phiếu chấm theo `docs/TIEU-CHI-CHAM.md`, bảng `item_reviews`, `week_reviews`, `assignment_focus`). **3d**: `/cham/nguoi-cham` (năng lực người chấm: số bài, % đúng hạn, điểm TB, dễ / khắt khe so với mặt bằng ±0,5★ khi ≥ 5 bài), cửa sổ chi tiết BXH có mục "Chất lượng bài tuần" (TB sao, năng lực mạnh / yếu, các tuần gần nhất; không tên người chấm, không nhận xét). Còn: tiêu chí bài thi. |
 | 4 | Chấm điểm tự động (quy tắc + AI OpenAI) và bảng xếp hạng công khai `/bang-xep-hang` | Mã xong; đã chạy với dữ liệu thật (6.845 dòng điểm, 140 người). AI chưa chạy thật (chưa có khóa OpenAI). Xong, đã gộp (PR #4 → PR #5). |
-| 5 | Báo cáo thống kê | Chưa bắt đầu |
+| 5 | Báo cáo thống kê | **5a** (PR #27): `/bao-cao` toàn khóa theo tuần, buổi học offline (tách đầu HN = Hà Nội + Miền Bắc / đầu SG = HCM + Miền Nam theo cột "Khu Vực"), bài ngày, bài tuần, bài thi, người chấm. **5b**: chấm chéo dh3g (`feedbacks_json`: lượt cho / nhận, theo đội, tuần, ai chưa chấm), tổng hợp từng học viên (sắp xếp theo cột). Còn: chấm chéo offline (file CHAM_CHEO_LOG chưa chia sẻ), định nghĩa "kỷ luật". |
 | 6 | Đưa vào dùng thật | Chưa bắt đầu |
 
 Cập nhật bảng này ở cuối mỗi đợt. Mỗi PR trỏ thẳng vào `main`, **không xếp chồng** (PR #3, #4 từng bị gộp vào nhánh trung gian, phải mở PR #5 để đưa vào `main`).

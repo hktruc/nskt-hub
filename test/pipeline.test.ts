@@ -105,3 +105,21 @@ describe("bảng xếp hạng theo đội", () => {
     expect(html).toContain('class="dist"');
   });
 });
+
+describe("báo cáo chấm chéo và từng học viên", () => {
+  it("đếm lượt chấm chéo cho / nhận; bảng từng học viên sắp xếp được", async () => {
+    const { env, raw } = await synced();
+    raw.prepare("UPDATE teams SET name='🐟 Đội Cá Chép 07' WHERE id=7").run();
+    await scoringTick(env, NOW);
+    const dev = { ...env, LOCAL_DEV_NO_AUTH: "true" };
+    const peer = await (await app.fetch(new Request("http://localhost/bao-cao/cham-cheo"), dev)).text();
+    // Học Viên A (đội 07) được Học Viên B (không thuộc 12 đội) chấm 1 lượt.
+    expect(peer).toMatch(/Tổng lượt chấm chéo<\/div><div class="num">1</);
+    expect(peer).toContain("Chưa chấm chéo cho ai (1)");
+    const sum = await (await app.fetch(new Request("http://localhost/bao-cao/hoc-vien?sx=cham-cheo&tang=1"), dev)).text();
+    expect(sum).toContain("Học Viên A");
+    expect(sum).toContain("0 / 1");
+    expect(sum).not.toContain("Học Viên B");
+    expect(sum).not.toContain("0000000001");
+  });
+});

@@ -287,6 +287,9 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .s-ok { background:#22C55E; } .s-mid { background:#FACC15; } .s-bad { background:#F87171; } .s-empty { background:var(--soft); }
 .meter { display:inline-flex; align-items:center; gap:8px; } .meter .sbar { width:110px; } .meter b { font-variant-numeric:tabular-nums; font-size:.875rem; min-width:3em; }
 .rlegend { display:flex; align-items:center; gap:4px 10px; flex-wrap:wrap; } .sq { display:inline-block; width:10px; height:10px; border-radius:3px; }
+.hbar { display:block; height:10px; border-radius:999px; background:var(--accent); }
+.lsum th a { color:inherit; text-decoration:none; } .lsum th a.on { color:var(--accent); }
+.lsum tr.rk-xanh td:first-child { box-shadow:inset 4px 0 0 #22C55E; } .lsum tr.rk-vang td:first-child { box-shadow:inset 4px 0 0 #FACC15; } .lsum tr.rk-do td:first-child { box-shadow:inset 4px 0 0 #F87171; }
 .plist { list-style:none; margin:8px 0 0; padding:0; columns:2 220px; } .plist li { padding:3px 0; break-inside:avoid; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;

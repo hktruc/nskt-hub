@@ -228,3 +228,137 @@ export async function courseByWeek(db: D1Database, now = new Date()): Promise<We
       feedbacks: e.fb,
     }));
 }
+
+// ---------------- Chấm chéo (học viên nhận xét bài nhau trên dh3g) ----------------
+
+export type PeerReport = {
+  total: number;
+  avgGrade: number | null;
+  givers: number;
+  receivers: number;
+  learners: number;
+  byWeek: { from: string; n: number }[];
+  byTeam: { team: string; members: number; given: number; received: number; activeGivers: number }[];
+  top: { l: Learner; given: number }[];
+  never: Learner[];
+  notReceived: Learner[];
+  given: Map<number, number>;
+  received: Map<number, number>;
+};
+
+export async function peerReport(db: D1Database): Promise<PeerReport> {
+  const roster = await loadRoster(db);
+
+  const rows = (
+    await db
+      .prepare(
+        `SELECT s.learner_id AS owner, json_extract(value,'$.reviewerId') AS reviewer, json_extract(value,'$.grade') AS grade,
+                substr(json_extract(value,'$.createdAt'),1,10) AS day
+         FROM submissions s, json_each(s.feedbacks_json) WHERE s.feedback_count > 0`,
+      )
+      .all<{ owner: number; reviewer: number | null; grade: number | null; day: string | null }>()
+  ).results.filter((r) => r.day && r.day >= SCORING.startDate);
+  const given = new Map<number, number>(), received = new Map<number, number>(), weeks = new Map<string, number>();
+  let gsum = 0, gn = 0;
+  for (const r of rows) {
+    if (r.reviewer !== null) given.set(r.reviewer, (given.get(r.reviewer) ?? 0) + 1);
+    received.set(r.owner, (received.get(r.owner) ?? 0) + 1);
+    const w = mondayOf(r.day!);
+    weeks.set(w, (weeks.get(w) ?? 0) + 1);
+    if (typeof r.grade === "number") (gsum += r.grade), gn++;
+  }
+  const teams = new Map<string, { team: string; members: number; given: number; received: number; activeGivers: number }>();
+  for (const l of roster) {
+    const t = teams.get(l.team) ?? { team: l.team, members: 0, given: 0, received: 0, activeGivers: 0 };
+    t.members++;
+    t.given += given.get(l.id) ?? 0;
+    t.received += received.get(l.id) ?? 0;
+    if (given.get(l.id)) t.activeGivers++;
+    teams.set(l.team, t);
+  }
+  return {
+    total: rows.length,
+    avgGrade: gn ? Math.round(gsum / gn) : null,
+    givers: roster.filter((l) => given.get(l.id)).length,
+    receivers: roster.filter((l) => received.get(l.id)).length,
+    learners: roster.length,
+    byWeek: [...weeks.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([from, n]) => ({ from, n })),
+    byTeam: [...teams.values()].sort((a, b) => a.team.localeCompare(b.team)),
+    top: roster
+      .filter((l) => given.get(l.id))
+      .map((l) => ({ l, given: given.get(l.id)! }))
+      .sort((a, b) => b.given - a.given)
+      .slice(0, 15),
+    never: roster.filter((l) => !given.get(l.id)),
+    notReceived: roster.filter((l) => !received.get(l.id)),
+    given,
+    received,
+  };
+
+}
+
+// ---------------- Tổng hợp từng học viên ----------------
+
+export type LearnerRow = {
+  l: Learner;
+  percent: number | null;
+  color: string | null;
+  attPresent: number;
+  attTotal: number;
+  dailyOnTime: number;
+  dailyTotal: number;
+  weeklyDone: number;
+  weeklyTotal: number;
+  flags: number;
+  given: number;
+  received: number;
+  quality: number | null;
+};
+
+export async function learnerSummary(db: D1Database, nowVN: string, ranked: { learnerId: number; percent: number; color: string }[], peer: PeerReport): Promise<LearnerRow[]> {
+  const roster = await loadRoster(db);
+  const [att, subs, flags, q] = await db.batch([
+    db.prepare("SELECT learner_id, code FROM offline_attendance WHERE code NOT IN ('PD','KHAC')"),
+    db
+      .prepare(
+        `SELECT s.learner_id, s.status, a.type FROM submissions s JOIN assignments a ON a.id = s.assignment_id
+         WHERE a.type IN ('NORMAL','WEEK') AND a.due_at >= ? AND a.due_at <= ?`,
+      )
+      .bind(SCORING.startDate, nowVN),
+    db.prepare("SELECT learner_id, COUNT(*) AS n FROM scores WHERE flags_json != '[]' AND due_at >= ? GROUP BY learner_id").bind(SCORING.startDate),
+    db.prepare("SELECT learner_id, AVG(score) AS q FROM week_reviews WHERE score IS NOT NULL GROUP BY learner_id"),
+  ]);
+  const rk = new Map(ranked.map((r) => [r.learnerId, r]));
+  const m = new Map<number, LearnerRow>(
+    roster.map((l) => [
+      l.id,
+      { l, percent: rk.get(l.id)?.percent ?? null, color: rk.get(l.id)?.color ?? null, attPresent: 0, attTotal: 0, dailyOnTime: 0, dailyTotal: 0, weeklyDone: 0, weeklyTotal: 0, flags: 0, given: peer.given.get(l.id) ?? 0, received: peer.received.get(l.id) ?? 0, quality: null },
+    ]),
+  );
+  for (const r of (att?.results ?? []) as { learner_id: number; code: string }[]) {
+    const x = m.get(r.learner_id);
+    if (!x) continue;
+    x.attTotal++;
+    if (["OK", "M", "X", "M1", "CANH_BAO"].includes(r.code)) x.attPresent++;
+  }
+  for (const r of (subs?.results ?? []) as { learner_id: number; status: string | null; type: string }[]) {
+    const x = m.get(r.learner_id);
+    if (!x) continue;
+    if (r.type === "NORMAL") {
+      x.dailyTotal++;
+      if (r.status === "DONE") x.dailyOnTime++;
+    } else {
+      x.weeklyTotal++;
+      if (r.status === "DONE" || r.status === "OVERDUE" || r.status === "LATE") x.weeklyDone++;
+    }
+  }
+  for (const r of (flags?.results ?? []) as { learner_id: number; n: number }[]) {
+    const x = m.get(r.learner_id);
+    if (x) x.flags = r.n;
+  }
+  for (const r of (q?.results ?? []) as { learner_id: number; q: number }[]) {
+    const x = m.get(r.learner_id);
+    if (x) x.quality = Math.round(r.q * 10) / 10;
+  }
+  return [...m.values()];
+}
