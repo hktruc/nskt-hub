@@ -1,0 +1,12 @@
+{
+  "name": "Nhân Sự Kế Thừa 2026",
+  "short_name": "NSKT 2026",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F3F8FA",
+  "theme_color": "#076A8F",
+  "icons": [
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -7,6 +7,8 @@
   // Chạy ở địa chỉ miễn phí nskt-hub.<tài-khoản>.workers.dev (chủ dự án chọn 11/11/2026).
   // Trang nội bộ khóa bằng Cloudflare Access; /bang-xep-hang để công khai.
   "workers_dev": true,
+  // Ảnh logo, biểu tượng, ảnh xem trước khi chia sẻ link: tệp tĩnh trong thư mục public/ (Cloudflare phục vụ thẳng, không qua ứng dụng).
+  "assets": { "directory": "./public" },
   "preview_urls": false,
   "observability": {
     "enabled": true

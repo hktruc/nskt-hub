@@ -13,6 +13,7 @@ export function LeaderboardPage(props: {
   provisional: boolean;
   hasAttendance?: boolean;
   updatedAt: string | null;
+  origin?: string;
 }) {
   const filtered = props.team ? props.ranked.filter((r) => r.team === props.team) : props.ranked;
   // Xem một đội: hạng trong đội, kèm hạng toàn khóa. Bằng điểm thì ngang hạng.
@@ -24,7 +25,20 @@ export function LeaderboardPage(props: {
   });
   const count = (c: Ranked["color"]) => list.filter((r) => r.color === c).length;
   return (
-    <Layout title="Bảng xếp hạng" publicPage>
+    <Layout
+      title="Bảng xếp hạng"
+      publicPage
+      og={
+        props.origin
+          ? {
+              title: "Bảng xếp hạng · Nhân Sự Kế Thừa 2026",
+              description: "Thứ hạng học viên NSKT 2026 theo 12 đội, cập nhật hằng ngày.",
+              url: `${props.origin}/bang-xep-hang${props.team ? `?doi=${props.team}` : ""}`,
+              image: `${props.origin}/brand/og-bang-xep-hang.png`,
+            }
+          : undefined
+      }
+    >
       <h1>Bảng xếp hạng NSKT2026</h1>
       <p class="muted small">Cập nhật {formatVN(props.updatedAt)} (giờ Việt Nam).</p>
       {props.provisional ? (

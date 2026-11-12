@@ -1,20 +1,46 @@
+import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
 
 const css = `
 :root { color-scheme: light dark;
-  --bg:#F0FDFA; --card:#FFFFFF; --fg:#134E4A; --muted:#475569; --line:#CCEFEA; --soft:#E6F6F3;
-  --accent:#0D9488; --on-accent:#FFFFFF;
+  /* Màu theo logo "Nhân Sự Kế Thừa 2026": xanh dương bánh lái (chính), xanh ngọc ô 2026 (phụ), cam "Kế Thừa" (nhấn). */
+  --bg:#F3F8FA; --card:#FFFFFF; --fg:#0B3B4E; --muted:#4B6573; --line:#D3E6EC; --soft:#E8F2F6;
+  --accent:#076A8F; --on-accent:#FFFFFF; --teal:#1D9195; --orange:#FB9E20; --orange-fg:#9A5A00;
+  --shadow:0 1px 2px rgba(11,59,78,.06), 0 2px 8px rgba(11,59,78,.06);
   --ok-bg:#E7F7EF; --ok-fg:#166534; --warn-bg:#FFF1E7; --warn-fg:#9A3412; --bad-bg:#FDECEC; --bad-fg:#B91C1C;
   --radius:12px; --font:"Be Vietnam Pro", system-ui, sans-serif; }
 @media (prefers-color-scheme: dark) { :root {
-  --bg:#0F1C1B; --card:#172826; --fg:#E6F4F1; --muted:#9DB3B0; --line:#2A403D; --soft:#1D3532;
-  --accent:#2DD4BF; --on-accent:#04201D;
+  --bg:#0D1B22; --card:#13262F; --fg:#E3F0F5; --muted:#9BB4BF; --line:#24404C; --soft:#1A3340;
+  --accent:#5BBDE0; --on-accent:#03202B; --teal:#4FC3C7; --orange:#FBB04E; --orange-fg:#FBB04E;
+  --shadow:none;
   --ok-bg:#12342A; --ok-fg:#86EFAC; --warn-bg:#3A2412; --warn-fg:#FDBA74; --bad-bg:#3A1616; --bad-fg:#FCA5A5; } }
 * { box-sizing:border-box; }
 body { margin:0; font:16px/1.55 var(--font); color:var(--fg); background:var(--bg); }
-header { background:var(--card); border-bottom:1px solid var(--line); padding:6px 16px; display:flex; gap:0 14px; flex-wrap:wrap; align-items:center; }
-header a { color:var(--fg); text-decoration:none; min-height:44px; display:inline-flex; align-items:center; }
-header a.brand { font-weight:700; color:var(--accent); margin-right:auto; }
+header.top { position:sticky; top:0; z-index:20; background:var(--card); border-bottom:1px solid var(--line); box-shadow:var(--shadow); }
+.top-in { max-width:1120px; margin:0 auto; padding:6px 16px; display:flex; align-items:center; gap:4px; min-height:56px; }
+.brand { display:inline-flex; align-items:center; margin-right:auto; text-decoration:none; }
+.brand img { height:38px; width:auto; display:block; }
+@media (prefers-color-scheme: dark) { .brand img { background:#fff; border-radius:8px; padding:3px 6px; height:40px; } }
+.nav-top { display:none; gap:2px; }
+.nav-top a, .nav-more summary { display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:6px 12px; border-radius:999px; color:var(--fg); text-decoration:none; font-weight:500; font-size:.9375rem; cursor:pointer; }
+.nav-top a:hover, .nav-more summary:hover { background:var(--soft); }
+.nav-top a[aria-current], .nav-tab[aria-current] { color:var(--accent); }
+.nav-top a[aria-current] { background:var(--soft); font-weight:700; }
+.nav-top svg, .nav-tab svg, .nav-more svg { width:18px; height:18px; flex:none; }
+.nav-more { position:relative; } .nav-more summary { list-style:none; } .nav-more summary::-webkit-details-marker { display:none; }
+.nav-more .menu { position:absolute; right:0; top:calc(100% + 6px); background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 8px 28px rgba(11,59,78,.16); padding:6px; min-width:210px; display:flex; flex-direction:column; z-index:30; }
+.nav-more .menu a { display:flex; align-items:center; gap:10px; min-height:44px; padding:8px 12px; border-radius:10px; color:var(--fg); text-decoration:none; }
+.nav-more .menu a:hover { background:var(--soft); }
+.nav-bottom { position:fixed; left:0; right:0; bottom:0; z-index:20; display:flex; background:var(--card); border-top:1px solid var(--line); padding:4px 4px calc(4px + env(safe-area-inset-bottom)); box-shadow:0 -2px 10px rgba(11,59,78,.06); }
+.nav-tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:52px; color:var(--muted); text-decoration:none; font-size:.6875rem; font-weight:600; border-radius:10px; }
+.nav-tab svg { width:22px; height:22px; }
+.nav-tab[aria-current] svg { stroke:var(--accent); }
+.nav-tab[aria-current]::before { content:""; width:28px; height:3px; border-radius:3px; background:var(--orange); margin:-6px 0 3px; }
+.nav-bottom .nav-more { flex:1; display:flex; } .nav-bottom .nav-more summary { flex:1; flex-direction:column; gap:2px; min-height:52px; padding:0; font-size:.6875rem; font-weight:600; color:var(--muted); justify-content:center; border-radius:10px; }
+.nav-bottom .nav-more summary svg { width:22px; height:22px; }
+.nav-bottom .nav-more .menu { top:auto; bottom:calc(100% + 8px); right:4px; }
+body.has-bottom main { padding-bottom:96px; }
+@media (min-width: 760px) { .nav-top { display:flex; } .nav-bottom { display:none; } body.has-bottom main { padding-bottom:32px; } }
 main { max-width:960px; margin:0 auto; padding:20px 16px 32px; }
 a { color:var(--accent); }
 h1 { font-size:1.375rem; line-height:1.3; margin:0 0 12px; }
@@ -24,7 +50,7 @@ h2 { font-size:1.125rem; margin:28px 0 8px; }
 .warn { background:var(--warn-bg); color:var(--warn-fg); }
 .notice { background:var(--ok-bg); color:var(--ok-fg); }
 .tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin:16px 0; }
-.tile { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; }
+.tile { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; box-shadow:var(--shadow); }
 .tile .num { font-size:1.6rem; font-weight:700; font-variant-numeric:tabular-nums; }
 .tile .lbl { color:var(--muted); font-size:.875rem; }
 table { border-collapse:collapse; width:100%; font-size:.9375rem; background:var(--card); }
@@ -190,43 +216,143 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
-export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader" }) {
+// Biểu tượng nét mảnh (vẽ theo kiểu Lucide, giấy phép ISC), dùng chung cho menu.
+const ICON: Record<string, string> = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  db: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  chart: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
+};
+export function Icon(props: { name: string }) {
+  return raw(
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[props.name] ?? ""}</svg>`,
+  );
+}
+
+type NavItem = { href: string; label: string; icon: string };
+const MAIN_NAV: NavItem[] = [
+  { href: "/", label: "Tổng quan", icon: "home" },
+  { href: "/nop-bai", label: "Nộp bài", icon: "inbox" },
+  { href: "/cham", label: "Chấm bài", icon: "star" },
+  { href: "/bang-xep-hang", label: "Xếp hạng", icon: "trophy" },
+];
+const MORE_NAV: NavItem[] = [
+  { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },
+  { href: "/cham/nguoi-cham", label: "Năng lực người chấm", icon: "chart" },
+  { href: "/du-lieu", label: "Dữ liệu", icon: "db" },
+  { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
+  { href: "/quan-tri", label: "Quản trị (admin)", icon: "shield" },
+];
+const GRADER_NAV: NavItem[] = [
+  { href: "/cham", label: "Bàn chấm", icon: "star" },
+  { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
+];
+
+// Đánh dấu mục đang mở (đường dẫn dài nhất khớp).
+const ACTIVE_JS = `(()=>{const p=location.pathname;let best=null,len=-1;document.querySelectorAll('[data-nav]').forEach(a=>{const h=a.getAttribute('href');const ok=h==='/'?p==='/':(p===h||p.startsWith(h+'/'));if(ok&&h.length>len){best=h;len=h.length;}});if(best)document.querySelectorAll('[data-nav][href="'+best+'"]').forEach(a=>a.setAttribute('aria-current','page'));})();`;
+
+export type Og = { title: string; description: string; url: string; image: string };
+
+export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader"; og?: Og }) {
+  const grader = props.nav === "grader";
+  const main = grader ? GRADER_NAV : MAIN_NAV;
+  const withNav = !props.publicPage;
   return (
     <html lang="vi">
       <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="robots" content="noindex" />
-        <meta name="theme-color" content="#0D9488" />
-        <title>{props.title} · nskt-hub</title>
+        <meta name="theme-color" content="#076A8F" />
+        <title>{props.title} · NSKT 2026</title>
+        <link rel="icon" type="image/png" href="/brand/favicon-64.png" />
+        <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        {props.og ? (
+          <>
+            <meta property="og:type" content="website" />
+            <meta property="og:title" content={props.og.title} />
+            <meta property="og:description" content={props.og.description} />
+            <meta property="og:url" content={props.og.url} />
+            <meta property="og:image" content={props.og.image} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta name="twitter:card" content="summary_large_image" />
+          </>
+        ) : null}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" />
         <style dangerouslySetInnerHTML={{ __html: css }} />
       </head>
-      <body>
-        <header>
-          <a href={props.publicPage ? "/bang-xep-hang" : props.nav === "grader" ? "/cham" : "/"} class="brand">
-            nskt-hub
-          </a>
-          {props.publicPage ? null : props.nav === "grader" ? (
-            <>
-              <a href="/cham">Bàn chấm</a>
-              <a href="/tai-khoan">Tài khoản</a>
-            </>
-          ) : (
-            <>
-              <a href="/">Tổng quan</a>
-              <a href="/nop-bai">Nộp bài</a>
-              <a href="/cham">Chấm bài</a>
-              <a href="/bang-xep-hang">Xếp hạng</a>
-              <a href="/canh-bao">Cảnh báo</a>
-              <a href="/du-lieu">Dữ liệu</a>
-              <a href="/tai-khoan">Tài khoản</a>
-            </>
-          )}
+      <body class={withNav ? "has-bottom" : ""}>
+        <header class="top">
+          <div class="top-in">
+            <a href={props.publicPage ? "/bang-xep-hang" : grader ? "/cham" : "/"} class="brand" aria-label="Nhân Sự Kế Thừa 2026 – trang chủ">
+              <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+            </a>
+            {withNav ? (
+              <nav class="nav-top" aria-label="Menu chính">
+                {main.map((n) => (
+                  <a href={n.href} data-nav="">
+                    <Icon name={n.icon} />
+                    {n.label}
+                  </a>
+                ))}
+                {grader ? null : (
+                  <details class="nav-more">
+                    <summary>
+                      <Icon name="menu" />
+                      Thêm
+                    </summary>
+                    <div class="menu">
+                      {MORE_NAV.map((n) => (
+                        <a href={n.href} data-nav="">
+                          <Icon name={n.icon} />
+                          {n.label}
+                        </a>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </nav>
+            ) : null}
+          </div>
         </header>
         <main>{props.children}</main>
+        {withNav ? (
+          <nav class="nav-bottom" aria-label="Menu">
+            {main.map((n) => (
+              <a href={n.href} class="nav-tab" data-nav="">
+                <Icon name={n.icon} />
+                {n.label}
+              </a>
+            ))}
+            {grader ? null : (
+              <details class="nav-more">
+                <summary>
+                  <Icon name="menu" />
+                  Thêm
+                </summary>
+                <div class="menu">
+                  {MORE_NAV.map((n) => (
+                    <a href={n.href} data-nav="">
+                      <Icon name={n.icon} />
+                      {n.label}
+                    </a>
+                  ))}
+                </div>
+              </details>
+            )}
+          </nav>
+        ) : null}
+        {withNav ? <script dangerouslySetInnerHTML={{ __html: ACTIVE_JS }} /> : null}
       </body>
     </html>
   );
