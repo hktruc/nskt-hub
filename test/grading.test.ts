@@ -150,4 +150,29 @@ describe("bàn chấm", () => {
     raw.prepare("UPDATE submissions SET answers_hash='moi' WHERE learner_id=31").run();
     expect(await (await call("/cham", { cookie: psCookie })).text()).toContain("Học viên sửa bài sau khi chấm");
   });
+
+  it("cửa sổ chi tiết (công khai) hiện điểm chất lượng nhưng không tên người chấm, không nhận xét", async () => {
+    const { raw, call, psCookie } = await setup();
+    raw.prepare(
+      "INSERT INTO scores (learner_id, assignment_id, due_at, earned, max, on_time_videos, hours_early, provisional, flags_json, detail_json, computed_at) VALUES (31, 900, '2026-11-08T23:00:00', 20, 26, 1, 3, 0, '[]', '[]', '2026-11-09T00:00:00Z')",
+    ).run();
+    await call("/cham/luu", { method: "POST", cookie: psCookie, body: fullSheet({ comment: "Nhận xét riêng chỉ BTC thấy" }) });
+    // Trang công khai: không gửi cookie.
+    const pub = await (await call("/bang-xep-hang/hv/31?p=1")).text();
+    expect(pub).toContain("Chất lượng bài tuần");
+    expect(pub).toContain("3,9★");
+    expect(pub).toContain("mạnh nhất: <strong>Đúng ý, đủ ý");
+    expect(pub).not.toContain("Phụng Sự Giả");
+    expect(pub).not.toContain("Nhận xét riêng");
+  });
+
+  it("trang năng lực người chấm: coach xem được, ban phụng sự thì không", async () => {
+    const { call, psCookie, coachCookie } = await setup();
+    await call("/cham/luu", { method: "POST", cookie: psCookie, body: fullSheet() });
+    expect((await call("/cham/nguoi-cham", { cookie: psCookie })).status).toBe(403);
+    const html = await (await call("/cham/nguoi-cham", { cookie: coachCookie })).text();
+    expect(html).toContain("Phụng Sự Giả");
+    expect(html).toContain("Đội 03");
+    expect(html).toMatch(/<strong>1<\/strong> bài/);
+  });
 });

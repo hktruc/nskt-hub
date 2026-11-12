@@ -178,6 +178,8 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .written { margin:8px 0; } .written .answer { white-space:pre-wrap; font-size:.9375rem; background:var(--soft); border-radius:8px; padding:8px 10px; margin:0; }
 .sheet-bar { position:sticky; bottom:0; display:flex; gap:8px; padding:10px 0; background:var(--bg); border-top:1px solid var(--line); margin-top:12px; }
 .sheet-bar button { flex:2; } .secondary-btn { flex:1; justify-content:center; background:var(--soft); color:var(--fg); border:1px solid var(--line); }
+.g-stats { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:6px; font-size:.875rem; }
+.qweeks { display:flex; flex-wrap:wrap; gap:4px; } .qweeks .mini { font-size:.8125rem; padding:2px 8px; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
 `;
 
