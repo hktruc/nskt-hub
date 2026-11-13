@@ -11,8 +11,7 @@ import { shortVN } from "./submissions";
 // Bàn chấm bài tuần: hàng chờ (ai chưa chấm, ai tốt / cần kèm) và phiếu chấm một học viên.
 
 const STATUS: Record<QueueLine["status"], [string, string]> = {
-  "chua-cham": ["Chưa chấm", "bad"],
-  "dang-cham": ["Chấm dở", "warn"],
+  "chua-cham": ["Chưa ai chấm", "bad"],
   "da-cham": ["Đã chấm", "ok"],
   "sua-sau-cham": ["Học viên sửa bài sau khi chấm", "warn"],
   "chua-nop": ["Chưa nộp", ""],
@@ -35,13 +34,16 @@ export function QueuePage(props: {
   const { week, lines } = props;
   const grader = props.user.role === "phung_su";
   const submitted = lines.filter((l) => l.status !== "chua-nop");
-  const todo = submitted.filter((l) => l.status === "chua-cham" || l.status === "dang-cham" || l.status === "sua-sau-cham");
+  const todo = submitted.filter((l) => l.status === "chua-cham"); // CHƯA AI CHẤM
+  const mineCount = lines.filter((l) => l.mine).length;
   const overdue = todo.filter((l) => l.overdue);
   const q = (k: string) => lines.filter((l) => l.quality === k).length;
   const shown = lines.filter((l) => (props.team ? l.team === props.team : true)).filter((l) => {
     switch (props.filter) {
       case "chua-cham":
-        return l.status === "chua-cham" || l.status === "dang-cham" || l.status === "sua-sau-cham";
+        return l.status === "chua-cham";
+      case "cua-toi":
+        return l.mine;
       case "can-kem":
       case "tot":
       case "kha":
@@ -52,7 +54,13 @@ export function QueuePage(props: {
         return true;
     }
   });
-  const sorted = props.filter === "diem" ? [...shown].sort((a, b) => (b.score ?? -1) - (a.score ?? -1)) : shown;
+  // Mặc định: người CHƯA AI CHẤM lên đầu để không bị sót.
+  const rankStatus = (l: QueueLine) => (l.status === "chua-cham" ? 0 : l.status === "sua-sau-cham" ? 1 : l.status === "da-cham" ? 2 : 3);
+  const sorted =
+    props.filter === "diem"
+      ? [...shown].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+      : [...shown].sort((a, b) => rankStatus(a) - rankStatus(b) || a.team.localeCompare(b.team) || a.name.localeCompare(b.name, "vi"));
+  const firstTodo = todo.filter((l) => (props.team ? l.team === props.team : true))[0];
   const link = (o: { bt?: number; doi?: string; loc?: string }) => {
     const p = new URLSearchParams();
     if (o.bt ?? week?.id) p.set("bt", String(o.bt ?? week?.id));
@@ -129,16 +137,46 @@ export function QueuePage(props: {
             </p>
           ) : null}
 
+          {todo.length ? (
+            <div class={`call-out${overdue.length ? " urgent" : ""}`}>
+              <div>
+                <strong>
+                  {todo.length} học viên đã nộp nhưng CHƯA AI CHẤM
+                  {overdue.length ? ` · ${overdue.length} đã quá hạn chấm` : ""}
+                </strong>
+                <div class="small">
+                  {props.teams.length > 1
+                    ? props.teams
+                        .map((t) => [t, todo.filter((l) => l.team === t).length] as const)
+                        .filter(([, n]) => n)
+                        .map(([t, n]) => `${teamLabel(t)}: ${n}`)
+                        .join(" · ")
+                    : "Bấm để chấm ngay người đầu tiên."}
+                </div>
+              </div>
+              {firstTodo ? (
+                <a class="btn" href={`/cham/bai?hv=${firstTodo.learnerId}&bt=${week.id}`}>
+                  Chấm ngay →
+                </a>
+              ) : null}
+            </div>
+          ) : submitted.length ? (
+            <p class="notice small">✓ Mọi học viên đã nộp đều đã có người chấm.</p>
+          ) : null}
           <div class="tiles">
             <a class={`tile${props.filter === "chua-cham" ? " on" : ""}`} href={link({ loc: "chua-cham" })}>
               <div class="num" style={todo.length ? "color:var(--bad-fg)" : ""}>{todo.length}</div>
-              <div class="lbl">Chưa chấm{overdue.length ? ` · ${overdue.length} quá hạn` : ""}</div>
+              <div class="lbl">Chưa ai chấm{overdue.length ? ` · ${overdue.length} quá hạn` : ""}</div>
             </a>
             <a class={`tile${props.filter === "" ? " on" : ""}`} href={link({ loc: "" })}>
               <div class="num">
                 {submitted.length - todo.length}/{submitted.length}
               </div>
-              <div class="lbl">Đã chấm / đã nộp</div>
+              <div class="lbl">Đã có người chấm / đã nộp</div>
+            </a>
+            <a class={`tile${props.filter === "cua-toi" ? " on" : ""}`} href={link({ loc: "cua-toi" })}>
+              <div class="num">{mineCount}</div>
+              <div class="lbl">Bạn đã chấm</div>
             </a>
             <a class={`tile${props.filter === "tot" ? " on" : ""}`} href={link({ loc: "tot" })}>
               <div class="num">{q("tot")}</div>
@@ -152,7 +190,7 @@ export function QueuePage(props: {
 
           {props.teams.length > 1 ? (
             <>
-            <p class="chips-label">Lọc theo đội (số đỏ = chưa chấm)</p>
+            <p class="chips-label">Lọc theo đội (số đỏ = chưa ai chấm)</p>
             <nav class="chips" aria-label="Lọc theo đội">
               <a class={`chip${props.team ? "" : " on"}`} href={link({ doi: "" })}>
                 Tất cả đội
@@ -186,7 +224,10 @@ export function QueuePage(props: {
                     {teamLabel(l.team)}
                     {l.items ? ` · ${l.items} thẻ` : ""}
                   </span>
-                  <span class={`badge ${l.overdue ? "bad" : badge}`}>{l.overdue ? "Quá hạn chấm" : label}</span>
+                  <span class={`badge ${l.overdue ? "bad" : badge}`}>
+                    {l.overdue ? "Chưa ai chấm · quá hạn" : l.status === "da-cham" ? `${l.reviewers} người chấm` : label}
+                    {l.mine ? " · có bạn" : ""}
+                  </span>
                   <span class="pct">{l.score !== null ? `${fmt(l.score)}★` : ""}</span>
                 </>
               );
@@ -195,7 +236,7 @@ export function QueuePage(props: {
                   {l.status === "chua-nop" ? (
                     <div class="rank-row q-row">{inner}</div>
                   ) : (
-                    <a class={`rank-row q-row ${color}`} href={`/cham/bai?hv=${l.learnerId}&bt=${week.id}`} title={l.grader ? `Người chấm: ${l.grader}` : ""}>
+                    <a class={`rank-row q-row ${color}`} href={`/cham/bai?hv=${l.learnerId}&bt=${week.id}`} title={l.graders.length ? `Người chấm: ${l.graders.join(", ")}` : "Chưa ai chấm"}>
                       {inner}
                     </a>
                   )}
@@ -346,11 +387,16 @@ export function SheetPage(props: { user: User; s: SheetData; error?: string; dra
       {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
       {s.review ? (
         <p class="notice small">
-          Đã chấm: <strong>{fmt(s.review.score)}★</strong> · {s.review.grader_label} · {shortVN(s.review.updated_at.slice(0, 19))} (giờ máy chủ). Lưu lại sẽ
-          ghi đè.
-          {s.review.answers_hash && s.answersHash && s.review.answers_hash !== s.answersHash ? " Học viên đã sửa bài sau lần chấm này." : ""}
+          Bạn đã chấm bài này: <strong>{fmt(s.review.score)}★</strong>. Lưu lại sẽ cập nhật bản chấm của bạn (không ảnh hưởng bản của người khác).
+          {s.review.answers_hash && s.answersHash && s.review.answers_hash !== s.answersHash ? " Học viên đã sửa bài sau lần bạn chấm." : ""}
         </p>
-      ) : null}
+      ) : s.others.length ? (
+        <p class="small muted">
+          Đã có {s.others.length} người khác chấm bài này. Bạn vẫn chấm độc lập; bản chấm của họ hiện sau khi bạn lưu.
+        </p>
+      ) : (
+        <p class="small call-inline">Chưa ai chấm học viên này.</p>
+      )}
       {props.error ? <p class="warn">{props.error}</p> : null}
 
       <form method="post" action="/cham/luu" class="sheet-form">
@@ -448,6 +494,21 @@ export function SheetPage(props: { user: User; s: SheetData; error?: string; dra
           </details>
         ) : null}
 
+        {s.review && s.others.length ? (
+          <details class="card-item" open>
+            <summary class="small">
+              <strong>Bản chấm của người khác ({s.others.length})</strong> · điểm chính thức = trung bình mọi bản
+            </summary>
+            <ul class="small plist" style="columns:1">
+              {s.others.map((o) => (
+                <li>
+                  <strong>{fmt(o.score)}★</strong> · {o.grader_label} · {SPIRIT[o.spirit ?? ""] ?? "—"} · {PROGRESS[o.progress ?? ""] ?? "—"}
+                  {o.comment ? ` · "${o.comment.slice(0, 200)}"` : ""}
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
         {s.review && s.ai.length ? (
           <details class="card-item">
             <summary class="small">AI gợi ý (chỉ hiện sau khi đã chấm)</summary>

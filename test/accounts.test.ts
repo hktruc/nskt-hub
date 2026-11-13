@@ -107,7 +107,7 @@ describe("tài khoản nội bộ", () => {
 
     const ps = raw.prepare("SELECT id FROM users WHERE phone='0900000222'").get() as { id: number };
     await call("/quan-tri/doi", { method: "POST", cookie: admin, body: form({ id: String(ps.id), doi: ["T03", "T04", "T99"] }) });
-    expect(raw.prepare("SELECT team_code FROM grader_teams WHERE user_id=? ORDER BY team_code").all(ps.id)).toEqual([{ team_code: "T03" }, { team_code: "T04" }]);
+    expect(raw.prepare("SELECT teams_json FROM grader_team_plans WHERE user_id=?").all(ps.id)).toEqual([{ teams_json: '["T03","T04"]' }]);
 
     // Thu hồi: phiên đang mở bị hủy ngay.
     const psCookie = await activateAs("0900000222", codes.ps);

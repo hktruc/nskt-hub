@@ -67,7 +67,9 @@ Mỗi thẻ (video hoặc sơ đồ) có thêm 3 nút đánh dấu, **không ch�
 ## Quy định
 
 - **Hạn chấm: 3 ngày sau hạn nộp bài tuần.** Quá hạn mà chưa chấm thì báo đỏ trên bảng của coach / BTC.
-- Ban phụng sự chỉ chấm **các đội admin giao**; không cần coach duyệt.
+- Ban phụng sự chỉ chấm **các đội admin giao theo tuần** (luân phiên; tuần không giao lại thì giữ như tuần trước). Nhiều người có thể chấm trùng đội; coach / BTC chấm bất kỳ. Không cần coach duyệt.
+- **Mỗi người giữ bản chấm riêng**; một học viên có thể được nhiều người chấm. Điểm chất lượng chính thức = **trung bình các bản**. Bạn chỉ thấy bản chấm của người khác **sau khi đã lưu bản của mình**, để chấm độc lập.
+- Ưu tiên chấm những học viên **"chưa ai chấm"** (bàn chấm đưa lên đầu, tô đỏ).
 - Kết quả chấm của từng người trong ban phụng sự **hiện cho coach và BTC** xem (số bài đã chấm, đúng hạn, mức độ dễ / khắt khe so với mặt bằng).
 - Điểm chấm **không ảnh hưởng bảng xếp hạng**. Trên cửa sổ chi tiết khi bấm tên (công khai): chỉ hiện **điểm sao và năng lực mạnh / yếu**, **không** hiện tên người chấm, **không** hiện nhận xét chữ.
 - Học viên **không** vào được trang chấm.

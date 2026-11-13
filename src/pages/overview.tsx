@@ -110,7 +110,7 @@ export async function loadOverview(env: Env, now = new Date()): Promise<Overview
   const week = (await gradableAssignments(db, nowVN))[0];
   const queue = week ? await loadQueue(db, week, null, nowVN) : [];
   const sub = queue.filter((l) => l.status !== "chua-nop");
-  const todoL = sub.filter((l) => l.status !== "da-cham");
+  const todoL = sub.filter((l) => l.status === "chua-cham"); // chưa ai chấm
   const f = first<{ n: number; w: number | null }>(flags);
   return {
     learners: ranked.length,
@@ -230,7 +230,7 @@ export function OverviewPage(props: { o: Overview }) {
               {o.grading.todo}
             </div>
             <div class="small">
-              bài chưa chấm{o.grading.overdue ? ` · ${o.grading.overdue} quá hạn` : ""} · đã chấm {o.grading.done}/{o.grading.submitted}
+              chưa ai chấm{o.grading.overdue ? ` · ${o.grading.overdue} quá hạn` : ""} · đã có người chấm {o.grading.done}/{o.grading.submitted}
             </div>
           </a>
         ) : null}

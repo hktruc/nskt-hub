@@ -34,3 +34,8 @@ export function formatVN(iso: string | null | undefined): string {
   const s = new Date(t + VN_OFFSET_MS).toISOString();
   return `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)} ${s.slice(11, 16)}`;
 }
+
+/** Thứ Hai của tuần chứa ngày `day` (YYYY-MM-DD). */
+export function mondayOf(day: string): string {
+  return addDays(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7));
+}

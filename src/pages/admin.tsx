@@ -1,4 +1,4 @@
-import { formatVN } from "../dates";
+import { addDays, formatVN, mondayOf, vietnamDay } from "../dates";
 import { teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
 import { ROLE_LABEL, ROLES, type UserListItem } from "../users/accounts";
@@ -14,7 +14,11 @@ const STATUS: Record<UserListItem["status"], [string, string]> = {
 
 export type IssuedCode = { name: string; phone: string; code: string };
 
+const ddmm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+
 export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; error?: string; notice?: string; origin: string }) {
+  const week = mondayOf(vietnamDay(new Date()));
+  const weeks = [0, 1, 2, 3, 4, 5].map((i) => addDays(week, 7 * i));
   return (
     <Layout title="Quản trị">
       <h1>Quản trị tài khoản</h1>
@@ -64,7 +68,9 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
                 <div>
                   <strong>{u.name}</strong> <span class="muted small">· {u.phone}</span>
                   <div class="small">
-                    {ROLE_LABEL[u.role]} · lần vào gần nhất {formatVN(u.last_login_at)}
+                    {ROLE_LABEL[u.role]}
+                    {u.role === "phung_su" ? ` · tuần này chấm: ${u.teams.length ? u.teams.map(teamLabel).join(", ") : "chưa giao"}` : ""} · lần vào gần nhất{" "}
+                    {formatVN(u.last_login_at)}
                   </div>
                 </div>
                 <span class={`badge ${badge}`}>{label}</span>
@@ -74,7 +80,29 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
                 {u.role === "phung_su" ? (
                   <form method="post" action="/quan-tri/doi" class="team-pick">
                     <input type="hidden" name="id" value={String(u.id)} />
-                    <div class="small" style="font-weight:600;margin-bottom:4px">Đội được giao chấm</div>
+                    <div class="small" style="font-weight:600;margin-bottom:4px">Giao đội chấm (luân phiên theo tuần)</div>
+                    {u.plans.length ? (
+                      <ul class="small plan-list">
+                        {u.plans.map((p) => (
+                          <li class={p.fromWeek > week ? "future" : ""}>
+                            Từ tuần {ddmm(p.fromWeek)}: {p.teams.length ? p.teams.map(teamLabel).join(", ") : "không chấm"}
+                            {p.fromWeek > week ? " (sắp tới)" : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <label class="small">
+                      Áp dụng từ tuần{" "}
+                      <select name="tuan">
+                        {weeks.map((w, i) => (
+                          <option value={w}>
+                            {ddmm(w)}
+                            {i === 0 ? " (tuần này)" : i === 1 ? " (tuần sau)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p class="small muted" style="margin:4px 0">Các tuần sau giữ nguyên như vậy cho tới khi giao lại. Nhiều người có thể chấm trùng đội.</p>
                     <div class="team-grid">
                       {TEAMS.map((t) => (
                         <label class="tchk">
@@ -82,7 +110,7 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
                         </label>
                       ))}
                     </div>
-                    <button class="secondary">Lưu đội</button>
+                    <button class="secondary">Lưu lịch giao</button>
                   </form>
                 ) : null}
                 <div class="actions" style="margin-top:8px">

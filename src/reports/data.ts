@@ -1,6 +1,6 @@
 // Số liệu cho các báo cáo thống kê. Chỉ học viên thuộc 12 đội.
 
-import { addDays, vietnamDay } from "../dates";
+import { addDays, mondayOf, vietnamDay } from "../dates";
 import { isLearnerTeam, teamCode } from "../domain/teams";
 import { mediaOfAnswers } from "../domain/media";
 import { SCORING } from "../scoring/config";
@@ -18,7 +18,7 @@ export async function loadRoster(db: D1Database): Promise<Learner[]> {
 }
 
 const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
-export const mondayOf = (day: string) => addDays(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7));
+export { mondayOf };
 
 // ---------------- Buổi học offline ----------------
 
@@ -136,7 +136,8 @@ export async function assignmentReport(db: D1Database, type: "NORMAL" | "WEEK" |
   const ids = JSON.stringify(as.map((a) => a.id));
   const [subs, reviews] = await db.batch([
     db.prepare(`SELECT learner_id, assignment_id, status, ${type === "EXAM" ? "NULL AS answers_json" : "answers_json"}, feedback_count FROM submissions WHERE assignment_id IN (SELECT value FROM json_each(?))`).bind(ids),
-    db.prepare("SELECT assignment_id, score, spirit FROM week_reviews WHERE assignment_id IN (SELECT value FROM json_each(?))").bind(ids),
+    // Mỗi học viên một điểm: trung bình các bản chấm.
+    db.prepare("SELECT assignment_id, learner_id, AVG(score) AS score FROM reviews_week WHERE assignment_id IN (SELECT value FROM json_each(?)) GROUP BY assignment_id, learner_id").bind(ids),
   ]);
   const perLearner = new Map<number, { onTime: number; late: number; missing: number }>();
   const lines: AssignmentLine[] = as.map((a) => {
@@ -164,7 +165,7 @@ export async function assignmentReport(db: D1Database, type: "NORMAL" | "WEEK" |
     }
     L.byTeam = [...teams.entries()].sort((x, y) => x[0].localeCompare(y[0])).map(([team, c]) => ({ team, ...c }));
     if (type === "WEEK") {
-      const rv = ((reviews?.results ?? []) as { assignment_id: number; score: number | null; spirit: string | null }[]).filter((r) => r.assignment_id === a.id);
+      const rv = ((reviews?.results ?? []) as { assignment_id: number; learner_id: number; score: number | null }[]).filter((r) => r.assignment_id === a.id && roster.has(r.learner_id));
       L.graded = rv.length;
       const sc = rv.map((r) => r.score).filter((x): x is number => x !== null);
       L.quality = sc.length ? Math.round((10 * sc.reduce((p, q) => p + q, 0)) / sc.length) / 10 : null;
@@ -326,7 +327,7 @@ export async function learnerSummary(db: D1Database, nowVN: string, ranked: { le
       )
       .bind(SCORING.startDate, nowVN),
     db.prepare("SELECT learner_id, COUNT(*) AS n FROM scores WHERE flags_json != '[]' AND due_at >= ? GROUP BY learner_id").bind(SCORING.startDate),
-    db.prepare("SELECT learner_id, AVG(score) AS q FROM week_reviews WHERE score IS NOT NULL GROUP BY learner_id"),
+    db.prepare("SELECT learner_id, AVG(s) AS q FROM (SELECT learner_id, assignment_id, AVG(score) AS s FROM reviews_week WHERE score IS NOT NULL GROUP BY learner_id, assignment_id) GROUP BY learner_id"),
   ]);
   const rk = new Map(ranked.map((r) => [r.learnerId, r]));
   const m = new Map<number, LearnerRow>(
