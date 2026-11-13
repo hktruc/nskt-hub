@@ -177,11 +177,12 @@ export function LeaderboardPage(props: {
             Bằng điểm: ai đi học đúng giờ nhiều buổi hơn, rồi nộp video đúng hạn nhiều hơn, sớm hơn xếp trên.
           </li>
           <li>
-            <strong>Bảng đồng đội:</strong> điểm đội = <strong>trung bình điểm các thành viên</strong>, nên đội đông hay ít người đều so sánh công bằng.
-            Màu theo cùng ngưỡng. Bằng điểm: đội có nhiều thành viên xanh hơn xếp trên.
+            <strong>Bảng đồng đội:</strong> thứ hạng đội <strong>chỉ tính theo điểm trung bình các thành viên</strong>, nên đội đông hay ít người
+            đều so sánh công bằng. Màu theo cùng ngưỡng. Bằng điểm: đội có nhiều thành viên xanh hơn xếp trên.
           </li>
           <li>
-            <strong>Ngoài thành tích cá nhân, đội còn được ghi nhận "cả đội cùng tiến"</strong> bằng 5 danh hiệu tuần (không cộng vào điểm):{" "}
+            <strong>Ngoài thành tích cá nhân, đội còn được ghi nhận "cả đội cùng tiến"</strong> bằng 5 danh hiệu tuần. Danh hiệu là{" "}
+            <strong>phần vinh danh riêng, không cộng điểm và không làm thay đổi thứ hạng đội</strong>:{" "}
             {Object.values(AWARD_INFO).map((a, i) => (
               <>
                 {i ? " · " : ""}
@@ -511,6 +512,7 @@ function TeamBoard(props: { ranked: Ranked[]; awards: Award[] }) {
       {props.awards.length ? (
         <section class="awards" aria-label="Danh hiệu tuần">
           <h2>Danh hiệu tuần</h2>
+          <p class="muted small" style="margin:-4px 0 8px">Vinh danh tinh thần "cả đội cùng tiến" · không cộng điểm, không đổi thứ hạng.</p>
           <div class="award-grid">
             {props.awards.map((a) => (
               <div class="award" title={a.hint}>
@@ -556,7 +558,10 @@ function TeamBoard(props: { ranked: Ranked[]; awards: Award[] }) {
           </li>
         ))}
       </ol>
-      <p class="muted small">Điểm đội = trung bình điểm các thành viên. Chấm màu: số thành viên xanh / vàng / đỏ. Bấm vào đội để xem từng người.</p>
+      <p class="muted small">
+        Thứ hạng đội = trung bình điểm các thành viên. Danh hiệu tuần (🏆📈🤝✅💬) là vinh danh riêng, không cộng điểm. Chấm màu: số thành viên xanh /
+        vàng / đỏ. Bấm vào đội để xem từng người.
+      </p>
     </>
   );
 }
