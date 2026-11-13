@@ -123,3 +123,23 @@ describe("báo cáo chấm chéo và từng học viên", () => {
     expect(sum).not.toContain("0000000001");
   });
 });
+
+describe("bảng xếp hạng đồng đội", () => {
+  it("điểm đội = trung bình thành viên, ghi số thành viên; đội ít người vẫn công bằng", async () => {
+    const { LeaderboardPage, teamRanking } = await import("../src/pages/leaderboard");
+    const mk = (id: number, team: string, percent: number) => ({
+      rank: 0, learnerId: id, name: `HV ${id}`, team, percent, studyPercent: percent, attendancePercent: null,
+      color: (percent >= 80 ? "xanh" : percent >= 50 ? "vang" : "do") as "xanh" | "vang" | "do", colorLabel: "", onTimeSessions: 0, onTimeVideos: 0, avgHoursEarly: 0,
+    });
+    // Đội 01: 3 người (90, 80, 40) → TB 70. Đội 02: 1 người 75 → TB 75 (xếp trên dù ít người).
+    const ranked = [mk(1, "T01", 90), mk(2, "T01", 80), mk(3, "T01", 40), mk(4, "T02", 75)];
+    expect(teamRanking(ranked).map((t) => [t.team, t.members, t.avg, t.rank, t.color])).toEqual([
+      ["T02", 1, 75, 1, "vang"],
+      ["T01", 3, 70, 2, "vang"],
+    ]);
+    const html = String(LeaderboardPage({ ranked, team: "", teams: ["T01", "T02"], provisional: false, updatedAt: null, mode: "doi" }));
+    expect(html).toContain("3 người");
+    expect(html).toContain('href="/bang-xep-hang?doi=T01"');
+    expect(html).not.toContain("HV 1<"); // chế độ đồng đội không liệt kê từng người
+  });
+});

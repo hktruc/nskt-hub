@@ -26,6 +26,7 @@ import { LeaderboardPage, LearnerDetailPage, LearnerDetailView } from "./pages/l
 import { FlagsPage, loadFlags } from "./pages/flags";
 import { SubmissionDetailPage, loadDetail } from "./pages/submission-detail";
 import { loadLeaderboard, loadLearnerDetail } from "./scoring/leaderboard";
+import { teamAwards } from "./scoring/team-awards";
 import { nowVN, recomputeScores } from "./scoring/run";
 import { DAYS_AHEAD, RECENT_DAYS_BACK, enqueueRange, planDaily, planFull, workQueue } from "./sync/queue";
 
@@ -55,6 +56,8 @@ async function publicViewer(c: Context<AppEnv>): Promise<"full" | "grader" | und
 
 app.get("/bang-xep-hang", async (c) => {
   const data = await loadLeaderboard(c.env.DB, nowVN(new Date()));
+  const teamMode = c.req.query("xem") === "doi";
+  const awards = teamMode ? await teamAwards(c.env.DB, nowVN(new Date()), data.ranked) : [];
   const teams = [...new Set(data.ranked.map((r) => r.team))].sort();
   const doi = c.req.query("doi") ?? "";
   const viewerNav = await publicViewer(c);
@@ -68,6 +71,8 @@ app.get("/bang-xep-hang", async (c) => {
       updatedAt={data.updatedAt}
       origin={new URL(c.req.url).origin}
       viewerNav={viewerNav}
+      mode={teamMode ? "doi" : "ca-nhan"}
+      awards={awards}
     />,
   );
 });
