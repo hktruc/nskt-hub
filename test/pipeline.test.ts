@@ -138,7 +138,7 @@ describe("bảng xếp hạng đồng đội", () => {
       ["T01", 3, 70, 2, "vang"],
     ]);
     const html = String(LeaderboardPage({ ranked, team: "", teams: ["T01", "T02"], provisional: false, updatedAt: null, mode: "doi" }));
-    expect(html).toContain("3 thành viên");
+    expect(html).toContain("3 người");
     expect(html).toContain('href="/bang-xep-hang?doi=T01"');
     expect(html).not.toContain("HV 1<"); // chế độ đồng đội không liệt kê từng người
   });
