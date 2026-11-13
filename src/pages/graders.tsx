@@ -11,7 +11,8 @@ export function GradersPage(props: { graders: GraderStat[]; overall: number | nu
     <ReportShell tab="/bao-cao/nguoi-cham" title="Năng lực người chấm">
       <h2>Năng lực người chấm</h2>
       <p class="muted small">
-        Điểm trung bình cả khóa: <strong>{f(props.overall)}★</strong>. Người cho điểm cao hơn mặt bằng từ 0,5★ trở lên (đã chấm ít nhất 5 bài) bị đánh
+        Điểm trung bình cả khóa: <strong>{f(props.overall)}★</strong>. Mỗi người giữ bản chấm riêng; khi nhiều người chấm cùng một bài, ứng dụng so điểm từng người với
+        trung bình những người còn lại ("Lệch người khác"). Cao hơn từ 0,5★ trở lên (từ 3 bài trùng; chưa đủ thì so với mặt bằng chung, từ 5 bài) bị đánh
         dấu <span class="badge warn">Chấm dễ</span>, thấp hơn từ 0,5★ là <span class="badge warn">Chấm khắt khe</span>. "Đúng hạn" = chấm trong 3 ngày
         sau hạn nộp.
       </p>
@@ -37,6 +38,10 @@ export function GradersPage(props: { graders: GraderStat[]; overall: number | nu
               </span>
               <span>
                 TB <strong>{f(g.avg)}★</strong>
+              </span>
+              <span title="So với những người khác chấm cùng bài">
+                Lệch người khác <strong>{g.deviation === null ? "—" : `${g.deviation > 0 ? "+" : ""}${f(g.deviation)}★`}</strong>
+                {g.overlaps ? <span class="muted"> ({g.overlaps} bài trùng)</span> : null}
               </span>
               <span>
                 <strong>{g.doiPho}</strong> đối phó

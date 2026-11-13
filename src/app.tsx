@@ -185,8 +185,9 @@ async function queueFor(c: Context<AppEnv>, bt?: string) {
   const nowVNs = nowVN(new Date());
   const weeks = await gradableAssignments(c.env.DB, nowVNs);
   const week = weeks.find((w) => String(w.id) === bt) ?? weeks[0] ?? null;
-  const allowed = allowedTeams(u);
-  const lines = week ? await loadQueue(c.env.DB, week, allowed, nowVNs) : [];
+  // Ban phụng sự: đội theo lịch giao của tuần có hạn nộp bài này.
+  const allowed = week ? await allowedTeams(c.env.DB, u, week.due_at) : u.role === "phung_su" ? [] : null;
+  const lines = week ? await loadQueue(c.env.DB, week, allowed, nowVNs, u.id) : [];
   const teams = allowed ?? [...new Set(lines.map((l) => l.team))].sort();
   return { u, weeks, week, lines, teams };
 }
@@ -217,9 +218,9 @@ app.get("/cham", async (c) => {
 
 async function sheetFor(c: Context<AppEnv>, hv: number, bt: number) {
   if (!Number.isSafeInteger(hv) || !Number.isSafeInteger(bt)) return null;
-  const s = await loadSheet(c.env.DB, hv, bt);
+  const s = await loadSheet(c.env.DB, hv, bt, c.get("user").id);
   if (!s) return null;
-  const allowed = allowedTeams(c.get("user"));
+  const allowed = await allowedTeams(c.env.DB, c.get("user"), s.assignment.due_at);
   if (allowed && !allowed.includes(s.learner.team)) return "cam" as const;
   return s;
 }
@@ -261,10 +262,13 @@ app.post("/cham/luu", async (c) => {
   const err = validate(input);
   if (err) return c.html(<SheetPage user={c.get("user")} s={s} draft={draft} error={err} back={sheetBack(s.assignment.id, s.learner.team)} />, 400);
   await saveReview(c.env.DB, s, input, c.get("user"), c.get("email"), new Date());
-  // Sang người tiếp theo chưa chấm: ưu tiên cùng đội.
+  // Sang người tiếp theo CHƯA AI CHẤM (ưu tiên cùng đội); hết thì tới bài mình đã chấm nhưng học viên vừa sửa.
   const week = { id: s.assignment.id, title: s.assignment.title, type: s.assignment.type, due_at: s.assignment.due_at };
-  const lines = await loadQueue(c.env.DB, week, allowedTeams(c.get("user")), nowVN(new Date()));
-  const todo = lines.filter((l) => l.learnerId !== s.learner.id && (l.status === "chua-cham" || l.status === "dang-cham" || l.status === "sua-sau-cham"));
+  const u = c.get("user");
+  const lines = await loadQueue(c.env.DB, week, await allowedTeams(c.env.DB, u, week.due_at), nowVN(new Date()), u.id);
+  const others = lines.filter((l) => l.learnerId !== s.learner.id);
+  const fresh = others.filter((l) => l.status === "chua-cham");
+  const todo = fresh.length ? fresh : others.filter((l) => l.status === "sua-sau-cham" && l.mine);
   const next = todo.find((l) => l.team === s.learner.team) ?? todo[0];
   return c.redirect(next ? `/cham/bai?hv=${next.learnerId}&bt=${s.assignment.id}` : `/cham?bt=${s.assignment.id}&tb=het-viec`, 303);
 });
@@ -308,9 +312,8 @@ app.get("/bao-cao/nguoi-cham", async (c) => {
   const u = c.get("user");
   if (u.role === "phung_su") return c.html(<ForbiddenPage user={u} message="Trang này dành cho coach, BTC, admin." />, 403);
   const { graders, overall } = await loadGraderStats(c.env.DB);
-  const rows = (await c.env.DB.prepare("SELECT user_id, team_code FROM grader_teams ORDER BY team_code").all<{ user_id: number; team_code: string }>()).results;
-  const teamsOf = new Map<number, string[]>();
-  for (const r of rows) teamsOf.set(r.user_id, [...(teamsOf.get(r.user_id) ?? []), r.team_code]);
+  // Đội được giao tuần này (theo lịch giao luân phiên).
+  const teamsOf = new Map<number, string[]>((await listUsers(c.env.DB)).map((x) => [x.id, x.teams]));
   return c.html(<GradersPage graders={graders} overall={overall} teamsOf={teamsOf} />);
 });
 
@@ -389,7 +392,8 @@ app.post("/quan-tri/doi", async (c) => {
   const f = await c.req.formData();
   const u = await targetUser(c, f);
   if (!u) return adminPage(c, { error: "Không tìm thấy người này." }, 400);
-  await setTeams(c.env.DB, u.id, f.getAll("doi").map(String), c.get("email"), new Date());
+  const tuan = String(f.get("tuan") ?? "");
+  await setTeams(c.env.DB, u.id, f.getAll("doi").map(String), c.get("email"), new Date(), /^\d{4}-\d{2}-\d{2}$/.test(tuan) ? tuan : undefined);
   return c.redirect("/quan-tri?tb=doi", 303);
 });
 

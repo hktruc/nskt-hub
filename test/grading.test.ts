@@ -52,7 +52,7 @@ async function setup() {
   const ps = await createUser(d1, { phone: "0911000001", name: "Phụng Sự Giả", role: "phung_su" }, "test", now);
   const coach = await createUser(d1, { phone: "0911000002", name: "Coach Giả", role: "coach" }, "test", now);
   const psId = (raw.prepare("SELECT id FROM users WHERE phone='0911000001'").get() as { id: number }).id;
-  raw.prepare("INSERT INTO grader_teams (user_id, team_code, assigned_at) VALUES (?, 'T03', ?)").run(psId, iso);
+  raw.prepare("INSERT INTO grader_team_plans (user_id, from_week, teams_json, set_at) VALUES (?, '2026-09-28', '[\"T03\"]', ?)").run(psId, iso);
   const call = (path: string, init: RequestInit & { cookie?: string } = {}) => {
     const h = new Headers(init.headers);
     if (init.cookie) h.set("cookie", init.cookie);
@@ -113,8 +113,8 @@ describe("bàn chấm", () => {
     const saved = await call("/cham/luu", { method: "POST", cookie: psCookie, body: fullSheet() });
     expect(saved.status).toBe(303);
     expect(saved.headers.get("location")).toBe("/cham/bai?hv=32&bt=900");
-    expect(raw.prepare("SELECT score, spirit, grader_label FROM week_reviews WHERE learner_id=31").get()).toMatchObject({ score: 3.9, spirit: "nghiem-tuc" });
-    expect(raw.prepare("SELECT item_key, a1, flag FROM item_reviews WHERE learner_id=31 ORDER BY item_key").all()).toEqual([
+    expect(raw.prepare("SELECT score, spirit, grader_label FROM reviews_week WHERE learner_id=31").get()).toMatchObject({ score: 3.9, spirit: "nghiem-tuc" });
+    expect(raw.prepare("SELECT item_key, a1, flag FROM reviews_item WHERE learner_id=31 ORDER BY item_key").all()).toEqual([
       { item_key: "0:https://www.tiktok.com/@gia/video/1", a1: null, flag: "khong-xem-duoc" },
       { item_key: "0:https://youtu.be/aaaaaaaaaaa", a1: 5, flag: null },
       { item_key: "1:https://s3.sunteco.app/f/sodo.jpg", a1: null, flag: null },
@@ -130,7 +130,7 @@ describe("bàn chấm", () => {
     expect(html).toMatch(/name="a1_0" value="5" checked/);
     const low = await call("/cham/luu", { method: "POST", cookie: psCookie, body: fullSheet({ spirit: "doi-pho" }) });
     expect(await low.text()).toContain("cần viết nhận xét");
-    expect(raw.prepare("SELECT COUNT(*) n FROM week_reviews").get()).toEqual({ n: 0 });
+    expect(raw.prepare("SELECT COUNT(*) n FROM reviews_week").get()).toEqual({ n: 0 });
   });
 
   it("coach thấy mọi đội, tô màu theo chất lượng, đổi được trọng tâm tuần; ban phụng sự thì không", async () => {
@@ -203,5 +203,44 @@ describe("bàn chấm", () => {
     expect(html).toContain('<option value="897">Bài tuần 897');
     const old = await (await call("/cham?bt=897", { cookie: coachCookie })).text();
     expect(old).toContain('<option value="897" selected="">');
+  });
+
+  it("nhiều người cùng chấm một học viên: mỗi người giữ bản riêng, điểm chính thức là trung bình", async () => {
+    const { raw, call, psCookie, coachCookie } = await setup();
+    const q0 = await (await call("/cham", { cookie: coachCookie })).text();
+    expect(q0).toContain("CHƯA AI CHẤM");
+    await call("/cham/luu", { method: "POST", cookie: psCookie, body: fullSheet() }); // 3,9★
+    const before = await (await call("/cham/bai?hv=31&bt=900", { cookie: coachCookie })).text();
+    expect(before).toContain("Đã có 1 người khác chấm");
+    expect(before).not.toContain("Bản chấm của người khác"); // chưa lộ điểm người khác trước khi tự chấm
+    await call("/cham/luu", { method: "POST", cookie: coachCookie, body: fullSheet({ a1_0: "3", a2_0: "3", a3_0: "3", a4_0: "3", b1: "3", b2: "3" }) });
+    expect(raw.prepare("SELECT COUNT(*) n FROM reviews_week WHERE learner_id=31").get()).toEqual({ n: 2 });
+    const after = await (await call("/cham/bai?hv=31&bt=900", { cookie: coachCookie })).text();
+    expect(after).toContain("Bản chấm của người khác (1)");
+    expect(after).toContain("Phụng Sự Giả");
+    const q = await (await call("/cham", { cookie: coachCookie })).text();
+    expect(q).toContain("2 người chấm · có bạn");
+    // Trung bình hai bản 3,9★ và 3,0★ = 3,45 → hiện 3,4★ hoặc 3,5★ (làm tròn số thực).
+    expect(q).toMatch(/3,[45]★/);
+  });
+
+  it("giao đội luân phiên theo tuần: tuần không giao lại thì giữ như tuần trước", async () => {
+    const { raw, call, psCookie } = await setup();
+    const iso = "2026-11-01T00:00:00Z";
+    const psId = (raw.prepare("SELECT id FROM users WHERE phone='0911000001'").get() as { id: number }).id;
+    // Từ tuần 09/11 chuyển sang chấm đội 04.
+    raw.prepare("INSERT INTO grader_team_plans (user_id, from_week, teams_json, set_at) VALUES (?, '2026-11-09', '[\"T04\"]', ?)").run(psId, iso);
+    raw.prepare("INSERT INTO assignments (id, title, type, due_at, first_seen_at, last_seen_at) VALUES (905, 'Bài tuần 06 (X10)', 'WEEK', '2026-11-12T23:00:00', ?, ?)").run(iso, iso);
+    raw.prepare(
+      "INSERT INTO submissions (learner_id, assignment_id, status, submitted_at, answers_json, answers_hash, content_hash, first_seen_at, changed_at, last_seen_at) VALUES (41, 905, 'DONE', '2026-11-12T20:00:00', ?, 'z', 'c', ?, ?, ?), (31, 905, 'DONE', '2026-11-12T20:00:00', ?, 'z', 'c', ?, ?, ?)",
+    ).run(answers(["https://youtu.be/eeeeeeeeeee"], ""), iso, iso, iso, answers(["https://youtu.be/fffffffffff"], ""), iso, iso, iso);
+    // Bài tuần 05 (tuần 02/11): vẫn đội 03. Bài tuần 06 (tuần 09/11): đội 04.
+    const w5 = await (await call("/cham?bt=900", { cookie: psCookie })).text();
+    expect(w5).toContain("Học Viên 31");
+    expect(w5).not.toContain("Học Viên 41");
+    const w6 = await (await call("/cham?bt=905", { cookie: psCookie })).text();
+    expect(w6).toContain("Học Viên 41");
+    expect(w6).not.toContain("Học Viên 31");
+    expect((await call("/cham/bai?hv=31&bt=905", { cookie: psCookie })).status).toBe(403);
   });
 });

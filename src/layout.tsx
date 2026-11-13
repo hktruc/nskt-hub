@@ -201,8 +201,14 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .admin-new { max-width:420px; }
 .admin-actions { margin-top:8px; } .admin-actions summary { cursor:pointer; color:var(--accent); font-weight:600; }
 .team-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:4px 8px; margin-bottom:8px; }
+.plan-list { margin:2px 0 8px; padding-left:18px; } .plan-list li.future { color:var(--accent); font-weight:600; }
+.team-pick select { min-height:36px; border:1px solid var(--line); border-radius:8px; padding:4px 8px; font:inherit; background:var(--card); color:var(--fg); }
 .tchk { display:flex; align-items:center; gap:6px; min-height:36px; font-size:.875rem; }
 .q-row { flex-wrap:wrap; }
+.call-out { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:var(--warn-bg); color:var(--warn-fg); border-radius:var(--radius); padding:12px 14px; margin:10px 0; box-shadow:var(--shadow); }
+.call-out.urgent { background:var(--bad-bg); color:var(--bad-fg); }
+.call-out .btn { flex:none; }
+.call-inline { color:var(--bad-fg); font-weight:600; }
 .q-row .badge { font-size:.6875rem; padding:1px 8px; }
 .chip .cnt { margin-left:6px; background:var(--bad-bg); color:var(--bad-fg); border-radius:999px; padding:0 6px; font-size:.75rem; font-weight:700; }
 .week-setting { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:8px 12px; margin:8px 0 12px; font-size:.875rem; }

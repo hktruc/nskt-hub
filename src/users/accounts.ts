@@ -2,6 +2,7 @@
 // Mật khẩu và mã kích hoạt chỉ lưu dạng băm PBKDF2-SHA256; mã phiên chỉ lưu dạng băm SHA-256.
 
 import { normPhone } from "../attendance/offline";
+import { mondayOf, vietnamDay } from "../dates";
 
 export type Role = "admin" | "btc" | "coach" | "phung_su";
 export const ROLES: Role[] = ["admin", "btc", "coach", "phung_su"];
@@ -79,10 +80,17 @@ type UserRow = {
 
 export class AccountError extends Error {}
 
+/** Đội được giao cho người chấm trong tuần `week` (thứ Hai): lần giao gần nhất có hiệu lực từ tuần đó trở về trước. */
+export async function teamsFor(db: D1Database, userId: number, week: string): Promise<string[]> {
+  const r = await db
+    .prepare("SELECT teams_json FROM grader_team_plans WHERE user_id = ? AND from_week <= ? ORDER BY from_week DESC LIMIT 1")
+    .bind(userId, week)
+    .first<{ teams_json: string }>();
+  return r ? (JSON.parse(r.teams_json) as string[]).sort() : [];
+}
+export const thisWeek = (now: Date) => mondayOf(vietnamDay(now));
 async function teamsOf(db: D1Database, userId: number): Promise<string[]> {
-  return (await db.prepare("SELECT team_code FROM grader_teams WHERE user_id = ? ORDER BY team_code").bind(userId).all<{ team_code: string }>()).results.map(
-    (r) => r.team_code,
-  );
+  return teamsFor(db, userId, thisWeek(new Date()));
 }
 
 /** Admin tạo tài khoản; trả về mã kích hoạt (chỉ hiện một lần). */
@@ -124,12 +132,16 @@ export async function setRole(db: D1Database, userId: number, role: string): Pro
   await db.prepare("UPDATE users SET role = ? WHERE id = ?").bind(role, userId).run();
 }
 
-export async function setTeams(db: D1Database, userId: number, teams: string[], by: string, now: Date): Promise<void> {
-  const clean = [...new Set(teams.filter((t) => /^T(0[1-9]|1[0-2])$/.test(t)))];
-  await db.batch([
-    db.prepare("DELETE FROM grader_teams WHERE user_id = ?").bind(userId),
-    ...clean.map((t) => db.prepare("INSERT INTO grader_teams (user_id, team_code, assigned_at, assigned_by) VALUES (?,?,?,?)").bind(userId, t, now.toISOString(), by)),
-  ]);
+/** Giao đội từ tuần `fromWeek` (thứ Hai) trở đi; các tuần sau giữ nguyên cho tới lần giao kế tiếp. */
+export async function setTeams(db: D1Database, userId: number, teams: string[], by: string, now: Date, fromWeek = thisWeek(now)): Promise<void> {
+  const clean = [...new Set(teams.filter((t) => /^T(0[1-9]|1[0-2])$/.test(t)))].sort();
+  await db
+    .prepare(
+      `INSERT INTO grader_team_plans (user_id, from_week, teams_json, set_by, set_at) VALUES (?,?,?,?,?)
+       ON CONFLICT(user_id, from_week) DO UPDATE SET teams_json=excluded.teams_json, set_by=excluded.set_by, set_at=excluded.set_at`,
+    )
+    .bind(userId, mondayOf(fromWeek), JSON.stringify(clean), by, now.toISOString())
+    .run();
 }
 
 async function registerFail(db: D1Database, u: UserRow, now: Date) {
@@ -209,18 +221,22 @@ export async function logout(db: D1Database, token: string | undefined): Promise
   if (token) await db.prepare("DELETE FROM user_sessions WHERE token_hash = ?").bind(await sha256(token)).run();
 }
 
-export type UserListItem = UserRow & { teams: string[]; status: "cho-kich-hoat" | "dang-dung" | "thu-hoi" };
+export type UserListItem = UserRow & { teams: string[]; plans: { fromWeek: string; teams: string[] }[]; status: "cho-kich-hoat" | "dang-dung" | "thu-hoi" };
 
 export async function listUsers(db: D1Database): Promise<UserListItem[]> {
   const [users, teams] = await db.batch([
     db.prepare("SELECT * FROM users ORDER BY active DESC, CASE role WHEN 'admin' THEN 0 WHEN 'btc' THEN 1 WHEN 'coach' THEN 2 ELSE 3 END, name"),
-    db.prepare("SELECT user_id, team_code FROM grader_teams ORDER BY team_code"),
+    db.prepare("SELECT user_id, from_week, teams_json FROM grader_team_plans ORDER BY from_week"),
   ]);
-  const byUser = new Map<number, string[]>();
-  for (const t of (teams?.results ?? []) as { user_id: number; team_code: string }[]) byUser.set(t.user_id, [...(byUser.get(t.user_id) ?? []), t.team_code]);
+  const week = thisWeek(new Date());
+  const plans = new Map<number, { fromWeek: string; teams: string[] }[]>();
+  for (const t of (teams?.results ?? []) as { user_id: number; from_week: string; teams_json: string }[])
+    plans.set(t.user_id, [...(plans.get(t.user_id) ?? []), { fromWeek: t.from_week, teams: JSON.parse(t.teams_json) as string[] }]);
+  const current = (id: number) => [...(plans.get(id) ?? [])].reverse().find((p) => p.fromWeek <= week)?.teams ?? [];
   return ((users?.results ?? []) as UserRow[]).map((u) => ({
     ...u,
-    teams: byUser.get(u.id) ?? [],
+    teams: current(u.id),
+    plans: plans.get(u.id) ?? [],
     status: !u.active ? "thu-hoi" : u.password_hash ? "dang-dung" : "cho-kich-hoat",
   }));
 }

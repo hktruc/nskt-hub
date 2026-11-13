@@ -44,6 +44,7 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 | 2026-11-12 | Danh sách Google Sheet là chuẩn; một số học viên đăng nhập dh3g bằng số điện thoại cũ. **Cho phép ghép theo họ tên khi số điện thoại không khớp** — Claude giới hạn: chỉ trong cùng đội, chỉ với người dh3g chưa ghép được bằng số, chỉ khi trùng đúng một người (so có dấu, rồi không dấu). Danh sách ghép theo tên hiện ở `/du-lieu` để BTC xem lại. |
 | 2026-11-12 | **Chấm bài (người chấm):** chỉ chấm **bài tuần** và **bài thi** (tiêu chí bài thi bổ sung sau); **không chấm bài ngày**. Bộ tiêu chí ở `docs/TIEU-CHI-CHAM.md`: tầng A chấm riêng từng video (A1–A4) và từng sơ đồ ảnh/PDF (A5), tầng B chấm chung cả tuần (B1 trọng tâm tuần, B2 chiều sâu phần viết, B3 tinh thần, B4 so tuần trước, B5 nhận xét, B6 đề cử). Điểm tuần = 60% phần riêng + 40% (B1, B2); màu ≥4 / 3–3,9 / <3. Hạn chấm 3 ngày sau hạn nộp. B1 mặc định theo thứ tự tuần, BTC đổi được. |
 | 2026-11-12 | **Admin giao đội** cho ban phụng sự; **không cần coach duyệt**; kết quả chấm của từng người phụng sự hiện cho coach/BTC. Học viên không vào trang chấm. Điểm chấm **không ảnh hưởng BXH**; cửa sổ chi tiết (công khai) chỉ hiện điểm sao + năng lực mạnh/yếu, không tên người chấm, không nhận xét chữ. Mục "khu vực 2" bỏ. |
+| 2026-11-13 | **Chấm nhiều người:** admin giao đội cho ban phụng sự **theo tuần, luân phiên** (bảng `grader_team_plans`: "từ tuần X, chấm các đội…"; tuần không giao lại thì giữ như tuần trước; bài tuần thuộc tuần của hạn nộp). Nhiều người có thể trùng đội; coach / BTC chấm bất kỳ. **Lưu mọi bản chấm** (`reviews_week`, `reviews_item`, khóa gồm người chấm); điểm chính thức = **trung bình các bản** (Claude chọn, chủ dự án có thể đổi sang ưu tiên coach). Người chấm không thấy điểm người khác trước khi tự lưu. Bàn chấm đưa **"chưa ai chấm"** lên đầu, hộp cảnh báo đỏ + nút "Chấm ngay". Năng lực người chấm so với người chấm cùng bài ("lệch người khác"). Bảng cũ `grader_teams`, `week_reviews`, `item_reviews` giữ làm bản lưu. |
 | 2026-11-11 | Kỹ thuật: một Cloudflare Worker (Hono + TypeScript, giao diện dựng sẵn trên máy chủ bằng JSX), D1, cron của Cloudflare, kiểm thử bằng Vitest. |
 
 Mặc định đang dùng, chủ dự án chưa xác nhận rõ:
@@ -160,7 +161,7 @@ Kiểm thử dùng SQLite có sẵn trong Node để giả lập D1 (`test/helpe
 - `src/google/sheets.ts` — đọc Google Sheet bằng tài khoản dịch vụ; `src/attendance/offline.ts` — điểm danh offline
 - `src/domain/` — quy tắc nghiệp vụ không phụ thuộc giao diện: `media.ts` (phát hiện video/ảnh/tệp), `teams.ts` (tên đội dh3g → T01…T12)
 - `docs/anh/` — ảnh chụp giao diện bằng dữ liệu giả
-- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0008.
+- `migrations/` — cấu trúc D1 (chỉ thêm file mới, không sửa file đã áp dụng). **Bản triển khai không tự chạy migration**: trước khi gộp PR có file migration mới, chạy file đó lên D1 thật (Claude làm qua API D1, rồi ghi tên vào bảng `d1_migrations`). Đã chạy: 0001–0009.
 - `docs/TRIEN-KHAI.md` — các bước đưa lên Cloudflare
 - `docs/THIET-KE.md` — hệ thống giao diện (màu, chữ, thành phần, quy tắc mobile)
 - `test/` — kiểm thử
