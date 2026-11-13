@@ -1,7 +1,7 @@
 import { formatVN } from "../dates";
 import { teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
-import { SCORING } from "../scoring/config";
+import { SCORING, colorOf } from "../scoring/config";
 import type { LearnerDetail, Ranked } from "../scoring/leaderboard";
 
 // Trang công khai, không cần đăng nhập. Chỉ hiện: hạng, họ tên, đội, điểm (%), màu.
@@ -16,7 +16,10 @@ export function LeaderboardPage(props: {
   origin?: string;
   /** Người đã đăng nhập (BTC, coach, ban phụng sự): thấy đủ menu và logo về trang chủ. */
   viewerNav?: "full" | "grader";
+  /** "doi": bảng xếp hạng đồng đội (điểm đội = trung bình thành viên). */
+  mode?: "ca-nhan" | "doi";
 }) {
+  const teamMode = props.mode === "doi" && !props.team;
   const filtered = props.team ? props.ranked.filter((r) => r.team === props.team) : props.ranked;
   // Xem một đội: hạng trong đội, kèm hạng toàn khóa. Bằng điểm thì ngang hạng.
   const same = (a: Ranked, b: Ranked) => a.rank === b.rank; // hạng toàn khóa bằng nhau = bằng điểm mọi tiêu chí
@@ -74,6 +77,19 @@ export function LeaderboardPage(props: {
         <p class="notice small">Một số bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p>
       ) : null}
 
+      <nav class="seg-tabs" aria-label="Chọn bảng xếp hạng">
+        <a class={teamMode ? "" : "on"} href="/bang-xep-hang">
+          Cá nhân
+        </a>
+        <a class={teamMode ? "on" : ""} href="/bang-xep-hang?xem=doi">
+          Đồng đội
+        </a>
+      </nav>
+
+      {teamMode ? <TeamBoard ranked={props.ranked} /> : null}
+
+      {teamMode ? null : (
+      <>
       <nav class="chips" aria-label="Lọc theo đội">
         <a class={`chip${props.team ? "" : " on"}`} href="/bang-xep-hang">
           Toàn khóa
@@ -122,6 +138,8 @@ export function LeaderboardPage(props: {
         </ol>
       )}
       <p class="muted small">Bấm vào một tên để xem điểm tích lũy và thứ hạng 3 tuần gần nhất.</p>
+      </>
+      )}
       <section class="rules" aria-label="Cách tính điểm">
         <h2>Cách tính điểm</h2>
         <ul>
@@ -155,6 +173,10 @@ export function LeaderboardPage(props: {
             <span class="swatch xanh">Xanh</span> ≥ {SCORING.greenFrom}% · <span class="swatch vang">Vàng</span>{" "}
             {SCORING.yellowFrom}–{SCORING.greenFrom - 1}% · <span class="swatch do">Đỏ</span> &lt; {SCORING.yellowFrom}%.
             Bằng điểm: ai đi học đúng giờ nhiều buổi hơn, rồi nộp video đúng hạn nhiều hơn, sớm hơn xếp trên.
+          </li>
+          <li>
+            <strong>Bảng đồng đội:</strong> điểm đội = <strong>trung bình điểm các thành viên</strong>, nên đội đông hay ít người đều so sánh công bằng.
+            Màu theo cùng ngưỡng. Bằng điểm: đội có nhiều thành viên xanh hơn xếp trên.
           </li>
         </ul>
       </section>
@@ -439,5 +461,71 @@ export function LearnerDetailPage(props: { d: LearnerDetail; viewerNav?: "full" 
       </p>
       <LearnerDetailView d={props.d} />
     </Layout>
+  );
+}
+
+type TeamRow = { team: string; members: number; avg: number; color: Ranked["color"]; xanh: number; vang: number; do: number; rank: number };
+
+/** Xếp hạng đội: trung bình điểm thành viên (công bằng giữa đội đông và đội ít người). */
+export function teamRanking(ranked: Ranked[]): TeamRow[] {
+  const by = new Map<string, Ranked[]>();
+  for (const r of ranked) by.set(r.team, [...(by.get(r.team) ?? []), r]);
+  const rows = [...by.entries()].map(([team, m]) => {
+    const avg = Math.round((10 * m.reduce((a, r) => a + r.percent, 0)) / m.length) / 10;
+    return {
+      team,
+      members: m.length,
+      avg,
+      color: colorOf(avg),
+      xanh: m.filter((r) => r.color === "xanh").length,
+      vang: m.filter((r) => r.color === "vang").length,
+      do: m.filter((r) => r.color === "do").length,
+      rank: 0,
+    };
+  });
+  const cmp = (a: TeamRow, b: TeamRow) => b.avg - a.avg || b.xanh / b.members - a.xanh / a.members;
+  rows.sort((a, b) => cmp(a, b) || a.team.localeCompare(b.team));
+  rows.forEach((r, i) => (r.rank = i && cmp(rows[i - 1]!, r) === 0 ? rows[i - 1]!.rank : i + 1));
+  return rows;
+}
+
+function TeamBoard(props: { ranked: Ranked[] }) {
+  const rows = teamRanking(props.ranked);
+  if (rows.length === 0) return <p class="muted">Chưa có điểm.</p>;
+  const pod = rows.length >= 3 ? [rows[1]!, rows[0]!, rows[2]!] : [];
+  return (
+    <>
+      {pod.length ? (
+        <div class="podium" aria-label="Ba đội dẫn đầu">
+          {pod.map((r, i) => (
+            <a class={`pod pod-${[2, 1, 3][i]} ${r.color}`} href={`/bang-xep-hang?doi=${r.team}`}>
+              <span class="medal">{r.rank}</span>
+              <span class="pname">{teamLabel(r.team)}</span>
+              <span class="pteam">{r.members} thành viên</span>
+              <span class="ppct">{r.avg.toLocaleString("vi-VN")}%</span>
+            </a>
+          ))}
+        </div>
+      ) : null}
+      <ol class="rank-list team-list">
+        {rows.map((r) => (
+          <li>
+            <a class={`rank-row ${r.color}`} href={`/bang-xep-hang?doi=${r.team}`} title="Bấm để xem từng thành viên">
+              <span class="rank">{r.rank}</span>
+              <span class="name">{teamLabel(r.team)}</span>
+              <span class="team">{r.members} thành viên</span>
+              <span class="tcolors" aria-label={`${r.xanh} xanh, ${r.vang} vàng, ${r.do} đỏ`}>
+                <i class="dot xanh" />
+                {r.xanh} <i class="dot vang" />
+                {r.vang} <i class="dot do" />
+                {r.do}
+              </span>
+              <span class="pct">{r.avg.toLocaleString("vi-VN")}%</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p class="muted small">Điểm đội = trung bình điểm các thành viên. Chấm màu: số thành viên xanh / vàng / đỏ. Bấm vào đội để xem từng người.</p>
+    </>
   );
 }

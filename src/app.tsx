@@ -68,6 +68,7 @@ app.get("/bang-xep-hang", async (c) => {
       updatedAt={data.updatedAt}
       origin={new URL(c.req.url).origin}
       viewerNav={viewerNav}
+      mode={c.req.query("xem") === "doi" ? "doi" : "ca-nhan"}
     />,
   );
 });

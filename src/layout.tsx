@@ -263,6 +263,12 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .search { position:sticky; top:68px; z-index:5; display:flex; align-items:center; gap:10px; background:var(--bg); padding:6px 0 8px; }
 .search input { flex:1; min-height:44px; border:1px solid var(--line); border-radius:999px; padding:8px 16px 8px 40px; font:16px var(--font); color:var(--fg); background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%234B6573' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='m13 13 4 4'/%3E%3C/svg%3E") no-repeat 14px center; }
 .rank-list > li[hidden] { display:none; }
+.seg-tabs { display:flex; background:var(--soft); border-radius:999px; padding:4px; gap:4px; margin:12px 0 4px; max-width:360px; }
+.seg-tabs a { flex:1; text-align:center; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:999px; text-decoration:none; color:var(--fg); font-weight:600; }
+.seg-tabs a.on { background:var(--card); color:var(--accent); box-shadow:var(--shadow); }
+.team-list .rank-row { min-height:44px; font-size:.9375rem; }
+.tcolors { flex:none; font-size:.75rem; font-weight:600; white-space:nowrap; display:inline-flex; align-items:center; gap:2px; }
+.tcolors .dot { width:8px; height:8px; margin:0 2px 0 6px; }
 /* Cửa sổ chi tiết: biểu đồ */
 .rank-chart { width:100%; height:auto; max-height:110px; display:block; margin:2px 0 8px; }
 .rank-chart .grid { stroke:var(--line); stroke-dasharray:3 4; } .rank-chart .lbl { font-size:9px; fill:var(--muted); }
