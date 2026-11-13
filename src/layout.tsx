@@ -266,6 +266,16 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .seg-tabs { display:flex; background:var(--soft); border-radius:999px; padding:4px; gap:4px; margin:12px 0 4px; max-width:360px; }
 .seg-tabs a { flex:1; text-align:center; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:999px; text-decoration:none; color:var(--fg); font-weight:600; }
 .seg-tabs a.on { background:var(--card); color:var(--accent); box-shadow:var(--shadow); }
+.awards h2 { margin:14px 0 8px; }
+.award-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; }
+.award { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; display:flex; flex-direction:column; gap:1px; box-shadow:var(--shadow); }
+.award .aicon { font-size:1.375rem; line-height:1; } .award .atitle { font-size:.75rem; color:var(--muted); font-weight:600; margin-top:4px; }
+.award .ateam { font-size:1rem; } .award .ametric { font-size:.75rem; color:var(--muted); }
+.aicons { font-size:.8125rem; margin-left:4px; }
+.team-list .tinfo { flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.3; }
+.team-list .tname { font-weight:700; } .team-list .tsub { font-size:.75rem; opacity:.85; display:inline-flex; align-items:center; gap:2px; flex-wrap:wrap; }
+.team-list .tsub .dot { width:8px; height:8px; margin:0 2px 0 4px; }
+.team-list .rank-row { padding:8px 12px; }
 .team-list .rank-row { min-height:44px; font-size:.9375rem; }
 .tcolors { flex:none; font-size:.75rem; font-weight:600; white-space:nowrap; display:inline-flex; align-items:center; gap:2px; }
 .tcolors .dot { width:8px; height:8px; margin:0 2px 0 6px; }

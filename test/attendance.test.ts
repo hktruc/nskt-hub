@@ -227,3 +227,20 @@ describe("báo cáo", () => {
     expect(["Hà Nội", "Miền Bắc", "HCM", "Miền Nam", "Hà Nam", ""].map(regionOf)).toEqual(["HN", "HN", "SG", "SG", "KHAC", "KHAC"]);
   });
 });
+
+describe("danh hiệu tuần của bảng đồng đội", () => {
+  it("trao Đội dẫn đầu, Đội chuyên cần…; luật chơi ghi rõ tiêu chí đồng đội", async () => {
+    const { env } = await setup();
+    await syncOfflineAttendance(env, new Date("2026-11-12T01:00:00Z"), fakeGoogle().fetchImpl);
+    const html = await (await app.fetch(new Request("https://nskt-hub.invalid/bang-xep-hang?xem=doi"), env)).text();
+    expect(html).toContain("Danh hiệu tuần");
+    expect(html).toContain("🏆");
+    expect(html).toContain("Đội dẫn đầu");
+    expect(html).toContain("Đội chuyên cần");
+    expect(html).toContain("Ngoài thành tích cá nhân, đội còn được ghi nhận");
+    // Bảng cá nhân không tốn công tính danh hiệu, nhưng vẫn giải thích tiêu chí đồng đội.
+    const solo = await (await app.fetch(new Request("https://nskt-hub.invalid/bang-xep-hang"), env)).text();
+    expect(solo).not.toContain("Danh hiệu tuần</h2>");
+    expect(solo).toContain("Ngoài thành tích cá nhân, đội còn được ghi nhận");
+  });
+});
