@@ -4,10 +4,14 @@
 import { normPhone } from "../attendance/offline";
 import { mondayOf, vietnamDay } from "../dates";
 import { isLearnerTeam } from "../domain/teams";
+import { featureOn } from "../course";
 
-export type Role = "admin" | "btc" | "coach" | "phung_su";
-export const ROLES: Role[] = ["admin", "btc", "coach", "phung_su"];
-export const ROLE_LABEL: Record<Role, string> = { admin: "Admin", btc: "BTC", coach: "Coach", phung_su: "Ban phụng sự" };
+export type Role = "admin" | "btc" | "coach" | "phung_su" | "truong_nhom";
+/** Vai trò dùng được ở khóa này: ban phụng sự khi có bàn chấm, trưởng nhóm khi có mục kỷ luật. */
+export const ROLES: Role[] = (["admin", "btc", "coach", "phung_su", "truong_nhom"] as Role[]).filter(
+  (r) => (r !== "phung_su" || featureOn("grading")) && (r !== "truong_nhom" || featureOn("discipline")),
+);
+export const ROLE_LABEL: Record<Role, string> = { admin: "Admin", btc: "BTC", coach: "Coach", phung_su: "Ban phụng sự", truong_nhom: "Trưởng nhóm" };
 
 export type User = { id: number; name: string; phone: string; role: Role; teams: string[]; viaAccess?: boolean };
 
@@ -247,7 +251,7 @@ export function userLabel(u: User): string {
   return u.viaAccess ? u.name : `${u.name} (${ROLE_LABEL[u.role]}, …${u.phone.slice(-4)})`;
 }
 
-/** Ban phụng sự chỉ dùng bàn chấm; các vai trò khác dùng mọi trang nội bộ. */
+/** Ban phụng sự chỉ dùng bàn chấm, trưởng nhóm chỉ xem nhóm mình; các vai trò khác dùng mọi trang nội bộ. */
 export function canUseFullApp(u: User): boolean {
-  return u.role !== "phung_su";
+  return u.role !== "phung_su" && u.role !== "truong_nhom";
 }

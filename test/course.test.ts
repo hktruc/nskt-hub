@@ -3,10 +3,13 @@ import { COURSE, featureOfPath } from "../src/course";
 import { isLearnerTeam, teamCode, teamCodes, teamLabel } from "../src/domain/teams";
 
 describe("hồ sơ khóa học", () => {
-  it("NSKT2026: 12 đội, bật mọi tính năng", () => {
+  it("NSKT2026: 12 đội, bật mọi tính năng trừ kỷ luật (chưa định nghĩa)", () => {
     expect(COURSE.id).toBe("nskt2026");
     expect(teamCodes()).toHaveLength(12);
-    expect(Object.values(COURSE.features).every(Boolean)).toBe(true);
+    const { discipline, ...rest } = COURSE.features;
+    expect(discipline).toBe(false);
+    expect(Object.values(rest).every(Boolean)).toBe(true);
+    expect(COURSE.home).toBe("overview");
   });
   it("đọc tên đội theo hồ sơ", () => {
     expect(teamCode("🐟 Đội Cá Chép 07")).toBe("T07");

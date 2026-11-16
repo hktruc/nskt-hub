@@ -1,3 +1,4 @@
+import { COURSE } from "../course";
 import { addDays, formatVN, mondayOf, vietnamDay } from "../dates";
 import { teamCodes, teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
@@ -6,6 +7,8 @@ import { ROLE_LABEL, ROLES, type UserListItem } from "../users/accounts";
 // Quản trị (chỉ admin): tạo tài khoản, cấp lại mã kích hoạt, thu hồi / khôi phục, đổi vai trò, giao đội chấm.
 
 const TEAMS = teamCodes();
+// Trưởng nhóm phụ trách nhóm suốt hành trình: lịch giao tính từ tuần bắt đầu.
+const LEADER_FROM = mondayOf(COURSE.discipline.startDate);
 const STATUS: Record<UserListItem["status"], [string, string]> = {
   "cho-kich-hoat": ["Chờ kích hoạt", "warn"],
   "dang-dung": ["Đang dùng", "ok"],
@@ -45,7 +48,7 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
         <label for="vt">Vai trò</label>
         <select id="vt" name="vt">
           {ROLES.map((r) => (
-            <option value={r} selected={r === "phung_su"}>
+            <option value={r} selected={r === (ROLES.includes("phung_su") ? "phung_su" : "btc")}>
               {ROLE_LABEL[r]}
             </option>
           ))}
@@ -53,8 +56,9 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
         <button>Tạo và lấy mã kích hoạt</button>
       </form>
       <p class="muted small">
-        Admin, BTC, coach: dùng mọi trang nội bộ. Ban phụng sự: chỉ vào bàn chấm, chỉ chấm các đội được giao. Kết quả chấm của ban phụng sự
-        hiện công khai cho coach và BTC xem.
+        Admin, BTC, coach: dùng mọi trang nội bộ.
+        {ROLES.includes("phung_su") ? " Ban phụng sự: chỉ vào bàn chấm, chỉ chấm các đội được giao. Kết quả chấm của ban phụng sự hiện công khai cho coach và BTC xem." : ""}
+        {ROLES.includes("truong_nhom") ? " Trưởng nhóm: chỉ xem nhóm mình, báo cáo camera sau mỗi buổi Zoom và viết nhật ký nhóm hằng tuần." : ""}
       </p>
 
       <h2>Danh sách ({props.users.length})</h2>
@@ -69,7 +73,8 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
                   <strong>{u.name}</strong> <span class="muted small">· {u.phone}</span>
                   <div class="small">
                     {ROLE_LABEL[u.role]}
-                    {u.role === "phung_su" ? ` · tuần này chấm: ${u.teams.length ? u.teams.map(teamLabel).join(", ") : "chưa giao"}` : ""} · lần vào gần nhất{" "}
+                    {u.role === "phung_su" ? ` · tuần này chấm: ${u.teams.length ? u.teams.map(teamLabel).join(", ") : "chưa giao"}` : ""}
+                    {u.role === "truong_nhom" ? ` · phụ trách: ${u.teams.length ? u.teams.map(teamLabel).join(", ") : "chưa giao nhóm"}` : ""} · lần vào gần nhất{" "}
                     {formatVN(u.last_login_at)}
                   </div>
                 </div>
@@ -111,6 +116,21 @@ export function AdminPage(props: { users: UserListItem[]; issued?: IssuedCode; e
                       ))}
                     </div>
                     <button class="secondary">Lưu lịch giao</button>
+                  </form>
+                ) : null}
+                {u.role === "truong_nhom" ? (
+                  <form method="post" action="/quan-tri/doi" class="team-pick">
+                    <input type="hidden" name="id" value={String(u.id)} />
+                    <input type="hidden" name="tuan" value={LEADER_FROM} />
+                    <div class="small" style="font-weight:600;margin-bottom:4px">Nhóm phụ trách</div>
+                    <div class="team-grid">
+                      {TEAMS.map((t) => (
+                        <label class="tchk">
+                          <input type="checkbox" name="doi" value={t} checked={u.teams.includes(t)} /> {teamLabel(t)}
+                        </label>
+                      ))}
+                    </div>
+                    <button class="secondary">Lưu nhóm phụ trách</button>
                   </form>
                 ) : null}
                 <div class="actions" style="margin-top:8px">

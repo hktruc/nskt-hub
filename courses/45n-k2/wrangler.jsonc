@@ -1,0 +1,32 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Bản chạy của khóa "Hành trình 45N · Gắn kết & Nâng tầm đội ngũ" K02 (cộng đồng dh3g 47), dùng chung mã nguồn với nskt-hub.
+  // Triển khai: npx wrangler deploy -c courses/45n-k2/wrangler.jsonc  →  45n-hub.<tài-khoản>.workers.dev
+  "name": "45n-hub",
+  "main": "../../src/index.tsx",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "alias": { "@course": "./course.ts" },
+  "assets": { "directory": "./public" },
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": {
+    "APP_NAME": "45n-hub",
+    "DH3G_BASE_URL": "https://api.dh3g.vn",
+    "DH3G_COMMUNITY_ID": "47",
+    "SYNC_START_DATE": "2026-11-09",
+    "OPENAI_MODEL": "gpt-5-nano",
+    "OPENAI_REASONING_EFFORT": "minimal"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "45n-hub-db",
+      // Tạo khi chủ dự án đồng ý triển khai; dữ liệu riêng, không lẫn với NSKT.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../migrations"
+    }
+  ],
+  "triggers": { "crons": ["15 0 * * *", "*/5 * * * *"] }
+  // Khóa dh3g là secret DH3G_API_KEY nhập riêng cho worker này (cùng giá trị với NSKT).
+}

@@ -1,4 +1,7 @@
-import { featureOfPath, featureOn } from "./course";
+import { COURSE, featureOfPath, featureOn } from "./course";
+import { byWeek, journeyWeek, rankTeams, totals, type LearnerResult } from "./discipline/engine";
+import { listExemptions, loadDiscipline, loadTeamReports, removeExemption, saveCamera, saveJournal, setExemption, setStopped } from "./discipline/data";
+import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { authenticate } from "./auth";
@@ -57,10 +60,12 @@ async function publicViewer(c: Context<AppEnv>): Promise<"full" | "grader" | und
 
 // Tắt bảng xếp hạng công khai: chỉ người đã đăng nhập xem được.
 app.use("/bang-xep-hang/*", async (c, next) => {
+  if (!featureOn("leaderboard")) return c.notFound();
   if (!featureOn("publicLeaderboard") && !(await publicViewer(c))) return c.html(<NeedLoginPage path={new URL(c.req.url).pathname} />, 401);
   await next();
 });
 app.use("/bang-xep-hang", async (c, next) => {
+  if (!featureOn("leaderboard")) return c.notFound();
   if (!featureOn("publicLeaderboard") && !(await publicViewer(c))) return c.html(<NeedLoginPage path="/bang-xep-hang" />, 401);
   await next();
 });
@@ -149,6 +154,7 @@ app.post("/dang-xuat", async (c) => {
 
 // ---- Mọi trang khác: phải đăng nhập (số điện thoại, hoặc Cloudflare Access cho admin) ----
 const GRADER_PATHS = ["/cham", "/tai-khoan"];
+const LEADER_PATHS = ["/ky-luat/nhom", "/ky-luat/zoom", "/ky-luat/hv", "/tai-khoan"];
 
 app.use("*", async (c, next) => {
   // Thao tác ghi chỉ nhận từ chính trang của ứng dụng.
@@ -167,9 +173,14 @@ app.use("*", async (c, next) => {
     user = { id: 0, name: auth.email, phone: "", role: "admin", teams: [], viaAccess: true };
   }
   const path = new URL(c.req.url).pathname;
-  if (!canUseFullApp(user) && path === "/") return c.redirect("/cham", 303);
-  if (!canUseFullApp(user) && !GRADER_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
-    return c.html(<ForbiddenPage user={user} message="Tài khoản ban phụng sự chỉ dùng bàn chấm bài." />, 403);
+  const leader = user.role === "truong_nhom";
+  if (!canUseFullApp(user) && path === "/") return c.redirect(leader ? "/ky-luat/nhom" : "/cham", 303);
+  const allowed = leader ? LEADER_PATHS : GRADER_PATHS;
+  if (!canUseFullApp(user) && !allowed.some((p) => path === p || path.startsWith(`${p}/`))) {
+    return c.html(
+      <ForbiddenPage user={user} message={leader ? "Tài khoản trưởng nhóm chỉ xem nhóm của mình và báo cáo camera, nhật ký nhóm." : "Tài khoản ban phụng sự chỉ dùng bàn chấm bài."} />,
+      403,
+    );
   }
   if ((path === "/quan-tri" || path.startsWith("/quan-tri/")) && user.role !== "admin") {
     return c.html(<ForbiddenPage user={user} message="Chỉ admin mới vào được trang quản trị." />, 403);
@@ -415,7 +426,191 @@ app.post("/quan-tri/doi", async (c) => {
   return c.redirect("/quan-tri?tb=doi", 303);
 });
 
-app.get("/", async (c) => c.html(<OverviewPage o={await loadOverview(c.env)} />));
+app.get("/", async (c) => (COURSE.home === "discipline" ? disciplineHome(c) : c.html(<OverviewPage o={await loadOverview(c.env)} />)));
+
+// ---- Kỷ luật: lỗi nhẹ / lỗi nặng (Zoom, bài tập), nhóm & trưởng nhóm, duyệt miễn ----
+const viewerOf = (u: User): Viewer => (canUseFullApp(u) ? { full: true, teams: null, nav: "full" } : { full: false, teams: u.teams, nav: "leader" });
+const canSeeTeam = (v: Viewer, team: string) => v.teams === null || v.teams.includes(team);
+const currentWeekNow = () => journeyWeek(COURSE.discipline, nowVN(new Date()));
+const DISC_NOTICES: Record<string, string> = {
+  camera: "Đã lưu báo cáo camera.",
+  "nhat-ky": "Đã lưu nhật ký nhóm.",
+  mien: "Đã duyệt miễn. Mục này không còn tính lỗi.",
+  "bo-mien": "Đã bỏ miễn.",
+  dung: "Đã lưu trạng thái tham gia.",
+};
+
+function zoomSummary(results: LearnerResult[], sessionId: number) {
+  const zs = results.map((r) => r.zoom.find((z) => z.s.id === sessionId)).filter((z) => z !== undefined);
+  const n = (st: string) => zs.filter((z) => z.state === st).length;
+  return { onTime: n("dung-gio"), late: n("tre"), absent: n("vang"), exempt: n("mien"), cameraOff: zs.filter((z) => z.cameraOff).length, past: zs.some((z) => z.state !== "chua-dien-ra" && z.state !== "dung") };
+}
+
+async function disciplineHome(c: Context<AppEnv>) {
+  const now = new Date();
+  const [{ input, results }, journals, sync] = await Promise.all([
+    loadDiscipline(c.env.DB, now),
+    loadTeamReports(c.env.DB, "journal"),
+    c.env.DB.prepare("SELECT MAX(finished_at) AS at FROM sync_jobs WHERE status = 'done'").first<{ at: string | null }>(),
+  ]);
+  const week = currentWeekNow();
+  const past = [...input.sessions].filter((s) => zoomSummary(results, s.id).past).sort((a, b) => b.startAt.localeCompare(a.startAt));
+  const last = past[0];
+  return c.html(
+    <DisciplineHomePage
+      v={viewerOf(c.get("user"))}
+      t={totals(results)}
+      weeks={byWeek(results, COURSE.discipline)}
+      teams={rankTeams(results)}
+      currentWeek={week}
+      journals={new Set(journals.filter((j) => j.ref === String(week)).map((j) => j.team))}
+      lastSession={last ? { s: last, ...zoomSummary(results, last.id) } : null}
+      updatedAt={sync?.at ?? null}
+    />,
+  );
+}
+
+app.get("/ky-luat", (c) => c.redirect("/", 301));
+
+app.get("/ky-luat/zoom", async (c) => {
+  const v = viewerOf(c.get("user"));
+  const [{ input, results }, cameraReports] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB, "camera")]);
+  const sessions = [...input.sessions].sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const sums = sessions.map((s) => ({ s, ...zoomSummary(results, s.id) }));
+  const wanted = Number(c.req.query("buoi"));
+  const selected = sessions.find((s) => s.id === wanted) ?? [...sums].reverse().find((x) => x.past)?.s ?? null;
+  return c.html(
+    <ZoomPage
+      v={v}
+      sessions={sums}
+      selected={selected}
+      results={results.filter((r) => v.full || canSeeTeam(v, r.l.team))}
+      cameraReports={cameraReports}
+      notice={DISC_NOTICES[c.req.query("tb") ?? ""]}
+    />,
+  );
+});
+
+app.post("/ky-luat/zoom/camera", async (c) => {
+  const u = c.get("user");
+  const v = viewerOf(u);
+  const f = await c.req.formData();
+  const sessionId = Number(f.get("buoi"));
+  const team = String(f.get("doi") ?? "");
+  if (!canSeeTeam(v, team)) return c.text("Không được báo cáo cho nhóm này.", 403);
+  const { results } = await loadDiscipline(c.env.DB, new Date());
+  const members = results.filter((r) => r.l.team === team).map((r) => r.l.id);
+  if (!members.length || !Number.isSafeInteger(sessionId)) return c.text("Dữ liệu không hợp lệ.", 400);
+  await saveCamera(c.env.DB, sessionId, team, members, f.getAll("tat").map(Number), c.get("email"), new Date());
+  return c.redirect(`/ky-luat/zoom?buoi=${sessionId}&tb=camera`, 303);
+});
+
+app.get("/ky-luat/bai-tap", async (c) => {
+  const { input, results } = await loadDiscipline(c.env.DB, new Date());
+  const assignments = [...input.assignments].filter((a) => a.dueAt >= COURSE.discipline.startDate).sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  const wanted = Number(c.req.query("bt"));
+  const selected = assignments.find((a) => a.id === wanted) ?? [...assignments].reverse().find((a) => a.dueAt <= input.now) ?? null;
+  return c.html(<HomeworkPage v={viewerOf(c.get("user"))} assignments={assignments} results={results} selected={selected} now={input.now} />);
+});
+
+app.get("/ky-luat/thanh-vien", async (c) => {
+  const { results } = await loadDiscipline(c.env.DB, new Date());
+  return c.html(<MembersPage v={viewerOf(c.get("user"))} results={results} sort={c.req.query("xep") ?? "loi"} />);
+});
+
+app.get("/ky-luat/nhom", async (c) => {
+  const v = viewerOf(c.get("user"));
+  if (!v.full) return v.teams?.[0] ? c.redirect(`/ky-luat/nhom/${v.teams[0]}`, 303) : c.html(<ForbiddenPage user={c.get("user")} message="Tài khoản chưa được giao nhóm. Nhờ admin giao nhóm ở trang Quản trị." />, 403);
+  const [{ results }, journals] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB, "journal")]);
+  const week = currentWeekNow();
+  return c.html(<TeamsPage v={v} teams={rankTeams(results)} currentWeek={week} journals={new Set(journals.filter((j) => j.ref === String(week)).map((j) => j.team))} />);
+});
+
+app.get("/ky-luat/nhom/:team", async (c) => {
+  const v = viewerOf(c.get("user"));
+  const team = c.req.param("team");
+  if (!canSeeTeam(v, team)) return c.html(<ForbiddenPage user={c.get("user")} message="Trưởng nhóm chỉ xem được nhóm của mình." />, 403);
+  const [{ input, results }, reports] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB)]);
+  const t = rankTeams(results).find((x) => x.team === team);
+  if (!t) return c.notFound();
+  const current = currentWeekNow();
+  const w = Number(c.req.query("tuan"));
+  const week = Number.isInteger(w) && w >= 1 && w <= COURSE.discipline.weeks ? w : current;
+  const mine = reports.filter((r) => r.team === team);
+  return c.html(
+    <TeamPage
+      v={v}
+      team={team}
+      t={t}
+      results={results.filter((r) => r.l.team === team)}
+      sessions={[...input.sessions].sort((a, b) => a.startAt.localeCompare(b.startAt))}
+      cameraReports={mine.filter((r) => r.kind === "camera")}
+      journals={mine.filter((r) => r.kind === "journal")}
+      week={week}
+      currentWeek={current}
+      canWrite={true}
+      notice={DISC_NOTICES[c.req.query("tb") ?? ""]}
+    />,
+  );
+});
+
+app.post("/ky-luat/nhom/:team/nhat-ky", async (c) => {
+  const v = viewerOf(c.get("user"));
+  const team = c.req.param("team");
+  if (!canSeeTeam(v, team)) return c.text("Không được viết nhật ký cho nhóm này.", 403);
+  const f = await c.req.formData();
+  const week = Number(f.get("tuan"));
+  if (!Number.isInteger(week) || week < 1 || week > COURSE.discipline.weeks) return c.text("Tuần không hợp lệ.", 400);
+  const content = Object.fromEntries(COURSE.discipline.journalFields.map((x) => [x.key, String(f.get(x.key) ?? "")]));
+  await saveJournal(c.env.DB, team, week, content, c.get("email"), new Date());
+  return c.redirect(`/ky-luat/nhom/${team}?tuan=${week}&tb=nhat-ky#nhat-ky`, 303);
+});
+
+app.get("/ky-luat/hv/:id", async (c) => {
+  const v = viewerOf(c.get("user"));
+  const { results } = await loadDiscipline(c.env.DB, new Date());
+  const r = results.find((x) => x.l.id === Number(c.req.param("id")));
+  if (!r) return c.notFound();
+  if (!canSeeTeam(v, r.l.team)) return c.html(<ForbiddenPage user={c.get("user")} message="Trưởng nhóm chỉ xem được thành viên nhóm mình." />, 403);
+  return c.html(<LearnerPage v={v} r={r} notice={DISC_NOTICES[c.req.query("tb") ?? ""]} today={vietnamDay(new Date())} />);
+});
+
+app.post("/ky-luat/hv/:id/mien", async (c) => {
+  if (!canUseFullApp(c.get("user"))) return c.text("Chỉ BTC được duyệt miễn.", 403);
+  const id = Number(c.req.param("id"));
+  const f = await c.req.formData();
+  const kind = f.get("loai") === "zoom" ? "zoom" : "bai";
+  const ref = Number(f.get("ma"));
+  if (!Number.isSafeInteger(id) || !Number.isSafeInteger(ref)) return c.text("Dữ liệu không hợp lệ.", 400);
+  if (f.get("bo") === "1") {
+    await removeExemption(c.env.DB, id, kind, ref);
+    return c.redirect(`/ky-luat/hv/${id}?tb=bo-mien`, 303);
+  }
+  const reason = String(f.get("ly_do") ?? "").trim();
+  if (!reason) return c.text("Cần ghi lý do miễn.", 400);
+  await setExemption(c.env.DB, id, kind, ref, reason, c.get("email"), new Date());
+  return c.redirect(`/ky-luat/hv/${id}?tb=mien`, 303);
+});
+
+app.post("/ky-luat/hv/:id/dung", async (c) => {
+  if (!canUseFullApp(c.get("user"))) return c.text("Chỉ BTC được đổi trạng thái tham gia.", 403);
+  const id = Number(c.req.param("id"));
+  const f = await c.req.formData();
+  const from = f.get("bo") === "1" ? null : String(f.get("tu") ?? "");
+  if (from !== null && !/^\d{4}-\d{2}-\d{2}$/.test(from)) return c.text("Ngày không hợp lệ.", 400);
+  await setStopped(c.env.DB, id, from, String(f.get("ly_do") ?? ""), c.get("email"), new Date());
+  return c.redirect(`/ky-luat/hv/${id}?tb=dung`, 303);
+});
+
+app.get("/ky-luat/mien", async (c) => {
+  if (!canUseFullApp(c.get("user"))) return c.html(<ForbiddenPage user={c.get("user")} message="Chỉ BTC xem được trang này." />, 403);
+  const [{ input, results }, exemptions] = await Promise.all([loadDiscipline(c.env.DB, new Date()), listExemptions(c.env.DB)]);
+  const titles = new Map<string, string>([
+    ...input.assignments.map((a) => [`bai:${a.id}`, a.title] as [string, string]),
+    ...[...input.sessions].sort((a, b) => a.startAt.localeCompare(b.startAt)).map((s, i) => [`zoom:${s.id}`, `Zoom ${sessionName(s, i)}`] as [string, string]),
+  ]);
+  return c.html(<ExemptionsPage v={viewerOf(c.get("user"))} exemptions={exemptions} results={results} titles={titles} />);
+});
 
 const NOTICES: Record<string, string> = {
   "da-xep": "Đã xếp việc vào hàng đợi. Dữ liệu sẽ về dần; tải lại trang này sau vài phút.",

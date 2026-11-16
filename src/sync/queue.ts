@@ -1,3 +1,4 @@
+import { featureOn } from "../course";
 import { addDays, vietnamDay, windows } from "../dates";
 import { fetchReport, type Dh3gConfig, type ReportKind } from "../dh3g/client";
 import { ParseError, parseAttendance, parseSubmissions, sha256 } from "../dh3g/parse";
@@ -73,7 +74,7 @@ export async function planHourly(env: Env, now: Date): Promise<number> {
   if (!env.DH3G_API_KEY) return 0;
   const today = vietnamDay(now);
   const from = addDays(today, -HOURLY_DAYS_BACK);
-  return enqueueRange(env.DB, from < env.SYNC_START_DATE ? env.SYNC_START_DATE : from, addDays(today, DAYS_AHEAD), "hourly", now, { attendance: false });
+  return enqueueRange(env.DB, from < env.SYNC_START_DATE ? env.SYNC_START_DATE : from, addDays(today, DAYS_AHEAD), "hourly", now, { attendance: featureOn("discipline") });
 }
 
 export async function planFull(env: Env, now: Date): Promise<number> {
