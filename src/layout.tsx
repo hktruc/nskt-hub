@@ -1,5 +1,6 @@
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
+import { COURSE, featureOn } from "./course";
 
 const css = `
 :root { color-scheme: light dark;
@@ -339,11 +340,11 @@ type NavItem = { href: string; label: string; icon: string };
 const MAIN_NAV: NavItem[] = [
   { href: "/", label: "Tổng quan", icon: "home" },
   { href: "/nop-bai", label: "Nộp bài", icon: "inbox" },
-  { href: "/cham", label: "Chấm bài", icon: "star" },
+  ...(featureOn("grading") ? [{ href: "/cham", label: "Chấm bài", icon: "star" }] : []),
   { href: "/bang-xep-hang", label: "Xếp hạng", icon: "trophy" },
 ];
 const MORE_NAV: NavItem[] = [
-  { href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" },
+  ...(featureOn("reports") ? [{ href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" }] : []),
   { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },
   { href: "/du-lieu", label: "Dữ liệu", icon: "db" },
   { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
@@ -369,8 +370,10 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="robots" content="noindex" />
-        <meta name="theme-color" content="#076A8F" />
-        <title>{props.title} · NSKT 2026</title>
+        <meta name="theme-color" content={COURSE.brand.themeColor} />
+        <title>
+          {props.title} · {COURSE.brand.short}
+        </title>
         <link rel="icon" type="image/png" href="/brand/favicon-64.png" />
         <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
@@ -397,11 +400,11 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
             {props.publicPage ? (
               // Người xem công khai: logo chỉ là hình, không dẫn vào khu nội bộ.
               <span class="brand">
-                <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+                <img src={COURSE.brand.logo} alt={COURSE.brand.name} width="140" height="38" />
               </span>
             ) : (
-              <a href={grader ? "/cham" : "/"} class="brand" aria-label="Nhân Sự Kế Thừa 2026 – trang chủ">
-                <img src="/brand/logo.webp" alt="Nhân Sự Kế Thừa 2026" width="140" height="38" />
+              <a href={grader ? "/cham" : "/"} class="brand" aria-label={`${COURSE.brand.name} – trang chủ`}>
+                <img src={COURSE.brand.logo} alt={COURSE.brand.name} width="140" height="38" />
               </a>
             )}
             {withNav ? (

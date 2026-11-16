@@ -1,3 +1,4 @@
+import { COURSE, featureOn } from "../course";
 import { formatVN } from "../dates";
 import { isLearnerTeam, teamCode, teamLabel } from "../domain/teams";
 import type { Env } from "../env";
@@ -140,7 +141,7 @@ export async function loadOverview(env: Env, now = new Date()): Promise<Overview
     dh3gAt: first<{ at: string | null }>(dh3g)?.at ?? null,
     sheet: first<{ at: string; status: string }>(sheet),
     teams,
-    grading: week ? { week: { id: week.id, title: week.title }, todo: todoL.length, overdue: todoL.filter((l) => l.overdue).length, done: sub.length - todoL.length, submitted: sub.length } : null,
+    grading: week && featureOn("grading") ? { week: { id: week.id, title: week.title }, todo: todoL.length, overdue: todoL.filter((l) => l.overdue).length, done: sub.length - todoL.length, submitted: sub.length } : null,
   };
 }
 
@@ -154,7 +155,7 @@ export function OverviewPage(props: { o: Overview }) {
   const lastTotal = last ? last.counts["dung-han"] + last.counts.tre + last.counts["chua-nop"] + last.counts["chua-toi-han"] : 0;
   return (
     <Layout title="Tổng quan">
-      <h1>Tổng quan NSKT2026</h1>
+      <h1>Tổng quan {COURSE.brand.short}</h1>
       <p class="muted small">
         {o.learners} học viên · {o.teams.length} đội · dữ liệu dh3g lấy lúc {formatVN(o.dh3gAt)}
         {o.sheet ? ` · điểm danh đọc lúc ${formatVN(o.sheet.at)}` : ""}.
@@ -287,8 +288,8 @@ export function OverviewPage(props: { o: Overview }) {
       <h2>Đi tới</h2>
       <nav class="ov-links">
         <a href="/nop-bai">Theo dõi nộp bài</a>
-        <a href="/cham">Bàn chấm bài tuần</a>
-        <a href="/bao-cao">Báo cáo thống kê</a>
+        {featureOn("grading") ? <a href="/cham">Bàn chấm bài tuần</a> : null}
+        {featureOn("reports") ? <a href="/bao-cao">Báo cáo thống kê</a> : null}
         <a href="/bang-xep-hang">Bảng xếp hạng (công khai)</a>
         <a href="/canh-bao">Cảnh báo</a>
         <a href="/du-lieu">Tình trạng dữ liệu</a>

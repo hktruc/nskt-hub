@@ -1,4 +1,5 @@
 import app from "./app";
+import { featureOn } from "./course";
 import type { Env } from "./env";
 import { isHourlySlot, syncOfflineAttendance } from "./attendance/offline";
 import { scoringTick } from "./scoring/run";
@@ -18,8 +19,10 @@ export default {
           if (isHourlySlot(now)) {
             const h = await planHourly(env, now);
             if (h) console.log("sync: xếp việc mỗi giờ", h);
-            const a = await syncOfflineAttendance(env, now);
-            if (a.status !== "chua-cau-hinh") console.log("điểm danh offline:", JSON.stringify(a));
+            if (featureOn("attendance")) {
+              const a = await syncOfflineAttendance(env, now);
+              if (a.status !== "chua-cau-hinh") console.log("điểm danh offline:", JSON.stringify(a));
+            }
           }
           const r = await workQueue(env, now);
           if (r.done > 0 || r.failed > 0) console.log("sync: xử lý hàng đợi", JSON.stringify(r));

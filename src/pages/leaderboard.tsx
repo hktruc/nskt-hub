@@ -1,3 +1,4 @@
+import { COURSE, featureOn } from "../course";
 import { formatVN } from "../dates";
 import { teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
@@ -39,16 +40,16 @@ export function LeaderboardPage(props: {
       og={
         props.origin
           ? {
-              title: "Bảng xếp hạng · Nhân Sự Kế Thừa 2026",
-              description: "Thứ hạng học viên NSKT 2026 theo 12 đội, cập nhật hằng ngày.",
+              title: COURSE.brand.shareTitle,
+              description: COURSE.brand.shareDescription,
               url: `${props.origin}/bang-xep-hang${props.team ? `?doi=${props.team}` : ""}`,
-              image: `${props.origin}/brand/og-bang-xep-hang.png`,
+              image: `${props.origin}${COURSE.brand.shareImage}`,
             }
           : undefined
       }
     >
       <section class="bxh-hero">
-        <p class="eyebrow">Cá Chép Vượt Long Môn</p>
+        <p class="eyebrow">{COURSE.brand.tagline}</p>
         <h1>Bảng xếp hạng</h1>
         <p class="small">
           {props.team ? `${teamLabel(props.team)} · ` : ""}
@@ -79,6 +80,7 @@ export function LeaderboardPage(props: {
         <p class="notice small">Một số bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p>
       ) : null}
 
+      {featureOn("teamBoard") ? (
       <nav class="seg-tabs" aria-label="Chọn bảng xếp hạng">
         <a class={teamMode ? "" : "on"} href="/bang-xep-hang">
           Cá nhân
@@ -87,6 +89,7 @@ export function LeaderboardPage(props: {
           Đồng đội
         </a>
       </nav>
+      ) : null}
 
       {teamMode ? <TeamBoard ranked={props.ranked} awards={props.awards ?? []} /> : null}
 

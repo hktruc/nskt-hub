@@ -1,3 +1,4 @@
+import { COURSE } from "../course";
 import type { AiTask, AiVerdict } from "../scoring/rules";
 
 // Gọi OpenAI (API của chủ dự án) để đọc câu hỏi và câu trả lời, trả về đạt / không đạt / đối phó.
@@ -23,7 +24,7 @@ const TASK_TEXT: Record<AiTask, string> = {
   "gop-y": "Câu góp ý cho ban tổ chức (không bắt buộc). ĐẠT nếu có một ý góp ý / câu hỏi thật, dù ngắn.",
 };
 
-const SYSTEM = `Bạn là trợ lý chấm bài cho khóa học NSKT2026 (kể chuyện, rèn tâm trí). Với mỗi mục, đọc câu hỏi và câu trả lời của học viên, rồi quyết định:
+const SYSTEM = `Bạn là trợ lý chấm bài cho ${COURSE.ai.context}. Với mỗi mục, đọc câu hỏi và câu trả lời của học viên, rồi quyết định:
 - ok: true nếu câu trả lời ĐẠT theo tiêu chí của mục, false nếu không.
 - nonsense: true nếu câu trả lời là đối phó: vài chữ cái hay ký hiệu vô nghĩa, gõ đại, chép lại đề, nội dung không liên quan. Khi nonsense là true thì ok phải là false.
 - note: một câu ngắn tiếng Việt (tối đa 15 từ) nêu lý do.

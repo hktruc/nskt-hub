@@ -1,0 +1,67 @@
+// "Hồ sơ khóa học": mọi thứ riêng của một khóa. Mã nguồn chung (xương sống) đọc hồ sơ này;
+// mỗi khóa một tệp `courses/<mã>/course.ts`, chọn lúc đóng gói qua bí danh "@course" (wrangler.jsonc → alias, theo từng môi trường).
+// Thêm khóa mới: xem docs/KHOA-HOC-MOI.md.
+
+export type Feature =
+  | "attendance" // điểm danh offline từ Google Sheet, tính vào điểm xếp hạng
+  | "grading" // bàn chấm bài tuần cho ban phụng sự / coach
+  | "aiGrading" // AI chấm gợi ý các câu cần đọc hiểu
+  | "teamBoard" // bảng xếp hạng đồng đội
+  | "teamAwards" // danh hiệu tuần của đội
+  | "publicLeaderboard" // bảng xếp hạng công khai (tắt: phải đăng nhập mới xem)
+  | "reports"; // mục Báo cáo thống kê
+
+export type Criterion = { key: string; name: string; one: string; three: string; five: string };
+
+export type CourseConfig = {
+  id: string;
+  brand: {
+    name: string; // "Nhân Sự Kế Thừa 2026"
+    short: string; // "NSKT 2026" (tiêu đề tab)
+    tagline: string; // dòng nhỏ trên bảng xếp hạng
+    logo: string; // đường dẫn ảnh trong thư mục public của khóa
+    themeColor: string;
+    shareTitle: string;
+    shareDescription: string;
+    shareImage: string; // ảnh 1200×630 khi gửi link bảng xếp hạng
+  };
+  teams: {
+    count: number; // số đội học viên
+    /** Tên đội trên dh3g → số thứ tự đội (1…count). */
+    numberOf: (name: string) => number | null;
+    /** Tên đội của ban tổ chức (không xếp hạng). */
+    staffRe: RegExp;
+    label: (n: number) => string; // "Đội 03"
+  };
+  scoring: {
+    startDate: string;
+    halfLifeWeeks: number;
+    greenFrom: number;
+    yellowFrom: number;
+    daily: { mandatory: number; encouragedVideo: number; encouragedDeepText: number };
+    weekly: { perVideo: number; mandatory: number; idea: number };
+    lateVideo: number;
+    lateTextFactor: number;
+    attendance: { share: number; halfLifeWeeks: number; points: Record<string, number> };
+  };
+  attendance: {
+    checkInFile: string; // tên file Google Sheet (chỉ để hiển thị)
+    rosterFile: string;
+    checkInRange: string;
+    rosterRange: string;
+    regions: { code: string; label: string; re: RegExp }[]; // vd. đầu HN / đầu SG theo cột "Khu Vực"
+  };
+  grading: {
+    videoCriteria: Criterion[];
+    diagram: Criterion;
+    writing: Criterion;
+    focusOptions: string[];
+    quickComments: string[];
+    itemsShare: number;
+    goodFrom: number;
+    okFrom: number;
+    dueDays: number;
+  };
+  ai: { context: string }; // mô tả khóa học cho AI chấm
+  features: Record<Feature, boolean>;
+};

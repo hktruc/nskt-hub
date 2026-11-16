@@ -1,3 +1,4 @@
+import { featureOn } from "../course";
 import { reviewItems, AI_VERSION, type AiConfig } from "../ai/openai";
 import { parseAnswers, type Answer } from "../domain/media";
 import { sha256 } from "../dh3g/parse";
@@ -76,7 +77,7 @@ export async function refreshSpecs(db: D1Database, now: Date): Promise<number> {
 }
 
 function aiConfig(env: Env, fetchImpl?: typeof fetch): AiConfig | null {
-  if (!env.OPENAI_API_KEY) return null;
+  if (!env.OPENAI_API_KEY || !featureOn("aiGrading")) return null;
   return {
     apiKey: env.OPENAI_API_KEY,
     model: env.OPENAI_MODEL || "gpt-5-nano",

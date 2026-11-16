@@ -1,11 +1,11 @@
 import { addDays, formatVN, mondayOf, vietnamDay } from "../dates";
-import { teamLabel } from "../domain/teams";
+import { teamCodes, teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
 import { ROLE_LABEL, ROLES, type UserListItem } from "../users/accounts";
 
 // Quản trị (chỉ admin): tạo tài khoản, cấp lại mã kích hoạt, thu hồi / khôi phục, đổi vai trò, giao đội chấm.
 
-const TEAMS = Array.from({ length: 12 }, (_, i) => `T${String(i + 1).padStart(2, "0")}`);
+const TEAMS = teamCodes();
 const STATUS: Record<UserListItem["status"], [string, string]> = {
   "cho-kich-hoat": ["Chờ kích hoạt", "warn"],
   "dang-dung": ["Đang dùng", "ok"],

@@ -1,3 +1,4 @@
+import { COURSE } from "../course";
 import { formatVN } from "../dates";
 import type { Env } from "../env";
 import { isLearnerTeam, teamCode } from "../domain/teams";
@@ -78,7 +79,7 @@ export async function loadDataStatus(env: Env): Promise<DataStatus> {
   return {
     hasKey: Boolean(env.DH3G_API_KEY),
     counts: [
-      { label: "Học viên (12 đội)", value: inTeams },
+      { label: `Học viên (${COURSE.teams.count} đội)`, value: inTeams },
       { label: "Người khác trong cộng đồng dh3g (BTC, coach, đã nghỉ…)", value: all - inTeams },
       { label: "Đội học viên", value: teamCount },
       { label: "Bài tập", value: n(assignments) },
@@ -220,8 +221,8 @@ function OfflineSection(props: { o: DataStatus["offline"] }) {
   return (
     <>
       <p class="muted">
-        Đọc trang <code>CHECK_IN</code> của file "NSKT2026 - KỶ LUẬT - HỌC VIÊN" mỗi giờ, ghép với học viên dh3g qua số điện thoại ở trang{" "}
-        <code>DS_CHIA_THON</code> (file "NSKT 2026 CHIA THÔN HỌC VIÊN").
+        Đọc trang <code>CHECK_IN</code> của file "{COURSE.attendance.checkInFile}" mỗi giờ, ghép với học viên dh3g qua số điện thoại ở trang{" "}
+        <code>DS_CHIA_THON</code> (file "{COURSE.attendance.rosterFile}").
       </p>
       {!o.configured ? (
         <div class="warn">

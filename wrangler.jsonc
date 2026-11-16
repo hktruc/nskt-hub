@@ -7,8 +7,10 @@
   // Chạy ở địa chỉ miễn phí nskt-hub.<tài-khoản>.workers.dev (chủ dự án chọn 11/11/2026).
   // Trang nội bộ khóa bằng Cloudflare Access; /bang-xep-hang để công khai.
   "workers_dev": true,
-  // Ảnh logo, biểu tượng, ảnh xem trước khi chia sẻ link: tệp tĩnh trong thư mục public/ (Cloudflare phục vụ thẳng, không qua ứng dụng).
-  "assets": { "directory": "./public" },
+  // Hồ sơ khóa học được đóng gói vào bản chạy này (xem docs/KHOA-HOC-MOI.md).
+  "alias": { "@course": "./courses/nskt2026/course.ts" },
+  // Ảnh logo, biểu tượng, ảnh xem trước khi chia sẻ link của khóa: Cloudflare phục vụ thẳng, không qua ứng dụng.
+  "assets": { "directory": "./courses/nskt2026/public" },
   "preview_urls": false,
   "observability": {
     "enabled": true
