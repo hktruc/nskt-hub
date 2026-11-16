@@ -27,7 +27,7 @@ Dữ liệu các khóa **không lẫn vào nhau** (mỗi khóa một D1). Sửa 
 | Khóa | Hồ sơ | Cấu hình | Link |
 |---|---|---|---|
 | NSKT2026 (dh3g 44) | `courses/nskt2026/` | `wrangler.jsonc` | nskt-hub.hktruc.workers.dev |
-| 45N K02 (dh3g 47) | `courses/45n-k2/` | `courses/45n-k2/wrangler.jsonc` | 45n-hub.hktruc.workers.dev (chưa triển khai) |
+| 45N K02 (dh3g 47) | `courses/45n-k2/` | `courses/45n-k2/wrangler.jsonc` | 45n-hub.hktruc.workers.dev |
 
 Tắt tính năng nào thì trang đó ẩn khỏi menu, đường dẫn trả "không dùng tính năng này", cron không chạy phần đó.
 
@@ -40,3 +40,17 @@ Tắt tính năng nào thì trang đó ẩn khỏi menu, đường dẫn trả "
 5. Triển khai: `npx wrangler deploy -c courses/<mã-khóa>/wrangler.jsonc`; admin tạo tài khoản BTC cho khóa ở `/quan-tri`.
 
 Kiểm thử: `npm test` chạy hai lượt, một với hồ sơ NSKT (`vitest.config.ts`), một với hồ sơ 45N (`vitest.45n.config.ts`, thư mục `test/45n/`).
+
+## Triển khai tự động (Workers Builds), làm một lần cho mỗi khóa
+
+NSKT2026 và mỗi khóa khác là một Workers Builds riêng, cùng nối với repo `hktruc/nskt-hub`; gộp vào `main` là mọi khóa cùng cập nhật.
+
+Chủ dự án làm trên dash.cloudflare.com (Claude không có quyền tạo worker):
+
+1. **Workers & Pages → Create → Import a repository** → chọn `hktruc/nskt-hub`.
+2. **Project name**: đúng tên worker trong cấu hình khóa (vd. `45n-hub`).
+3. **Build command**: để trống. **Deploy command**: `npx wrangler deploy -c courses/<mã-khóa>/wrangler.jsonc`. **Root directory**: `/`. Nhánh: `main`.
+4. Bấm **Deploy**. Xong thì vào worker → **Settings → Variables and Secrets** → **Add** → Type **Secret**, Name `DH3G_API_KEY`, Value = khóa dh3g (giống NSKT).
+5. Vào `https://<tên-worker>.hktruc.workers.dev/quan-tri` (đăng nhập Cloudflare Access bằng email chủ dự án) → tạo tài khoản số điện thoại cho mình (admin), BTC, trưởng nhóm.
+
+Phần Claude làm trước: tạo D1, chạy migrations, tạo ứng dụng Cloudflare Access cho `/quan-tri` (dùng lại chính sách "chỉ email chủ dự án"), ghi mã D1 và AUD vào `courses/<mã-khóa>/wrangler.jsonc`.
