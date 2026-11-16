@@ -1,3 +1,4 @@
+import { featureOfPath, featureOn } from "./course";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { authenticate } from "./auth";
@@ -54,10 +55,20 @@ async function publicViewer(c: Context<AppEnv>): Promise<"full" | "grader" | und
   return u ? (canUseFullApp(u) ? "full" : "grader") : undefined;
 }
 
+// Tắt bảng xếp hạng công khai: chỉ người đã đăng nhập xem được.
+app.use("/bang-xep-hang/*", async (c, next) => {
+  if (!featureOn("publicLeaderboard") && !(await publicViewer(c))) return c.html(<NeedLoginPage path={new URL(c.req.url).pathname} />, 401);
+  await next();
+});
+app.use("/bang-xep-hang", async (c, next) => {
+  if (!featureOn("publicLeaderboard") && !(await publicViewer(c))) return c.html(<NeedLoginPage path="/bang-xep-hang" />, 401);
+  await next();
+});
+
 app.get("/bang-xep-hang", async (c) => {
   const data = await loadLeaderboard(c.env.DB, nowVN(new Date()));
-  const teamMode = c.req.query("xem") === "doi";
-  const awards = teamMode ? await teamAwards(c.env.DB, nowVN(new Date()), data.ranked) : [];
+  const teamMode = featureOn("teamBoard") && c.req.query("xem") === "doi";
+  const awards = teamMode && featureOn("teamAwards") ? await teamAwards(c.env.DB, nowVN(new Date()), data.ranked) : [];
   const teams = [...new Set(data.ranked.map((r) => r.team))].sort();
   const doi = c.req.query("doi") ?? "";
   const viewerNav = await publicViewer(c);
@@ -163,6 +174,8 @@ app.use("*", async (c, next) => {
   if ((path === "/quan-tri" || path.startsWith("/quan-tri/")) && user.role !== "admin") {
     return c.html(<ForbiddenPage user={user} message="Chỉ admin mới vào được trang quản trị." />, 403);
   }
+  const feature = featureOfPath(path);
+  if (feature && !featureOn(feature)) return c.html(<ForbiddenPage user={user} message="Khóa học này không dùng tính năng này." />, 404);
   c.set("user", user);
   c.set("email", userLabel(user));
   await next();

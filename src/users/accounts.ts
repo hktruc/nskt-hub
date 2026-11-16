@@ -3,6 +3,7 @@
 
 import { normPhone } from "../attendance/offline";
 import { mondayOf, vietnamDay } from "../dates";
+import { isLearnerTeam } from "../domain/teams";
 
 export type Role = "admin" | "btc" | "coach" | "phung_su";
 export const ROLES: Role[] = ["admin", "btc", "coach", "phung_su"];
@@ -134,7 +135,7 @@ export async function setRole(db: D1Database, userId: number, role: string): Pro
 
 /** Giao đội từ tuần `fromWeek` (thứ Hai) trở đi; các tuần sau giữ nguyên cho tới lần giao kế tiếp. */
 export async function setTeams(db: D1Database, userId: number, teams: string[], by: string, now: Date, fromWeek = thisWeek(now)): Promise<void> {
-  const clean = [...new Set(teams.filter((t) => /^T(0[1-9]|1[0-2])$/.test(t)))].sort();
+  const clean = [...new Set(teams.filter((t) => isLearnerTeam(t)))].sort();
   await db
     .prepare(
       `INSERT INTO grader_team_plans (user_id, from_week, teams_json, set_by, set_at) VALUES (?,?,?,?,?)

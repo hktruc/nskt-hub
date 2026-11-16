@@ -180,7 +180,7 @@ describe("trang tổng quan", () => {
     const { env } = await setup();
     await syncOfflineAttendance(env, new Date("2026-11-12T01:00:00Z"), fakeGoogle().fetchImpl);
     const html = await (await app.fetch(new Request("http://localhost/"), { ...env, LOCAL_DEV_NO_AUTH: "true" })).text();
-    expect(html).toContain("Tổng quan NSKT2026");
+    expect(html).toContain("Tổng quan NSKT 2026");
     expect(html).toContain("Buổi học offline gần nhất · 30/10");
     expect(html).toContain('href="/bang-xep-hang?doi=T01"');
     expect(html).not.toContain("0900000001");

@@ -1,3 +1,4 @@
+import { COURSE, featureOfPath, featureOn } from "../course";
 import type { Child } from "hono/jsx";
 import { teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
@@ -15,7 +16,10 @@ const TABS = [
   ["/bao-cao/cham-cheo", "Chấm chéo"],
   ["/bao-cao/hoc-vien", "Từng học viên"],
   ["/bao-cao/nguoi-cham", "Người chấm"],
-] as const;
+].filter(([href]) => {
+  const f = featureOfPath(href!);
+  return !f || featureOn(f);
+}) as [string, string][];
 
 export function ReportShell(props: { tab: string; title: string; children?: Child }) {
   return (
@@ -94,7 +98,7 @@ export function CourseReport(props: { weeks: WeekRow[]; learners: number }) {
   };
   return (
     <ReportShell tab="/bao-cao" title="Báo cáo toàn khóa">
-      <p class="muted small">{props.learners} học viên thuộc 12 đội. Số liệu theo tuần (thứ Hai → Chủ nhật), tuần mới nhất ở trên.</p>
+      <p class="muted small">{props.learners} học viên thuộc {COURSE.teams.count} đội. Số liệu theo tuần (thứ Hai → Chủ nhật), tuần mới nhất ở trên.</p>
       <div class="tiles">
         {tile("Đi học offline (có mặt)", "attendance")}
         {tile("Bài ngày nộp đúng hạn", "dailyOnTime")}

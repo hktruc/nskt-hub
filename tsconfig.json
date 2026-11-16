@@ -10,7 +10,8 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": { "@course": ["./courses/nskt2026/course.ts"] }
   },
-  "include": ["src", "test"]
+  "include": ["src", "test", "courses"]
 }

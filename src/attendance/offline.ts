@@ -2,6 +2,7 @@
 // (file "NSKT 2026 CHIA THÔN HỌC VIÊN"), ghép Mã Cư Dân → số điện thoại → học viên dh3g.
 // Số điện thoại là định danh chính thức; Mã Cư Dân chỉ dùng để nối hai trang trong cùng một lần đọc.
 
+import { COURSE } from "../course";
 import { vietnamDay } from "../dates";
 import { isLearnerTeam, teamCode } from "../domain/teams";
 import type { Env } from "../env";
@@ -49,8 +50,7 @@ export type CheckInRecord = { resident: string; day: string; code: AttCode };
 /** "Hà Nội", "Miền Bắc" → HN; "HCM", "Miền Nam" → SG. */
 export function regionOf(raw: string | undefined): "HN" | "SG" | "KHAC" {
   const s = (raw ?? "").normalize("NFC").toLowerCase();
-  if (/hcm|hồ chí minh|sài gòn|sai gon|miền nam|mien nam/.test(s)) return "SG";
-  if (/hà nội|ha noi|miền bắc|bắc/.test(s)) return "HN";
+  for (const r of COURSE.attendance.regions) if (r.re.test(s)) return r.code as "HN" | "SG";
   return "KHAC";
 }
 
@@ -110,8 +110,8 @@ export type SyncResult =
   | { status: "loi"; message: string }
   | { status: "ok"; sessions: number; residents: number; matched: number; unmatched: string[]; byName: string[]; rows: number };
 
-export const CHECKIN_RANGE = "CHECK_IN!A1:AZ400";
-export const ROSTER_RANGE = "DS_CHIA_THON!A1:Z400";
+export const CHECKIN_RANGE = COURSE.attendance.checkInRange;
+export const ROSTER_RANGE = COURSE.attendance.rosterRange;
 
 export async function syncOfflineAttendance(env: Env, now: Date, fetchImpl: typeof fetch = fetch): Promise<SyncResult> {
   const sa = parseServiceAccount(env.GOOGLE_SERVICE_ACCOUNT_JSON);

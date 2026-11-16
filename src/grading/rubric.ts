@@ -1,39 +1,13 @@
 // Bộ tiêu chí chấm bài tuần — đúng như docs/TIEU-CHI-CHAM.md (chủ dự án duyệt 12/11/2026).
 
-export type Criterion = { key: string; name: string; one: string; three: string; five: string };
+import { COURSE } from "../course";
+export type { Criterion } from "../course/types";
 
-export const VIDEO_CRITERIA: Criterion[] = [
-  { key: "a1", name: "A1. Đúng ý, đủ ý", one: "Lạc đề, sai ý chính của câu chuyện / đề bài", three: "Đúng ý chính, thiếu chi tiết quan trọng", five: "Đúng và đủ ý, giữ được tinh thần gốc" },
-  { key: "a2", name: "A2. Truyền cảm", one: "Đọc thuộc lòng, đều đều, không nhìn người nghe", three: "Tự nhiên, có cảm xúc ở vài đoạn", five: "Giọng, nhịp, ánh mắt, cử chỉ cuốn người nghe từ đầu đến cuối" },
-  { key: "a3", name: "A3. Mạch lạc", one: "Lộn xộn, khó theo dõi", three: "Có mở – thân – kết nhưng còn lan man", five: "Mở hấp dẫn, có cao trào, kết gọn; dễ nhớ" },
-  { key: "a4", name: "A4. Đúc kết, thông điệp", one: "Không rút ra được gì", three: "Có bài học nhưng chung chung", five: "Bài học sâu, đa chiều (đạo lý – tâm lý – đám đông), chạm người nghe" },
-];
-
-export const DIAGRAM_CRITERION: Criterion = {
-  key: "a5",
-  name: "A5. Sơ đồ",
-  one: "Không liên quan, mờ không đọc được, hoặc chép nguyên văn",
-  three: "Có đủ các ý chính nhưng rời rạc, chưa thấy liên kết",
-  five: "Rõ ràng, có cấu trúc (ý trung tâm – nhánh), thể hiện mối liên hệ, dùng được để kể hoặc giảng lại",
-};
-
-export const B2: Criterion = {
-  key: "b2",
-  name: "B2. Chiều sâu phần viết",
-  one: "Viết cho có",
-  three: "Có ý của mình",
-  five: "Đa chiều, có trải nghiệm thật và hành động cụ thể",
-};
-
-export const FOCUS_OPTIONS = [
-  "Truyền cảm hứng theo chiều sâu",
-  "Chân thật, tầm nhìn (Ikigai, vector cuộc đời)",
-  "Cấu trúc bài giảng (5 tiêu chí)",
-  "Câu hỏi đi vào cốt lõi, mở, không phán xét",
-  "Lập luận đa chiều, trả lời câu hỏi khó",
-  "Truyền đạt rõ, đúng tinh thần",
-  "Kèm cặp, lan tỏa",
-];
+// Tiêu chí riêng từng khóa nằm trong hồ sơ khóa học.
+export const VIDEO_CRITERIA = COURSE.grading.videoCriteria;
+export const DIAGRAM_CRITERION = COURSE.grading.diagram;
+export const B2 = COURSE.grading.writing;
+export const FOCUS_OPTIONS = COURSE.grading.focusOptions;
 export const DEFAULT_FOCUS = FOCUS_OPTIONS[0]!;
 
 export const FLAGS: Record<string, string> = {
@@ -44,9 +18,10 @@ export const FLAGS: Record<string, string> = {
 export const SPIRIT: Record<string, string> = { "nghiem-tuc": "Nghiêm túc", "binh-thuong": "Bình thường", "doi-pho": "Đối phó" };
 export const PROGRESS: Record<string, string> = { "tien-bo": "Tiến bộ", "giu-nguyen": "Giữ nguyên", "di-xuong": "Đi xuống" };
 
-export const QUICK_COMMENTS = ["Kể tự nhiên", "Cần đúc kết sâu hơn", "Nói chậm lại", "Liên hệ bản thân nhiều hơn", "Sơ đồ cần rõ nhánh chính", "Bám sát đề bài"];
+export const QUICK_COMMENTS = COURSE.grading.quickComments;
 
-export const GRADING = { itemsShare: 0.6, goodFrom: 4, okFrom: 3, dueDays: 3 } as const;
+const { itemsShare, goodFrom, okFrom, dueDays } = COURSE.grading;
+export const GRADING = { itemsShare, goodFrom, okFrom, dueDays };
 
 export type ItemScore = { kind: "video" | "so-do"; a1?: number | null; a2?: number | null; a3?: number | null; a4?: number | null; a5?: number | null; flag?: string | null };
 
