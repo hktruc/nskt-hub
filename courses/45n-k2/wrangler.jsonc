@@ -16,14 +16,18 @@
     "DH3G_COMMUNITY_ID": "47",
     "SYNC_START_DATE": "2026-11-09",
     "OPENAI_MODEL": "gpt-5-nano",
-    "OPENAI_REASONING_EFFORT": "minimal"
+    "OPENAI_REASONING_EFFORT": "minimal",
+    // Cloudflare Access (không phải bí mật) chỉ khóa /quan-tri: ứng dụng "45n-hub - quan-tri", chỉ email chủ dự án.
+    // Chủ dự án vào /quan-tri qua Access (là admin), tạo tài khoản số điện thoại cho mình, BTC và trưởng nhóm.
+    "ACCESS_TEAM_DOMAIN": "hidden-art-d8b9.cloudflareaccess.com",
+    "ACCESS_AUD": "837bbf85559b7e395d029fb69a5ae9e7963983b76933f3d81c2a12234f0d0679"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "45n-hub-db",
-      // Tạo khi chủ dự án đồng ý triển khai; dữ liệu riêng, không lẫn với NSKT.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Tạo ngày 16/11/2026 (chủ dự án đồng ý); dữ liệu riêng, không lẫn với NSKT.
+      "database_id": "d974a11a-13a3-4f17-8674-1f3f46fe6d60",
       "migrations_dir": "../../migrations"
     }
   ],
