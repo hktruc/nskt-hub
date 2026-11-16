@@ -315,6 +315,27 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .lsum tr.rk-xanh td:first-child { box-shadow:inset 4px 0 0 #22C55E; } .lsum tr.rk-vang td:first-child { box-shadow:inset 4px 0 0 #FACC15; } .lsum tr.rk-do td:first-child { box-shadow:inset 4px 0 0 #F87171; }
 .plist { list-style:none; margin:8px 0 0; padding:0; columns:2 220px; } .plist li { padding:3px 0; break-inside:avoid; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+/* Kỷ luật */
+.grid2 { display:grid; grid-template-columns:1fr; gap:4px 20px; }
+@media (min-width: 720px) { .grid2 { grid-template-columns:1fr 1fr; } }
+.grid2 h3 { margin:12px 0 4px; }
+ul.people { margin:4px 0 8px; padding-left:18px; columns:1; }
+@media (min-width: 900px) { ul.people { columns:2; } }
+.faults { display:inline-flex; gap:4px; flex-wrap:nowrap; }
+.faults .badge, td .badge { white-space:nowrap; }
+.scroll td a[href^="/ky-luat/nhom/"] { white-space:nowrap; }
+.badge + .badge { margin-left:4px; }
+tr.on td { background:var(--soft); }
+th a.on { text-decoration:underline; }
+form.inline { display:inline; }
+button.link { background:none; border:0; color:var(--accent); padding:0; min-height:0; text-decoration:underline; font-weight:500; }
+button.small { min-height:36px; padding:4px 12px; font-size:.875rem; }
+.inline-form summary { cursor:pointer; color:var(--accent); }
+.inline-form form { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+.inline-form input { min-width:180px; }
+form.journal textarea { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:var(--radius); background:var(--card); color:var(--fg); }
+dl.journal-view dt { font-weight:600; margin-top:10px; }
+dl.journal-view dd { margin:4px 0 0; white-space:pre-wrap; }
 `;
 
 // Biểu tượng nét mảnh (vẽ theo kiểu Lucide, giấy phép ISC), dùng chung cho menu.
@@ -327,6 +348,8 @@ const ICON: Record<string, string> = {
   alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
   db: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  video: '<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   chart: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
 };
@@ -337,13 +360,27 @@ export function Icon(props: { name: string }) {
 }
 
 type NavItem = { href: string; label: string; icon: string };
+const discipline = featureOn("discipline");
 const MAIN_NAV: NavItem[] = [
   { href: "/", label: "Tổng quan", icon: "home" },
-  { href: "/nop-bai", label: "Nộp bài", icon: "inbox" },
+  ...(discipline
+    ? [
+        { href: "/ky-luat/zoom", label: "Zoom", icon: "video" },
+        { href: "/ky-luat/bai-tap", label: "Bài tập", icon: "inbox" },
+        { href: "/ky-luat/nhom", label: "Nhóm", icon: "users" },
+      ]
+    : [{ href: "/nop-bai", label: "Nộp bài", icon: "inbox" }]),
   ...(featureOn("grading") ? [{ href: "/cham", label: "Chấm bài", icon: "star" }] : []),
-  { href: "/bang-xep-hang", label: "Xếp hạng", icon: "trophy" },
+  ...(featureOn("leaderboard") ? [{ href: "/bang-xep-hang", label: "Xếp hạng", icon: "trophy" }] : []),
 ];
 const MORE_NAV: NavItem[] = [
+  ...(discipline
+    ? [
+        { href: "/ky-luat/thanh-vien", label: "Từng thành viên", icon: "user" },
+        { href: "/ky-luat/mien", label: "Duyệt miễn, dừng tham gia", icon: "shield" },
+        { href: "/nop-bai", label: "Theo dõi nộp bài (chi tiết)", icon: "inbox" },
+      ]
+    : []),
   ...(featureOn("reports") ? [{ href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" }] : []),
   { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },
   { href: "/du-lieu", label: "Dữ liệu", icon: "db" },
@@ -354,15 +391,20 @@ const GRADER_NAV: NavItem[] = [
   { href: "/cham", label: "Bàn chấm", icon: "star" },
   { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
 ];
+const LEADER_NAV: NavItem[] = [
+  { href: "/ky-luat/nhom", label: "Nhóm tôi", icon: "users" },
+  { href: "/ky-luat/zoom", label: "Zoom", icon: "video" },
+  { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
+];
 
 // Đánh dấu mục đang mở (đường dẫn dài nhất khớp).
 const ACTIVE_JS = `(()=>{const p=location.pathname;let best=null,len=-1;document.querySelectorAll('[data-nav]').forEach(a=>{const h=a.getAttribute('href');const ok=h==='/'?p==='/':(p===h||p.startsWith(h+'/'));if(ok&&h.length>len){best=h;len=h.length;}});if(best)document.querySelectorAll('[data-nav][href="'+best+'"]').forEach(a=>a.setAttribute('aria-current','page'));})();`;
 
 export type Og = { title: string; description: string; url: string; image: string };
 
-export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader"; og?: Og }) {
-  const grader = props.nav === "grader";
-  const main = grader ? GRADER_NAV : MAIN_NAV;
+export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader" | "leader"; og?: Og }) {
+  const grader = props.nav === "grader" || props.nav === "leader";
+  const main = props.nav === "leader" ? LEADER_NAV : grader ? GRADER_NAV : MAIN_NAV;
   const withNav = !props.publicPage;
   return (
     <html lang="vi">
@@ -403,7 +445,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
                 <img src={COURSE.brand.logo} alt={COURSE.brand.name} width="140" height="38" />
               </span>
             ) : (
-              <a href={grader ? "/cham" : "/"} class="brand" aria-label={`${COURSE.brand.name} – trang chủ`}>
+              <a href={props.nav === "leader" ? "/ky-luat/nhom" : grader ? "/cham" : "/"} class="brand" aria-label={`${COURSE.brand.name} – trang chủ`}>
                 <img src={COURSE.brand.logo} alt={COURSE.brand.name} width="140" height="38" />
               </a>
             )}

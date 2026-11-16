@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "test": "vitest run",
+    "test": "vitest run && vitest run -c vitest.45n.config.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run build",
-    "build": "wrangler deploy --dry-run --outdir dist"
+    "build": "wrangler deploy --dry-run --outdir dist && wrangler deploy --dry-run -c courses/45n-k2/wrangler.jsonc --outdir dist/45n-k2"
   },
   "engines": {
     "node": ">=22"
