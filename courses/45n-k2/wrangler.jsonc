@@ -25,9 +25,10 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "45n-hub-db",
-      // Tạo ngày 16/11/2026 (chủ dự án đồng ý); dữ liệu riêng, không lẫn với NSKT.
-      "database_id": "d974a11a-13a3-4f17-8674-1f3f46fe6d60",
+      "database_name": "45n-hub-db-apac",
+      // Đặt ở châu Á (APAC) như D1 của NSKT, tạo 17/11/2026. Bản đầu "45n-hub-db" (d974a11a…) lỡ đặt ở Bắc Mỹ làm trang chậm;
+      // đã chép toàn bộ sang đây, bản cũ giữ lại chưa xóa. Dữ liệu riêng, không lẫn với NSKT.
+      "database_id": "2456ef6b-75b2-415f-a212-4313f92cf770",
       "migrations_dir": "../../migrations"
     }
   ],
