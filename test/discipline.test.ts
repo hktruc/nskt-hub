@@ -3,7 +3,8 @@ import { COURSE as K45 } from "../courses/45n-k2/course";
 import { addMinutes, byWeek, computeDiscipline, journeyWeek, rankTeams, totals, type DisciplineInput } from "../src/discipline/engine";
 
 // Dữ liệu giả hoàn toàn.
-const cfg = K45.discipline;
+// Giữ quy tắc cũ (trễ 5 phút sau giờ bắt đầu trên dh3g) cho các kiểm thử lõi; quy tắc 20:00 + 15 phút kiểm ở dưới.
+const cfg = { ...K45.discipline, zoomCheckinTime: undefined, zoomLateMinutes: 5 };
 const base = (): DisciplineInput => ({
   learners: [
     { id: 1, name: "Người A", team: "T01", stoppedFrom: null },
@@ -85,5 +86,19 @@ describe("kỷ luật: lỗi nhẹ / lỗi nặng", () => {
     expect(journeyWeek(cfg, "2026-11-18T00:00:00")).toBe(2);
     expect(journeyWeek(cfg, "2027-02-01T00:00:00")).toBe(6);
     expect(addMinutes("2026-11-12T19:45:00", 5)).toBe("2026-11-12T19:50:00");
+  });
+
+  it("45N: giờ bắt đầu tính điểm danh 20:00, vào sau 20:15 là trễ (dh3g ghi buổi 19:45)", () => {
+    const i = base();
+    i.atts = [
+      { learnerId: 1, sessionId: 100, attended: true, attendedAt: "2026-11-12T20:15:00.000" },
+      { learnerId: 2, sessionId: 100, attended: true, attendedAt: "2026-11-12T20:15:01.2" },
+    ];
+    const [a, b, c] = computeDiscipline(i, K45.discipline);
+    expect(K45.discipline.zoomCheckinTime).toBe("20:00");
+    expect(K45.discipline.zoomLateMinutes).toBe(15);
+    expect(a!.zoom[0]!.state).toBe("dung-gio");
+    expect(b!.zoom[0]!.state).toBe("tre");
+    expect(c!.zoom[0]!.state).toBe("vang");
   });
 });

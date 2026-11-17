@@ -7,7 +7,7 @@ import { computeDiscipline, type DisciplineInput, type LearnerResult } from "./e
 
 export async function loadDisciplineInput(db: D1Database, now: Date): Promise<DisciplineInput> {
   const start = COURSE.discipline.startDate;
-  const [ls, as, ss, ses, at, cam, ex] = await db.batch([
+  const [ls, as, ss, ses, at, cam, ex, rep] = await db.batch([
     db.prepare(
       `SELECT l.id, l.full_name, t.name AS team_name, st.stopped_from, st.reason AS stop_reason
        FROM learners l LEFT JOIN teams t ON t.id = l.team_id LEFT JOIN learner_status st ON st.learner_id = l.id`,
@@ -18,6 +18,7 @@ export async function loadDisciplineInput(db: D1Database, now: Date): Promise<Di
     db.prepare("SELECT x.learner_id, x.session_id, x.attended, x.attended_at FROM attendances x JOIN sessions s ON s.id = x.session_id WHERE s.start_at >= ?").bind(start),
     db.prepare("SELECT session_id, learner_id FROM zoom_camera WHERE camera_off = 1"),
     db.prepare("SELECT learner_id, kind, ref, reason FROM discipline_exemptions"),
+    db.prepare("SELECT team, ref FROM team_reports WHERE kind = 'camera'"),
   ]);
   type L = { id: number; full_name: string | null; team_name: string | null; stopped_from: string | null; stop_reason: string | null };
   const learners = ((ls?.results ?? []) as L[])
@@ -51,6 +52,7 @@ export async function loadDisciplineInput(db: D1Database, now: Date): Promise<Di
       attendedAt: a.attended_at,
     })),
     cameraOff: new Set(((cam?.results ?? []) as { session_id: number; learner_id: number }[]).map((c) => `${c.session_id}:${c.learner_id}`)),
+    cameraReported: new Set(((rep?.results ?? []) as { team: string; ref: string }[]).map((r) => `${r.ref}:${r.team}`)),
     exemptions: new Map(((ex?.results ?? []) as { learner_id: number; kind: string; ref: number; reason: string }[]).map((e) => [`${e.learner_id}:${e.kind}:${e.ref}`, e.reason])),
     now: nowVN(now),
   };

@@ -31,7 +31,7 @@ async function setup() {
       (2,10,'OVERDUE','2026-11-13T08:00:00','h','${t}','${t}','${t}'), (2,11,'NOT_SUBMITTED',NULL,'h','${t}','${t}','${t}'),
       (3,10,'NOT_SUBMITTED',NULL,'h','${t}','${t}','${t}'), (3,11,'DONE','2026-11-15T10:00:00','h','${t}','${t}','${t}');
     INSERT INTO sessions VALUES (100,'','2026-11-12T19:45:00','2026-11-12T20:30:00',96,'${t}','${t}');
-    INSERT INTO attendances VALUES (1,100,1,'2026-11-12T19:44:00','${t}'), (2,100,1,'2026-11-12T19:58:00','${t}'), (3,100,0,NULL,'${t}');
+    INSERT INTO attendances VALUES (1,100,1,'2026-11-12T19:44:00','${t}'), (2,100,1,'2026-11-12T20:16:00','${t}'), (3,100,0,NULL,'${t}');
   `);
   const now = new Date();
   const btcCode = await createUser(d1, { phone: "0900000444", name: "BTC Giả", role: "btc" }, "test", now);
@@ -78,10 +78,22 @@ describe("45N-K02: kỷ luật", () => {
     expect(html).toMatch(/Có mặt đúng giờ \(1\)/);
     expect(html).toMatch(/Vào trễ \(1\)/);
     expect(html).toMatch(/Vắng \(1\)/);
+    expect(html).toContain("vào sau giờ bắt đầu tính điểm danh (20h), quá 15 phút là trễ");
     // Trưởng nhóm Nhóm 1 chỉ thấy và báo được nhóm mình.
     html = await (await call("/ky-luat/zoom?buoi=100", { cookie: lead })).text();
     expect(html).not.toContain("Học Viên Ba");
     expect((await call("/ky-luat/zoom/camera", { method: "POST", cookie: lead, body: form({ buoi: "100", doi: "T02", tat: "3" }) })).status).toBe(403);
+    // Trước khi báo cáo: nhãn đỏ, chưa biết camera của người có mặt, chưa tính lỗi.
+    html = await (await call("/ky-luat/zoom?buoi=100", { cookie: btc })).text();
+    expect(html).toContain("✗ Chưa báo cáo camera");
+    expect(html).toContain("0/1 nhóm");
+    expect(html).toMatch(/Chưa biết camera của 2 người có mặt/);
+    expect(await (await call("/ky-luat/hv/1", { cookie: btc })).text()).toContain("Chưa có báo cáo");
+    // "Xác nhận tất cả bật camera" là một báo cáo hợp lệ, bỏ qua ô đã đánh dấu.
+    await call("/ky-luat/zoom/camera", { method: "POST", cookie: lead, body: form({ buoi: "100", doi: "T01", tat: "1", tatca: "1" }) });
+    html = await (await call("/ky-luat/zoom?buoi=100", { cookie: btc })).text();
+    expect(html).toContain("✓ Đã báo cáo · tất cả bật cam");
+    expect(html).toContain("1/1 nhóm");
     const ok = await call("/ky-luat/zoom/camera", { method: "POST", cookie: lead, body: form({ buoi: "100", doi: "T01", tat: ["1", "3"] }) });
     expect(ok.status).toBe(303);
     html = await (await call("/ky-luat/hv/1", { cookie: btc })).text();
@@ -89,6 +101,7 @@ describe("45N-K02: kỷ luật", () => {
     // Người ngoài nhóm (3) không bị ghi camera dù gửi lên.
     html = await (await call("/ky-luat/zoom?buoi=100", { cookie: btc })).text();
     expect(html).toMatch(/Không bật camera \(1\)/);
+    expect(html).toContain("✓ Đã báo cáo · 1 không bật cam");
   });
 
   it("trưởng nhóm: chỉ vào nhóm mình, viết nhật ký; không duyệt miễn được", async () => {

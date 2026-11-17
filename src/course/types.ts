@@ -73,7 +73,9 @@ export type CourseConfig = {
   discipline: {
     startDate: string; // chỉ tính bài có hạn / buổi Zoom từ ngày này
     weeks: number; // số tuần của hành trình (biểu đồ tiến độ)
-    zoomLateMinutes: number; // vào sau giờ bắt đầu quá số phút này = vào trễ
+    /** Giờ bắt đầu tính điểm danh Zoom ("HH:MM", giờ VN). Không đặt thì dùng giờ bắt đầu buổi trên dh3g. */
+    zoomCheckinTime?: string;
+    zoomLateMinutes: number; // vào sau giờ bắt đầu tính điểm danh quá số phút này = vào trễ
     points: { nhe: number; nang: number }; // điểm lỗi
     rules: {
       dailyMissing: Severity; // bài ngày: qua hạn mà chưa nộp

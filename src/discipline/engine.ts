@@ -21,6 +21,8 @@ export type DisciplineInput = {
   atts: DAtt[];
   /** "mãBuổi:mãHọcViên" của những người trưởng nhóm đánh dấu không bật camera. */
   cameraOff: Set<string>;
+  /** "mãBuổi:mãNhóm" của các nhóm trưởng nhóm đã báo cáo camera buổi đó (kể cả báo "tất cả bật"). */
+  cameraReported?: Set<string>;
   /** "mãHọcViên:bai:mãBài" hoặc "mãHọcViên:zoom:mãBuổi" → lý do BTC duyệt miễn. */
   exemptions: Map<string, string>;
   now: string;
@@ -32,7 +34,9 @@ export type ZoomState = "dung-gio" | "tre" | "vang" | "mien" | "dung" | "chua-di
 export type Fault = { severity: "nhe" | "nang"; label: string };
 
 export type BaiRow = { a: DAssignment; daily: boolean; week: number; state: BaiState; submittedAt: string | null; faults: Fault[]; note?: string };
-export type ZoomRow = { s: DSession; week: number; state: ZoomState; attendedAt: string | null; cameraOff: boolean; faults: Fault[]; note?: string };
+/** Camera của người có mặt: bật / không bật (trưởng nhóm báo) / chưa có báo cáo của nhóm. null: không có mặt. */
+export type CameraState = "bat" | "tat" | "chua-bao-cao" | null;
+export type ZoomRow = { s: DSession; week: number; state: ZoomState; attendedAt: string | null; cameraOff: boolean; camera: CameraState; faults: Fault[]; note?: string };
 
 export type LearnerResult = {
   l: DLearner;
@@ -68,6 +72,15 @@ export function weekRange(cfg: DCfg, week: number): { from: string; to: string }
 /** Cộng phút vào thời gian giờ VN không múi giờ. */
 export function addMinutes(at: string, min: number): string {
   return new Date(Date.parse(`${at.slice(0, 19)}Z`) + min * 60_000).toISOString().slice(0, 19);
+}
+
+/** Giờ bắt đầu tính điểm danh của buổi: giờ cố định của khóa (nếu có) trong ngày buổi học, không thì giờ bắt đầu trên dh3g. */
+export function checkinStart(cfg: DCfg, s: DSession): string {
+  return cfg.zoomCheckinTime ? `${s.startAt.slice(0, 10)}T${cfg.zoomCheckinTime}:00` : s.startAt.slice(0, 19);
+}
+/** Vào sau mốc này là vào trễ. */
+export function lateAfter(cfg: DCfg, s: DSession): string {
+  return addMinutes(checkinStart(cfg, s), cfg.zoomLateMinutes);
 }
 
 const isDaily = (type: string) => type === "NORMAL";
@@ -131,7 +144,7 @@ export function computeDiscipline(input: DisciplineInput, cfg: DCfg): LearnerRes
       let faults: Fault[] = [];
       if (stopped(s.startAt)) state = "dung";
       else if (exempt !== undefined) state = "mien";
-      else if (att?.attended) state = att.attendedAt && att.attendedAt.slice(0, 19) > addMinutes(s.startAt, cfg.zoomLateMinutes) ? "tre" : "dung-gio";
+      else if (att?.attended) state = att.attendedAt && att.attendedAt.slice(0, 19) > lateAfter(cfg, s) ? "tre" : "dung-gio";
       else state = over ? "vang" : "chua-dien-ra";
 
       if (state === "tre") faults = fault(cfg.rules.zoomLate, "Vào Zoom trễ");
@@ -142,7 +155,9 @@ export function computeDiscipline(input: DisciplineInput, cfg: DCfg): LearnerRes
         if (state !== "vang") r.zoomPresent++;
         if (state === "dung-gio") r.zoomOnTime++;
       }
-      r.zoom.push({ s, week: journeyWeek(cfg, s.startAt), state, attendedAt: att?.attendedAt ?? null, cameraOff: camOff && (state === "tre" || state === "dung-gio"), faults, note: exempt ?? (state === "dung" ? (l.stopReason ?? undefined) : undefined) });
+      const present = state === "tre" || state === "dung-gio";
+      const camera: CameraState = !present ? null : camOff ? "tat" : input.cameraReported === undefined || input.cameraReported.has(`${s.id}:${l.team}`) ? "bat" : "chua-bao-cao";
+      r.zoom.push({ s, week: journeyWeek(cfg, s.startAt), state, attendedAt: att?.attendedAt ?? null, cameraOff: camOff && present, camera, faults, note: exempt ?? (state === "dung" ? (l.stopReason ?? undefined) : undefined) });
     }
 
     for (const f of [...r.bai, ...r.zoom].flatMap((x) => x.faults)) {

@@ -22,6 +22,11 @@ import type { Exemption, TeamReport } from "../discipline/data";
 import { Layout } from "../layout";
 
 const CFG = COURSE.discipline;
+/** "vào sau giờ bắt đầu tính điểm danh (20h), quá 15 phút" hoặc "vào sau giờ bắt đầu quá 5 phút". */
+const hourLabel = (t: string) => (t.endsWith(":00") ? `${Number(t.slice(0, 2))}h` : t.replace(":", "h"));
+const LATE_RULE = CFG.zoomCheckinTime
+  ? `vào sau giờ bắt đầu tính điểm danh (${hourLabel(CFG.zoomCheckinTime)}), quá ${CFG.zoomLateMinutes} phút`
+  : `vào sau giờ bắt đầu quá ${CFG.zoomLateMinutes} phút`;
 export type Viewer = { full: boolean; teams: string[] | null; nav: "full" | "leader" };
 
 const ddmm = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
@@ -102,6 +107,21 @@ const ZOOM_STATE: Record<ZoomState, [string, string]> = {
   dung: ["Đã dừng", ""],
   "chua-dien-ra": ["Chưa diễn ra", ""],
 };
+/** Trạng thái báo cáo camera của một nhóm trong một buổi. */
+export function CamReport(props: { rep: TeamReport | undefined; withTime?: boolean }) {
+  if (!props.rep) return <span class="badge bad">✗ Chưa báo cáo camera</span>;
+  const off = Number(props.rep.content?.off ?? 0);
+  const when = props.withTime ? ` · ${formatVN(props.rep.at)}` : "";
+  return off ? (
+    <span class="badge warn">
+      ✓ Đã báo cáo · {off} không bật cam{when}
+    </span>
+  ) : (
+    <span class="badge ok">✓ Đã báo cáo · tất cả bật cam{when}</span>
+  );
+}
+const CAMERA_LABEL = { bat: "Bật", tat: "Không bật", "chua-bao-cao": "Chưa có báo cáo" } as const;
+
 const State = (p: { s: [string, string] }) => <span class={`badge ${p.s[1]}`}>{p.s[0]}</span>;
 const FaultList = (p: { f: Fault[] }) =>
   p.f.length ? (
@@ -126,7 +146,7 @@ function RuleNote() {
         <li>Bài ngày qua hạn mà không nộp: {lab(r.dailyMissing)}. Nộp bù sau hạn: {lab(r.dailyLate)} (vẫn ghi "nộp trễ").</li>
         <li>Bài tuần nộp trễ: {lab(r.weeklyLate)}. Qua hạn mà không nộp: {lab(r.weeklyMissing)}.</li>
         <li>
-          Zoom: vào sau giờ bắt đầu quá {CFG.zoomLateMinutes} phút: {lab(r.zoomLate)}. Vắng: {lab(r.zoomAbsent)}. Không bật camera (trưởng nhóm báo): {lab(r.cameraOff)}.
+          Zoom: {LATE_RULE}: {lab(r.zoomLate)}. Vắng: {lab(r.zoomAbsent)}. Không bật camera (trưởng nhóm báo): {lab(r.cameraOff)}.
         </li>
         <li>Có mặt đúng giờ và bật camera, mục chưa tới hạn, mục BTC duyệt miễn: không lỗi.</li>
         <li>
@@ -231,7 +251,7 @@ export function DisciplineHomePage(props: {
   teams: TeamResult[];
   currentWeek: number;
   journals: Set<string>;
-  lastSession: { s: DSession; onTime: number; late: number; absent: number; cameraOff: number } | null;
+  lastSession: { s: DSession; onTime: number; late: number; absent: number; cameraOff: number; teamsReported: number; teamsPresent: number } | null;
   updatedAt: string | null;
 }) {
   const t = props.t;
@@ -277,7 +297,10 @@ export function DisciplineHomePage(props: {
       {props.lastSession ? (
         <p class="card-item">
           <b>Zoom gần nhất</b> ({sessionName(props.lastSession.s)}): {props.lastSession.onTime} đúng giờ · {props.lastSession.late} vào trễ · {props.lastSession.absent} vắng ·{" "}
-          {props.lastSession.cameraOff} không bật camera.{" "}
+          {props.lastSession.cameraOff} không bật camera ·{" "}
+          <span class={`badge ${props.lastSession.teamsReported < props.lastSession.teamsPresent ? "bad" : "ok"}`}>
+            {props.lastSession.teamsReported}/{props.lastSession.teamsPresent} nhóm đã báo cáo camera
+          </span>{" "}
           <a href={`/ky-luat/zoom?buoi=${props.lastSession.s.id}`}>Xem danh sách →</a>
         </p>
       ) : null}
@@ -296,7 +319,7 @@ export function DisciplineHomePage(props: {
 
 export function ZoomPage(props: {
   v: Viewer;
-  sessions: { s: DSession; onTime: number; late: number; absent: number; cameraOff: number; exempt: number; past: boolean }[];
+  sessions: { s: DSession; onTime: number; late: number; absent: number; cameraOff: number; cameraUnknown: number; teamsReported: number; teamsPresent: number; exempt: number; past: boolean }[];
   selected: DSession | null;
   results: LearnerResult[];
   cameraReports: TeamReport[];
@@ -307,6 +330,7 @@ export function ZoomPage(props: {
   const rows = sel ? props.results.map((r) => ({ r, z: r.zoom.find((z) => z.s.id === sel.id)! })).filter((x) => x.z) : [];
   const list = (st: ZoomState) => rows.filter((x) => x.z.state === st);
   const camOff = rows.filter((x) => x.z.cameraOff);
+  const camUnknown = rows.filter((x) => x.z.camera === "chua-bao-cao");
   const teams = [...new Set(props.results.map((r) => r.l.team))].sort();
   const reported = (team: string) => props.cameraReports.find((c) => c.team === team && sel && c.ref === String(sel.id));
   const People = (p: { xs: typeof rows; time?: boolean }) =>
@@ -326,7 +350,7 @@ export function ZoomPage(props: {
   return (
     <DisciplineShell tab="/ky-luat/zoom" title="Điểm danh Zoom" v={props.v} notice={props.notice}>
       <p class="muted small">
-        Có mặt / vào trễ / vắng lấy tự động từ dh3g (vào sau giờ bắt đầu quá {CFG.zoomLateMinutes} phút là trễ). Bật camera: dh3g không ghi nhận, <b>trưởng nhóm báo</b> ngay trên trang này.
+        Có mặt đúng giờ / vào trễ / vắng lấy tự động từ dh3g ({LATE_RULE} là trễ). Bật camera: dh3g không ghi nhận, <b>trưởng nhóm báo</b> ngay trên trang này.
       </p>
       <h2>Tổng hợp {props.sessions.length} buổi</h2>
       {props.sessions.length === 0 ? <p class="muted">dh3g chưa có buổi Zoom nào từ {ddmm(CFG.startDate)}.</p> : null}
@@ -339,6 +363,7 @@ export function ZoomPage(props: {
               <th>Vào trễ</th>
               <th>Vắng</th>
               <th>Không camera</th>
+              <th>Báo cáo camera</th>
               <th>Tham gia</th>
             </tr>
           </thead>
@@ -355,11 +380,16 @@ export function ZoomPage(props: {
                     <td>{x.absent}</td>
                     <td>{x.cameraOff}</td>
                     <td>
+                      <span class={`badge ${x.teamsReported < x.teamsPresent ? "bad" : "ok"}`}>
+                        {x.teamsReported}/{x.teamsPresent} nhóm
+                      </span>
+                    </td>
+                    <td>
                       <Meter v={pct(x.onTime + x.late, x.onTime + x.late + x.absent)} />
                     </td>
                   </>
                 ) : (
-                  <td colspan={5} class="muted small">
+                  <td colspan={6} class="muted small">
                     Chưa diễn ra
                   </td>
                 )}
@@ -372,6 +402,45 @@ export function ZoomPage(props: {
       {sel ? (
         <>
           <h2>{sessionName(sel, idx)}</h2>
+          <h2>Báo cáo camera của trưởng nhóm</h2>
+          <p class="muted small">
+            Mỗi buổi, trưởng nhóm <b>phải báo cáo</b> dù cả nhóm đều bật camera: đánh dấu người không bật rồi bấm "Lưu", hoặc bấm "Xác nhận: tất cả đều bật camera". Chưa báo cáo thì nhóm hiện
+            nhãn đỏ và chưa tính lỗi camera. Lưu lại lần nữa sẽ thay báo cáo cũ của nhóm.
+          </p>
+          {teams
+            .filter((team) => props.v.teams === null || props.v.teams.includes(team))
+            .map((team) => {
+              const present = rows.filter((x) => x.r.l.team === team && (x.z.state === "dung-gio" || x.z.state === "tre"));
+              const rep = reported(team);
+              return (
+                <details class="card-item" open={props.v.teams !== null}>
+                  <summary>
+                    <b>{teamLabel(team)}</b>{" "}
+                    <CamReport rep={rep} withTime />
+                    {rep ? <span class="muted small"> · {rep.by}</span> : null}
+                  </summary>
+                  {present.length ? (
+                    <form method="post" action="/ky-luat/zoom/camera">
+                      <input type="hidden" name="buoi" value={String(sel.id)} />
+                      <input type="hidden" name="doi" value={team} />
+                      {present.map((x) => (
+                        <label class="tchk" style="display:block">
+                          <input type="checkbox" name="tat" value={String(x.r.l.id)} checked={x.z.cameraOff} /> {x.r.l.name} <span class="muted small">không bật camera</span>
+                        </label>
+                      ))}
+                      <div class="actions" style="margin-top:8px">
+                        <button class="secondary">Lưu: người đánh dấu không bật camera</button>
+                        <button name="tatca" value="1">Xác nhận: tất cả đều bật camera</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p class="muted small">Không có ai của nhóm có mặt trong buổi này (theo dh3g).</p>
+                  )}
+                </details>
+              );
+            })}
+
+          <h2>Danh sách buổi này</h2>
           <div class="grid2">
             <section>
               <h3>Có mặt đúng giờ ({list("dung-gio").length})</h3>
@@ -388,6 +457,12 @@ export function ZoomPage(props: {
             <section>
               <h3>Không bật camera ({camOff.length})</h3>
               <People xs={camOff} />
+              {camUnknown.length ? (
+                <p class="small warn" style="margin-top:6px">
+                  Chưa biết camera của {camUnknown.length} người có mặt vì nhóm chưa báo cáo: {[...new Set(camUnknown.map((x) => x.r.l.team))].sort().map(teamLabel).join(", ")}. Chưa tính lỗi camera cho
+                  những người này.
+                </p>
+              ) : null}
             </section>
           </div>
           {list("mien").length ? (
@@ -397,42 +472,6 @@ export function ZoomPage(props: {
             </>
           ) : null}
 
-          <h2>Báo cáo camera của trưởng nhóm</h2>
-          <p class="muted small">Đánh dấu người có mặt nhưng không bật camera, rồi bấm Lưu. Lưu lại lần nữa sẽ thay danh sách cũ của nhóm.</p>
-          {teams
-            .filter((team) => props.v.teams === null || props.v.teams.includes(team))
-            .map((team) => {
-              const present = rows.filter((x) => x.r.l.team === team && (x.z.state === "dung-gio" || x.z.state === "tre"));
-              const rep = reported(team);
-              return (
-                <details class="card-item" open={props.v.teams !== null}>
-                  <summary>
-                    <b>{teamLabel(team)}</b>{" "}
-                    {rep ? (
-                      <span class="badge ok">
-                        Đã báo cáo {formatVN(rep.at)} · {rep.content?.off ?? 0} không camera
-                      </span>
-                    ) : (
-                      <span class="badge bad">Chưa báo cáo</span>
-                    )}
-                  </summary>
-                  {present.length ? (
-                    <form method="post" action="/ky-luat/zoom/camera">
-                      <input type="hidden" name="buoi" value={String(sel.id)} />
-                      <input type="hidden" name="doi" value={team} />
-                      {present.map((x) => (
-                        <label class="tchk" style="display:block">
-                          <input type="checkbox" name="tat" value={String(x.r.l.id)} checked={x.z.cameraOff} /> {x.r.l.name} <span class="muted small">không bật camera</span>
-                        </label>
-                      ))}
-                      <button class="secondary">Lưu báo cáo camera {teamLabel(team)}</button>
-                    </form>
-                  ) : (
-                    <p class="muted small">Không có ai của nhóm có mặt trong buổi này (theo dh3g).</p>
-                  )}
-                </details>
-              );
-            })}
         </>
       ) : null}
     </DisciplineShell>
@@ -740,7 +779,7 @@ export function LearnerPage(props: { v: Viewer; r: LearnerResult; notice?: strin
                   {z.attendedAt ? <div class="small muted">vào {z.attendedAt.slice(11, 16)}</div> : null}
                   {z.note ? <div class="small muted">Lý do: {z.note}</div> : null}
                 </td>
-                <td class="small">{z.state === "dung-gio" || z.state === "tre" ? (z.cameraOff ? "Không bật" : "—") : ""}</td>
+                <td class="small">{z.camera ? <span class={z.camera === "tat" ? "badge bad" : z.camera === "chua-bao-cao" ? "badge" : ""}>{CAMERA_LABEL[z.camera]}</span> : ""}</td>
                 <td>
                   <FaultList f={z.faults} />
                 </td>
@@ -880,7 +919,7 @@ export function TeamPage(props: {
           return (
             <li>
               Camera {sessionName(s, props.sessions.indexOf(s) >= 0 ? props.sessions.indexOf(s) : i)}:{" "}
-              {rep ? <span class="badge ok">Đã báo cáo {formatVN(rep.at)}</span> : <span class="badge bad">Chưa báo cáo</span>}{" "}
+              <CamReport rep={rep} withTime />{" "}
               {props.canWrite ? <a href={`/ky-luat/zoom?buoi=${s.id}`}>Báo cáo →</a> : null}
             </li>
           );
