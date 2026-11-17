@@ -70,6 +70,8 @@ export type CourseConfig = {
   ai: { context: string }; // mô tả khóa học cho AI chấm
   /** Trang chủ "/": tổng quan điểm (NSKT) hay tổng quan kỷ luật. */
   home: "overview" | "discipline";
+  /** Đường dẫn trang công khai cho học viên, không cần đăng nhập (vd. "/45ngaydonghanh"). Không đặt: không có trang công khai kỷ luật. */
+  publicPath?: string;
   discipline: {
     startDate: string; // chỉ tính bài có hạn / buổi Zoom từ ngày này
     weeks: number; // số tuần của hành trình (biểu đồ tiến độ)

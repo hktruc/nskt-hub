@@ -32,6 +32,8 @@ export const COURSE: CourseConfig = {
   scoring: { ...NSKT.scoring, startDate: "2026-11-12" },
   ai: { context: "hành trình 45 ngày Gắn kết & Nâng tầm đội ngũ" },
   home: "discipline",
+  // Chủ dự án 17/11: link công khai gửi học viên (chỉ xem Dashboard, Zoom, Bài tập, Nhóm, Từng thành viên).
+  publicPath: "/45ngaydonghanh",
   discipline: {
     startDate: "2026-11-11", // ngày khai giảng K02: buổi Zoom khai giảng là buổi 1/6; bài tập đầu tiên hạn 12/11
     weeks: 6,

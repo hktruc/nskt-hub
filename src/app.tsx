@@ -3,6 +3,7 @@ import { byWeek, journeyWeek, rankTeams, totals, type LearnerResult } from "./di
 import { listExemptions, loadDiscipline, loadTeamReports, removeExemption, saveCamera, saveJournal, setExemption, setStopped } from "./discipline/data";
 import { LeadersPage } from "./pages/leaders";
 import { teamCodes } from "./domain/teams";
+import { PUBLIC_VIEWER } from "./pages/discipline";
 import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -36,7 +37,7 @@ import { teamAwards } from "./scoring/team-awards";
 import { nowVN, recomputeScores } from "./scoring/run";
 import { DAYS_AHEAD, RECENT_DAYS_BACK, enqueueRange, planDaily, planFull, workQueue } from "./sync/queue";
 
-type AppEnv = { Bindings: Env; Variables: { email: string; user: User } };
+type AppEnv = { Bindings: Env; Variables: { email: string; user: User; pub?: boolean } };
 const app = new Hono<AppEnv>();
 
 const sameOrigin = (c: Context<AppEnv>) => c.req.header("Origin") === new URL(c.req.url).origin;
@@ -157,6 +158,25 @@ app.post("/dang-xuat", async (c) => {
 // ---- Mọi trang khác: phải đăng nhập (số điện thoại, hoặc Cloudflare Access cho admin) ----
 const GRADER_PATHS = ["/cham", "/tai-khoan"];
 const LEADER_PATHS = ["/ky-luat/nhom", "/ky-luat/zoom", "/ky-luat/hv", "/tai-khoan"];
+
+// ---- Trang công khai cho học viên (không đăng nhập, chỉ xem): khóa có kỷ luật và có đường dẫn công khai ----
+const PUB = featureOn("discipline") && COURSE.publicPath ? COURSE.publicPath : "";
+if (PUB) {
+  const pub = new Hono<AppEnv>();
+  pub.use("*", async (c, next) => {
+    c.set("pub", true);
+    await next();
+    c.header("X-Robots-Tag", "noindex, nofollow");
+  });
+  pub.get("/", (c) => disciplineHome(c));
+  pub.get("/zoom", (c) => zoomPage(c));
+  pub.get("/bai-tap", (c) => homeworkPage(c));
+  pub.get("/nhom", (c) => teamsPage(c));
+  pub.get("/nhom/:team", (c) => teamPage(c));
+  pub.get("/thanh-vien", (c) => membersPage(c));
+  pub.get("/hv/:id", (c) => learnerPage(c));
+  app.route(PUB, pub);
+}
 
 app.use("*", async (c, next) => {
   // Thao tác ghi chỉ nhận từ chính trang của ứng dụng.
@@ -440,6 +460,8 @@ app.get("/", async (c) => (COURSE.home === "discipline" ? disciplineHome(c) : c.
 
 // ---- Kỷ luật: lỗi nhẹ / lỗi nặng (Zoom, bài tập), nhóm & trưởng nhóm, duyệt miễn ----
 const viewerOf = (u: User): Viewer => (canUseFullApp(u) ? { full: true, teams: null, nav: "full" } : { full: false, teams: u.teams, nav: "leader" });
+/** Học viên xem trang công khai (không đăng nhập) hoặc người đã đăng nhập. */
+const viewerFor = (c: Context<AppEnv>): Viewer => (c.get("pub") ? PUBLIC_VIEWER : viewerOf(c.get("user")));
 const canSeeTeam = (v: Viewer, team: string) => v.teams === null || v.teams.includes(team);
 const currentWeekNow = () => journeyWeek(COURSE.discipline, nowVN(new Date()));
 const DISC_NOTICES: Record<string, string> = {
@@ -486,7 +508,7 @@ async function disciplineHome(c: Context<AppEnv>) {
   const last = past[0];
   return c.html(
     <DisciplineHomePage
-      v={viewerOf(c.get("user"))}
+      v={viewerFor(c)}
       t={totals(results)}
       weeks={byWeek(results, COURSE.discipline)}
       teams={rankTeams(results)}
@@ -500,8 +522,9 @@ async function disciplineHome(c: Context<AppEnv>) {
 
 app.get("/ky-luat", (c) => c.redirect("/", 301));
 
-app.get("/ky-luat/zoom", async (c) => {
-  const v = viewerOf(c.get("user"));
+app.get("/ky-luat/zoom", (c) => zoomPage(c));
+async function zoomPage(c: Context<AppEnv>) {
+  const v = viewerFor(c);
   const [{ input, results }, cameraReports] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB, "camera")]);
   const sessions = [...input.sessions].sort((a, b) => a.startAt.localeCompare(b.startAt));
   const sums = sessions.map((s) => ({ s, ...zoomSummary(results, s.id) }));
@@ -517,7 +540,7 @@ app.get("/ky-luat/zoom", async (c) => {
       notice={DISC_NOTICES[c.req.query("tb") ?? ""]}
     />,
   );
-});
+}
 
 app.post("/ky-luat/zoom/camera", async (c) => {
   const u = c.get("user");
@@ -535,30 +558,34 @@ app.post("/ky-luat/zoom/camera", async (c) => {
   return c.redirect(`/ky-luat/zoom?buoi=${sessionId}&tb=camera`, 303);
 });
 
-app.get("/ky-luat/bai-tap", async (c) => {
+app.get("/ky-luat/bai-tap", (c) => homeworkPage(c));
+async function homeworkPage(c: Context<AppEnv>) {
   const { input, results } = await loadDiscipline(c.env.DB, new Date());
   const assignments = [...input.assignments].filter((a) => a.dueAt >= COURSE.discipline.startDate).sort((a, b) => a.dueAt.localeCompare(b.dueAt));
   const wanted = Number(c.req.query("bt"));
   const selected = assignments.find((a) => a.id === wanted) ?? [...assignments].reverse().find((a) => a.dueAt <= input.now) ?? null;
-  return c.html(<HomeworkPage v={viewerOf(c.get("user"))} assignments={assignments} results={results} selected={selected} now={input.now} />);
-});
+  return c.html(<HomeworkPage v={viewerFor(c)} assignments={assignments} results={results} selected={selected} now={input.now} />);
+}
 
-app.get("/ky-luat/thanh-vien", async (c) => {
+app.get("/ky-luat/thanh-vien", (c) => membersPage(c));
+async function membersPage(c: Context<AppEnv>) {
   const { results } = await loadDiscipline(c.env.DB, new Date());
-  return c.html(<MembersPage v={viewerOf(c.get("user"))} results={results} sort={c.req.query("xep") ?? "loi"} />);
-});
+  return c.html(<MembersPage v={viewerFor(c)} results={results} sort={c.req.query("xep") ?? "loi"} />);
+}
 
-app.get("/ky-luat/nhom", async (c) => {
-  const v = viewerOf(c.get("user"));
-  if (!v.full) return v.teams?.[0] ? c.redirect(`/ky-luat/nhom/${v.teams[0]}`, 303) : c.html(<ForbiddenPage user={c.get("user")} message="Tài khoản chưa được giao nhóm. Nhờ admin giao nhóm ở trang Quản trị." />, 403);
+app.get("/ky-luat/nhom", (c) => teamsPage(c));
+async function teamsPage(c: Context<AppEnv>) {
+  const v = viewerFor(c);
+  if (!v.full && !v.pub) return v.teams?.[0] ? c.redirect(`/ky-luat/nhom/${v.teams[0]}`, 303) : c.html(<ForbiddenPage user={c.get("user")} message="Tài khoản chưa được giao nhóm. Nhờ admin giao nhóm ở trang Quản trị." />, 403);
   const [{ results }, journals] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB, "journal")]);
   const week = currentWeekNow();
   return c.html(<TeamsPage v={v} teams={rankTeams(results)} currentWeek={week} journals={new Set(journals.filter((j) => j.ref === String(week)).map((j) => j.team))} />);
-});
+}
 
-app.get("/ky-luat/nhom/:team", async (c) => {
-  const v = viewerOf(c.get("user"));
-  const team = c.req.param("team");
+app.get("/ky-luat/nhom/:team", (c) => teamPage(c));
+async function teamPage(c: Context<AppEnv>) {
+  const v = viewerFor(c);
+  const team = c.req.param("team") ?? "";
   if (!canSeeTeam(v, team)) return c.html(<ForbiddenPage user={c.get("user")} message="Trưởng nhóm chỉ xem được nhóm của mình." />, 403);
   const [{ input, results }, reports] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB)]);
   const t = rankTeams(results).find((x) => x.team === team);
@@ -578,15 +605,15 @@ app.get("/ky-luat/nhom/:team", async (c) => {
       journals={mine.filter((r) => r.kind === "journal")}
       week={week}
       currentWeek={current}
-      canWrite={true}
+      canWrite={!v.pub}
       notice={DISC_NOTICES[c.req.query("tb") ?? ""]}
     />,
   );
-});
+}
 
 app.post("/ky-luat/nhom/:team/nhat-ky", async (c) => {
   const v = viewerOf(c.get("user"));
-  const team = c.req.param("team");
+  const team = c.req.param("team") ?? "";
   if (!canSeeTeam(v, team)) return c.text("Không được viết nhật ký cho nhóm này.", 403);
   const f = await c.req.formData();
   const week = Number(f.get("tuan"));
@@ -596,14 +623,15 @@ app.post("/ky-luat/nhom/:team/nhat-ky", async (c) => {
   return c.redirect(`/ky-luat/nhom/${team}?tuan=${week}&tb=nhat-ky#nhat-ky`, 303);
 });
 
-app.get("/ky-luat/hv/:id", async (c) => {
-  const v = viewerOf(c.get("user"));
+app.get("/ky-luat/hv/:id", (c) => learnerPage(c));
+async function learnerPage(c: Context<AppEnv>) {
+  const v = viewerFor(c);
   const { results } = await loadDiscipline(c.env.DB, new Date());
   const r = results.find((x) => x.l.id === Number(c.req.param("id")));
   if (!r) return c.notFound();
   if (!canSeeTeam(v, r.l.team)) return c.html(<ForbiddenPage user={c.get("user")} message="Trưởng nhóm chỉ xem được thành viên nhóm mình." />, 403);
   return c.html(<LearnerPage v={v} r={r} notice={DISC_NOTICES[c.req.query("tb") ?? ""]} today={vietnamDay(new Date())} />);
-});
+}
 
 app.post("/ky-luat/hv/:id/mien", async (c) => {
   if (!canUseFullApp(c.get("user"))) return c.text("Chỉ BTC được duyệt miễn.", 403);

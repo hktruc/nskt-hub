@@ -400,6 +400,15 @@ const GRADER_NAV: NavItem[] = [
   { href: "/cham", label: "Bàn chấm", icon: "star" },
   { href: "/tai-khoan", label: "Tài khoản", icon: "user" },
 ];
+// Trang công khai cho học viên (chỉ xem): 5 mục, dưới đường dẫn công khai của khóa.
+const PUB = COURSE.publicPath ?? "";
+const PUBLIC_NAV: NavItem[] = [
+  { href: PUB, label: discipline ? "Dashboard" : "Tổng quan", icon: "home" },
+  { href: `${PUB}/zoom`, label: "Zoom", icon: "video" },
+  { href: `${PUB}/bai-tap`, label: "Bài tập", icon: "inbox" },
+  { href: `${PUB}/nhom`, label: "Nhóm", icon: "users" },
+  { href: `${PUB}/thanh-vien`, label: "Thành viên", icon: "user" },
+];
 const LEADER_NAV: NavItem[] = [
   { href: "/ky-luat/nhom", label: "Nhóm tôi", icon: "users" },
   { href: "/ky-luat/zoom", label: "Zoom", icon: "video" },
@@ -421,9 +430,9 @@ export function whoChip(name: string, role: string): string {
 
 export type Og = { title: string; description: string; url: string; image: string };
 
-export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader" | "leader"; og?: Og }) {
-  const grader = props.nav === "grader" || props.nav === "leader";
-  const main = props.nav === "leader" ? LEADER_NAV : grader ? GRADER_NAV : MAIN_NAV;
+export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader" | "leader" | "public"; og?: Og }) {
+  const grader = props.nav === "grader" || props.nav === "leader" || props.nav === "public";
+  const main = props.nav === "public" ? PUBLIC_NAV : props.nav === "leader" ? LEADER_NAV : grader ? GRADER_NAV : MAIN_NAV;
   const withNav = !props.publicPage;
   return (
     <html lang="vi">
@@ -464,7 +473,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
                 <img src={COURSE.brand.logo} alt={COURSE.brand.name} width="140" height="38" />
               </span>
             ) : (
-              <a href={props.nav === "leader" ? "/ky-luat/nhom" : grader ? "/cham" : "/"} class="brand" aria-label={`${COURSE.brand.name} – trang chủ`}>
+              <a href={props.nav === "public" ? PUB : props.nav === "leader" ? "/ky-luat/nhom" : grader ? "/cham" : "/"} class="brand" aria-label={`${COURSE.brand.name} – trang chủ`}>
                 <img src={COURSE.brand.logo} alt={COURSE.brand.name} width="140" height="38" />
               </a>
             )}
@@ -494,7 +503,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
                 )}
               </nav>
             ) : null}
-            {withNav ? raw(WHO_SLOT) : null}
+            {withNav && props.nav !== "public" ? raw(WHO_SLOT) : null}
           </div>
         </header>
         <main>{props.children}</main>
