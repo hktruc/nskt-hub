@@ -53,4 +53,4 @@ Chủ dự án làm trên dash.cloudflare.com (Claude không có quyền tạo w
 4. Bấm **Deploy**. Xong thì vào worker → **Settings → Variables and Secrets** → **Add** → Type **Secret**, Name `DH3G_API_KEY`, Value = khóa dh3g (giống NSKT).
 5. Vào `https://<tên-worker>.hktruc.workers.dev/quan-tri` (đăng nhập Cloudflare Access bằng email chủ dự án) → tạo tài khoản số điện thoại cho mình (admin), BTC, trưởng nhóm.
 
-Phần Claude làm trước: tạo D1, chạy migrations, tạo ứng dụng Cloudflare Access cho `/quan-tri` (dùng lại chính sách "chỉ email chủ dự án"), ghi mã D1 và AUD vào `courses/<mã-khóa>/wrangler.jsonc`.
+Phần Claude làm trước: tạo D1 **đặt ở châu Á** (API: `primary_location_hint: "apac"`; không chỉ định thì Cloudflare đặt gần máy tạo, có thể ở Mỹ, trang sẽ chậm), chạy migrations, tạo ứng dụng Cloudflare Access cho `/quan-tri` (dùng lại chính sách "chỉ email chủ dự án"), ghi mã D1 và AUD vào `courses/<mã-khóa>/wrangler.jsonc`.
