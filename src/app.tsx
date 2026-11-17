@@ -453,7 +453,25 @@ const DISC_NOTICES: Record<string, string> = {
 function zoomSummary(results: LearnerResult[], sessionId: number) {
   const zs = results.map((r) => r.zoom.find((z) => z.s.id === sessionId)).filter((z) => z !== undefined);
   const n = (st: string) => zs.filter((z) => z.state === st).length;
-  return { onTime: n("dung-gio"), late: n("tre"), absent: n("vang"), exempt: n("mien"), cameraOff: zs.filter((z) => z.cameraOff).length, past: zs.some((z) => z.state !== "chua-dien-ra" && z.state !== "dung") };
+  // Nhóm có người có mặt: đã / chưa báo cáo camera.
+  const teamsPresent = new Set<string>();
+  const teamsPending = new Set<string>();
+  results.forEach((r) => {
+    const z = r.zoom.find((x) => x.s.id === sessionId);
+    if (z?.camera) teamsPresent.add(r.l.team);
+    if (z?.camera === "chua-bao-cao") teamsPending.add(r.l.team);
+  });
+  return {
+    onTime: n("dung-gio"),
+    late: n("tre"),
+    absent: n("vang"),
+    exempt: n("mien"),
+    cameraOff: zs.filter((z) => z.cameraOff).length,
+    cameraUnknown: zs.filter((z) => z.camera === "chua-bao-cao").length,
+    teamsReported: teamsPresent.size - teamsPending.size,
+    teamsPresent: teamsPresent.size,
+    past: zs.some((z) => z.state !== "chua-dien-ra" && z.state !== "dung"),
+  };
 }
 
 async function disciplineHome(c: Context<AppEnv>) {
@@ -511,7 +529,9 @@ app.post("/ky-luat/zoom/camera", async (c) => {
   const { results } = await loadDiscipline(c.env.DB, new Date());
   const members = results.filter((r) => r.l.team === team).map((r) => r.l.id);
   if (!members.length || !Number.isSafeInteger(sessionId)) return c.text("Dữ liệu không hợp lệ.", 400);
-  await saveCamera(c.env.DB, sessionId, team, members, f.getAll("tat").map(Number), c.get("email"), new Date());
+  // "Xác nhận tất cả bật camera" bỏ qua các ô đã đánh dấu.
+  const off = f.get("tatca") === "1" ? [] : f.getAll("tat").map(Number);
+  await saveCamera(c.env.DB, sessionId, team, members, off, c.get("email"), new Date());
   return c.redirect(`/ky-luat/zoom?buoi=${sessionId}&tb=camera`, 303);
 });
 

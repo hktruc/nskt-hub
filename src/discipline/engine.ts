@@ -21,6 +21,8 @@ export type DisciplineInput = {
   atts: DAtt[];
   /** "mãBuổi:mãHọcViên" của những người trưởng nhóm đánh dấu không bật camera. */
   cameraOff: Set<string>;
+  /** "mãBuổi:mãNhóm" của các nhóm trưởng nhóm đã báo cáo camera buổi đó (kể cả báo "tất cả bật"). */
+  cameraReported?: Set<string>;
   /** "mãHọcViên:bai:mãBài" hoặc "mãHọcViên:zoom:mãBuổi" → lý do BTC duyệt miễn. */
   exemptions: Map<string, string>;
   now: string;
@@ -32,7 +34,9 @@ export type ZoomState = "dung-gio" | "tre" | "vang" | "mien" | "dung" | "chua-di
 export type Fault = { severity: "nhe" | "nang"; label: string };
 
 export type BaiRow = { a: DAssignment; daily: boolean; week: number; state: BaiState; submittedAt: string | null; faults: Fault[]; note?: string };
-export type ZoomRow = { s: DSession; week: number; state: ZoomState; attendedAt: string | null; cameraOff: boolean; faults: Fault[]; note?: string };
+/** Camera của người có mặt: bật / không bật (trưởng nhóm báo) / chưa có báo cáo của nhóm. null: không có mặt. */
+export type CameraState = "bat" | "tat" | "chua-bao-cao" | null;
+export type ZoomRow = { s: DSession; week: number; state: ZoomState; attendedAt: string | null; cameraOff: boolean; camera: CameraState; faults: Fault[]; note?: string };
 
 export type LearnerResult = {
   l: DLearner;
@@ -142,7 +146,9 @@ export function computeDiscipline(input: DisciplineInput, cfg: DCfg): LearnerRes
         if (state !== "vang") r.zoomPresent++;
         if (state === "dung-gio") r.zoomOnTime++;
       }
-      r.zoom.push({ s, week: journeyWeek(cfg, s.startAt), state, attendedAt: att?.attendedAt ?? null, cameraOff: camOff && (state === "tre" || state === "dung-gio"), faults, note: exempt ?? (state === "dung" ? (l.stopReason ?? undefined) : undefined) });
+      const present = state === "tre" || state === "dung-gio";
+      const camera: CameraState = !present ? null : camOff ? "tat" : input.cameraReported === undefined || input.cameraReported.has(`${s.id}:${l.team}`) ? "bat" : "chua-bao-cao";
+      r.zoom.push({ s, week: journeyWeek(cfg, s.startAt), state, attendedAt: att?.attendedAt ?? null, cameraOff: camOff && present, camera, faults, note: exempt ?? (state === "dung" ? (l.stopReason ?? undefined) : undefined) });
     }
 
     for (const f of [...r.bai, ...r.zoom].flatMap((x) => x.faults)) {
