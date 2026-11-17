@@ -36,6 +36,7 @@ const TABS: [string, string][] = [
   ["/ky-luat/nhom", "Nhóm"],
   ["/ky-luat/thanh-vien", "Từng thành viên"],
   ["/ky-luat/mien", "Duyệt miễn"],
+  ["/ky-luat/truong-nhom", "Trưởng nhóm"],
 ];
 
 export function DisciplineShell(props: { tab: string; title: string; v: Viewer; children?: Child; notice?: string }) {

@@ -1,6 +1,8 @@
 import { COURSE, featureOfPath, featureOn } from "./course";
 import { byWeek, journeyWeek, rankTeams, totals, type LearnerResult } from "./discipline/engine";
 import { listExemptions, loadDiscipline, loadTeamReports, removeExemption, saveCamera, saveJournal, setExemption, setStopped } from "./discipline/data";
+import { LeadersPage } from "./pages/leaders";
+import { teamCodes } from "./domain/teams";
 import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -23,7 +25,7 @@ import { FOCUS_OPTIONS, PROGRESS, SPIRIT } from "./grading/rubric";
 import { allowedTeams, focusOf, gradableAssignments, loadQueue, loadSheet, saveReview, setFocus, validate, type SaveInput } from "./grading/store";
 import { AdminPage, type IssuedCode } from "./pages/admin";
 import {
-  AccountError, SESSION_COOKIE, SESSION_MAX_AGE, activate, canUseFullApp, changePassword, createUser, listUsers, login, logout,
+  AccountError, cleanPhone, SESSION_COOKIE, SESSION_MAX_AGE, activate, canUseFullApp, changePassword, createUser, listUsers, login, logout,
   reissueCode, sessionUser, setActive, setRole, setTeams, userLabel, type User,
 } from "./users/accounts";
 import { LeaderboardPage, LearnerDetailPage, LearnerDetailView } from "./pages/leaderboard";
@@ -600,6 +602,70 @@ app.post("/ky-luat/hv/:id/dung", async (c) => {
   if (from !== null && !/^\d{4}-\d{2}-\d{2}$/.test(from)) return c.text("Ngày không hợp lệ.", 400);
   await setStopped(c.env.DB, id, from, String(f.get("ly_do") ?? ""), c.get("email"), new Date());
   return c.redirect(`/ky-luat/hv/${id}?tb=dung`, 303);
+});
+
+// ---- BTC quản lý tài khoản trưởng nhóm (chỉ vai trò trưởng nhóm) ----
+const LEADER_NOTICES: Record<string, string> = {
+  doi: "Đã đổi nhóm phụ trách.",
+  "thu-hoi": "Đã thu hồi quyền và đăng xuất trưởng nhóm khỏi mọi máy.",
+  "khoi-phuc": "Đã khôi phục quyền.",
+};
+const LEADER_FROM = mondayOf(COURSE.discipline.startDate);
+async function leadersPage(c: Context<AppEnv>, extra: { issued?: IssuedCode; error?: string; notice?: string } = {}, status: 200 | 400 = 200) {
+  const leaders = (await listUsers(c.env.DB)).filter((u) => u.role === "truong_nhom");
+  return c.html(<LeadersPage v={viewerOf(c.get("user"))} leaders={leaders} origin={new URL(c.req.url).origin} {...extra} />, status);
+}
+async function targetLeader(c: Context<AppEnv>, f: FormData) {
+  const id = Number(f.get("id"));
+  return Number.isSafeInteger(id)
+    ? c.env.DB.prepare("SELECT id, name, phone FROM users WHERE id = ? AND role = 'truong_nhom'").bind(id).first<{ id: number; name: string; phone: string }>()
+    : null;
+}
+const validTeam = (t: string) => teamCodes().includes(t);
+
+app.use("/ky-luat/truong-nhom/*", async (c, next) => {
+  if (!canUseFullApp(c.get("user"))) return c.html(<ForbiddenPage user={c.get("user")} message="Chỉ BTC, coach, admin quản lý tài khoản trưởng nhóm." />, 403);
+  await next();
+});
+app.get("/ky-luat/truong-nhom", async (c) => {
+  if (!canUseFullApp(c.get("user"))) return c.html(<ForbiddenPage user={c.get("user")} message="Chỉ BTC, coach, admin quản lý tài khoản trưởng nhóm." />, 403);
+  return leadersPage(c, { notice: LEADER_NOTICES[c.req.query("tb") ?? ""] });
+});
+app.post("/ky-luat/truong-nhom/tao", async (c) => {
+  const f = await c.req.formData();
+  const team = String(f.get("doi") ?? "");
+  const input = { phone: String(f.get("sdt") ?? ""), name: String(f.get("ten") ?? ""), role: "truong_nhom" };
+  if (!validTeam(team)) return leadersPage(c, { error: "Cần chọn nhóm phụ trách." }, 400);
+  try {
+    const code = await createUser(c.env.DB, input, c.get("email"), new Date());
+    const id = (await c.env.DB.prepare("SELECT id FROM users WHERE phone = ?").bind(cleanPhone(input.phone)).first<{ id: number }>())!.id;
+    await setTeams(c.env.DB, id, [team], c.get("email"), new Date(), LEADER_FROM);
+    return leadersPage(c, { issued: { name: input.name.trim(), phone: input.phone, code } });
+  } catch (e) {
+    if (!(e instanceof AccountError)) throw e;
+    return leadersPage(c, { error: e.message }, 400);
+  }
+});
+app.post("/ky-luat/truong-nhom/ma", async (c) => {
+  const u = await targetLeader(c, await c.req.formData());
+  if (!u) return leadersPage(c, { error: "Không tìm thấy trưởng nhóm này." }, 400);
+  return leadersPage(c, { issued: { name: u.name, phone: u.phone, code: await reissueCode(c.env.DB, u.id, new Date()) } });
+});
+app.post("/ky-luat/truong-nhom/trang-thai", async (c) => {
+  const f = await c.req.formData();
+  const u = await targetLeader(c, f);
+  if (!u) return leadersPage(c, { error: "Không tìm thấy trưởng nhóm này." }, 400);
+  const on = f.get("bat") === "1";
+  await setActive(c.env.DB, u.id, on);
+  return c.redirect(`/ky-luat/truong-nhom?tb=${on ? "khoi-phuc" : "thu-hoi"}`, 303);
+});
+app.post("/ky-luat/truong-nhom/doi", async (c) => {
+  const f = await c.req.formData();
+  const u = await targetLeader(c, f);
+  const team = String(f.get("doi") ?? "");
+  if (!u || !validTeam(team)) return leadersPage(c, { error: "Cần chọn trưởng nhóm và nhóm hợp lệ." }, 400);
+  await setTeams(c.env.DB, u.id, [team], c.get("email"), new Date(), LEADER_FROM);
+  return c.redirect("/ky-luat/truong-nhom?tb=doi", 303);
 });
 
 app.get("/ky-luat/mien", async (c) => {
