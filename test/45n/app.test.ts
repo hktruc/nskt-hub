@@ -82,6 +82,9 @@ describe("45N-K02: kỷ luật", () => {
     // Trưởng nhóm Nhóm 1 chỉ thấy và báo được nhóm mình.
     html = await (await call("/ky-luat/zoom?buoi=100", { cookie: lead })).text();
     expect(html).not.toContain("Học Viên Ba");
+    // Bảng tổng hợp chỉ tính nhóm mình (Nhóm 1: 1 đúng giờ, 1 trễ, 0 vắng; Học Viên Ba vắng thuộc Nhóm 2).
+    expect(html).toMatch(/Vắng \(0\)/);
+    expect(html).not.toContain("Nhóm 2");
     expect((await call("/ky-luat/zoom/camera", { method: "POST", cookie: lead, body: form({ buoi: "100", doi: "T02", tat: "3" }) })).status).toBe(403);
     // Trước khi báo cáo: nhãn đỏ, chưa biết camera của người có mặt, chưa tính lỗi.
     html = await (await call("/ky-luat/zoom?buoi=100", { cookie: btc })).text();
@@ -114,6 +117,8 @@ describe("45N-K02: kỷ luật", () => {
     expect((await call("/ky-luat/hv/3", { cookie: lead })).status).toBe(403);
     expect((await call("/ky-luat/thanh-vien", { cookie: lead })).status).toBe(403);
     expect((await call("/nop-bai", { cookie: lead })).status).toBe(403);
+    for (const path of ["/ky-luat/bai-tap", "/ky-luat/mien", "/ky-luat/truong-nhom", "/quan-tri", "/du-lieu", "/canh-bao", "/bai?hv=1&bt=10"])
+      expect((await call(path, { cookie: lead })).status, path).toBe(403);
     const saved = await call("/ky-luat/nhom/T01/nhat-ky", { method: "POST", cookie: lead, body: form({ tuan: "1", tinh_hinh: "Cả nhóm cố gắng", de_xuat: "Không" }) });
     expect(saved.status).toBe(303);
     const html = await (await call("/ky-luat/nhom/T01?tuan=1", { cookie: lead })).text();

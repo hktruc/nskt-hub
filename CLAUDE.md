@@ -12,6 +12,7 @@ Web app quản lý học tập NSKT2026 cho BTC: lấy dữ liệu từ dh3g.vn,
 - **Không đụng tới hệ thống cũ**: ba repo `long-mon-*`, worker `long-mon-dh3g-staging-private-v1`, `long-mon-staging-test-v1` và các D1 của chúng. Không xóa dữ liệu đang có. Chỉ tắt hệ thống cũ khi chủ dự án yêu cầu.
 - Không triển khai lên Cloudflare khi chưa được đồng ý.
 - Trước khi mở PR: `npm run check` phải qua.
+- **Gắn nhãn** (chủ dự án yêu cầu 17/11): mỗi câu trả lời và tên PR mở đầu bằng **[nskt-hub]** (khóa NSKT2026) hoặc **[45n-hub]** (khóa 45 Ngày Gắn kết & Nâng tầm đội ngũ); việc ở mã nguồn chung ảnh hưởng cả hai thì ghi cả hai.
 
 ## Quyết định đã chốt
 

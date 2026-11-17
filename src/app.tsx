@@ -504,7 +504,9 @@ app.get("/ky-luat/zoom", async (c) => {
   const v = viewerOf(c.get("user"));
   const [{ input, results }, cameraReports] = await Promise.all([loadDiscipline(c.env.DB, new Date()), loadTeamReports(c.env.DB, "camera")]);
   const sessions = [...input.sessions].sort((a, b) => a.startAt.localeCompare(b.startAt));
-  const sums = sessions.map((s) => ({ s, ...zoomSummary(results, s.id) }));
+  // Trưởng nhóm chỉ thấy số liệu và báo cáo của nhóm mình.
+  const visible = results.filter((r) => v.full || canSeeTeam(v, r.l.team));
+  const sums = sessions.map((s) => ({ s, ...zoomSummary(visible, s.id) }));
   const wanted = Number(c.req.query("buoi"));
   const selected = sessions.find((s) => s.id === wanted) ?? [...sums].reverse().find((x) => x.past)?.s ?? null;
   return c.html(
@@ -512,8 +514,8 @@ app.get("/ky-luat/zoom", async (c) => {
       v={v}
       sessions={sums}
       selected={selected}
-      results={results.filter((r) => v.full || canSeeTeam(v, r.l.team))}
-      cameraReports={cameraReports}
+      results={visible}
+      cameraReports={cameraReports.filter((r) => v.full || canSeeTeam(v, r.team))}
       notice={DISC_NOTICES[c.req.query("tb") ?? ""]}
     />,
   );
