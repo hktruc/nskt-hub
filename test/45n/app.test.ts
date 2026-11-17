@@ -131,4 +131,31 @@ describe("45N-K02: kỷ luật", () => {
     expect(html).toContain("Học Viên Hai");
     expect(html).not.toContain("K01");
   });
+
+  it("BTC tạo, đổi nhóm, thu hồi tài khoản trưởng nhóm; không đụng được tài khoản khác", async () => {
+    const { call, btc, lead, raw } = await setup();
+    let res = await call("/ky-luat/truong-nhom/tao", { method: "POST", cookie: btc, body: form({ ten: "Trưởng Nhóm Hai", sdt: "0900000666", doi: "T02" }) });
+    let html = await res.text();
+    expect(res.status).toBe(200);
+    expect(html).toContain("Mã kích hoạt cho");
+    const row = raw.prepare("SELECT id, role FROM users WHERE phone='0900000666'").get() as { id: number; role: string };
+    expect(row.role).toBe("truong_nhom");
+    // Thiếu nhóm thì không tạo.
+    expect((await call("/ky-luat/truong-nhom/tao", { method: "POST", cookie: btc, body: form({ ten: "X", sdt: "0900000777" }) })).status).toBe(400);
+    // Đổi nhóm.
+    expect((await call("/ky-luat/truong-nhom/doi", { method: "POST", cookie: btc, body: form({ id: String(row.id), doi: "T01" }) })).status).toBe(303);
+    html = await (await call("/ky-luat/truong-nhom", { cookie: btc })).text();
+    expect(html).toContain("Trưởng Nhóm Hai");
+    expect(html).toContain("Nhóm chưa có trưởng nhóm: Nhóm 2");
+    // Không cấp lại mã / thu hồi được tài khoản BTC qua trang này.
+    const btcId = (raw.prepare("SELECT id FROM users WHERE phone='0900000444'").get() as { id: number }).id;
+    expect((await call("/ky-luat/truong-nhom/ma", { method: "POST", cookie: btc, body: form({ id: String(btcId) }) })).status).toBe(400);
+    expect((await call("/ky-luat/truong-nhom/trang-thai", { method: "POST", cookie: btc, body: form({ id: String(btcId), bat: "0" }) })).status).toBe(400);
+    // Thu hồi trưởng nhóm.
+    expect((await call("/ky-luat/truong-nhom/trang-thai", { method: "POST", cookie: btc, body: form({ id: String(row.id), bat: "0" }) })).status).toBe(303);
+    expect((raw.prepare("SELECT active FROM users WHERE id=?").get(row.id) as { active: number }).active).toBe(0);
+    // Trưởng nhóm không vào được trang này.
+    expect((await call("/ky-luat/truong-nhom", { cookie: lead })).status).toBe(403);
+    expect((await call("/ky-luat/truong-nhom/tao", { method: "POST", cookie: lead, body: form({ ten: "Y", sdt: "0900000888", doi: "T01" }) })).status).toBe(403);
+  });
 });

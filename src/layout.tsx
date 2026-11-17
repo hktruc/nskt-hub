@@ -378,6 +378,7 @@ const MORE_NAV: NavItem[] = [
     ? [
         { href: "/ky-luat/thanh-vien", label: "Từng thành viên", icon: "user" },
         { href: "/ky-luat/mien", label: "Duyệt miễn, dừng tham gia", icon: "shield" },
+        { href: "/ky-luat/truong-nhom", label: "Tài khoản trưởng nhóm", icon: "users" },
         { href: "/nop-bai", label: "Theo dõi nộp bài (chi tiết)", icon: "inbox" },
       ]
     : []),
