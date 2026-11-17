@@ -27,7 +27,19 @@ const hourLabel = (t: string) => (t.endsWith(":00") ? `${Number(t.slice(0, 2))}h
 const LATE_RULE = CFG.zoomCheckinTime
   ? `vào sau giờ bắt đầu tính điểm danh (${hourLabel(CFG.zoomCheckinTime)}), quá ${CFG.zoomLateMinutes} phút`
   : `vào sau giờ bắt đầu quá ${CFG.zoomLateMinutes} phút`;
-export type Viewer = { full: boolean; teams: string[] | null; nav: "full" | "leader" };
+/** Người xem: BTC (full), trưởng nhóm (teams), hoặc học viên xem trang công khai (pub: chỉ xem, ẩn thông tin nhạy cảm). */
+export type Viewer = { full: boolean; teams: string[] | null; nav: "full" | "leader" | "public"; pub?: boolean };
+export const PUBLIC_VIEWER: Viewer = { full: false, teams: null, nav: "public", pub: true };
+/** Đường dẫn trang công khai của khóa (vd. "/45ngaydonghanh"); rỗng nếu khóa không có trang công khai. */
+export const PUBLIC_BASE = COURSE.publicPath ?? "";
+/** Đổi đường dẫn nội bộ sang đường dẫn công khai khi người xem là học viên. */
+export function L(v: Viewer, path: string): string {
+  if (!v.pub) return path;
+  if (path === "/" || path === "/ky-luat") return PUBLIC_BASE;
+  return path.startsWith("/ky-luat/") ? PUBLIC_BASE + path.slice("/ky-luat".length) : path;
+}
+/** Các trang học viên xem được khi không đăng nhập. */
+const PUBLIC_TABS = ["/", "/ky-luat/zoom", "/ky-luat/bai-tap", "/ky-luat/nhom", "/ky-luat/thanh-vien"];
 
 const ddmm = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
 const when = (s: string | null) => (s ? `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 16)}` : "—");
@@ -48,10 +60,10 @@ export function DisciplineShell(props: { tab: string; title: string; v: Viewer; 
   return (
     <Layout title={props.title} nav={props.v.nav}>
       <h1>{props.title}</h1>
-      {props.v.full ? (
+      {props.v.full || props.v.pub ? (
         <nav class="chips" aria-label="Chọn trang">
-          {TABS.map(([href, label]) => (
-            <a class={`chip${props.tab === href ? " on" : ""}`} href={href}>
+          {TABS.filter(([href]) => !props.v.pub || PUBLIC_TABS.includes(href)).map(([href, label]) => (
+            <a class={`chip${props.tab === href ? " on" : ""}`} href={L(props.v, href)}>
               {label}
             </a>
           ))}
@@ -158,7 +170,7 @@ function RuleNote() {
   );
 }
 
-export function TeamTable(props: { teams: TeamResult[]; journals?: Set<string>; journalWeek?: number }) {
+export function TeamTable(props: { v: Viewer; teams: TeamResult[]; journals?: Set<string>; journalWeek?: number }) {
   return (
     <div class="scroll">
       <table>
@@ -181,7 +193,7 @@ export function TeamTable(props: { teams: TeamResult[]; journals?: Set<string>; 
                 <b>{t.rank}</b>
               </td>
               <td>
-                <a href={`/ky-luat/nhom/${t.team}`}>{teamLabel(t.team)}</a>
+                <a href={L(props.v, `/ky-luat/nhom/${t.team}`)}>{teamLabel(t.team)}</a>
               </td>
               <td>
                 {t.active}
@@ -280,13 +292,13 @@ export function DisciplineHomePage(props: {
           <div class="lbl">Tham gia Zoom</div>
           <div class="num">{t.zoomRate ?? "—"}%</div>
         </div>
-        <a class="tile" href="/ky-luat/thanh-vien">
+        <a class="tile" href={L(props.v, "/ky-luat/thanh-vien")}>
           <div class="lbl">Lỗi nhẹ</div>
           <div class="num" style={t.nhe ? "color:var(--warn-fg)" : ""}>
             {t.nhe}
           </div>
         </a>
-        <a class="tile" href="/ky-luat/thanh-vien">
+        <a class="tile" href={L(props.v, "/ky-luat/thanh-vien")}>
           <div class="lbl">Lỗi nặng</div>
           <div class="num" style={t.nang ? "color:var(--bad-fg)" : ""}>
             {t.nang}
@@ -301,12 +313,12 @@ export function DisciplineHomePage(props: {
           <span class={`badge ${props.lastSession.teamsReported < props.lastSession.teamsPresent ? "bad" : "ok"}`}>
             {props.lastSession.teamsReported}/{props.lastSession.teamsPresent} nhóm đã báo cáo camera
           </span>{" "}
-          <a href={`/ky-luat/zoom?buoi=${props.lastSession.s.id}`}>Xem danh sách →</a>
+          <a href={L(props.v, `/ky-luat/zoom?buoi=${props.lastSession.s.id}`)}>Xem danh sách →</a>
         </p>
       ) : null}
 
       <h2>Bảng xếp hạng {COURSE.teams.count} nhóm</h2>
-      <TeamTable teams={props.teams} journals={props.journals} journalWeek={props.currentWeek} />
+      <TeamTable v={props.v} teams={props.teams} journals={props.journals} journalWeek={props.currentWeek} />
       <RuleNote />
 
       <h2>Tiến độ qua {CFG.weeks} tuần</h2>
@@ -338,9 +350,9 @@ export function ZoomPage(props: {
       <ul class="small people">
         {p.xs.map((x) => (
           <li>
-            <a href={`/ky-luat/hv/${x.r.l.id}`}>{x.r.l.name}</a> <span class="muted">· {teamLabel(x.r.l.team)}</span>
+            <a href={L(props.v, `/ky-luat/hv/${x.r.l.id}`)}>{x.r.l.name}</a> <span class="muted">· {teamLabel(x.r.l.team)}</span>
             {p.time && x.z.attendedAt ? <span class="muted"> · vào {x.z.attendedAt.slice(11, 16)}</span> : null}
-            {x.z.note ? <span class="muted"> · {x.z.note}</span> : null}
+            {x.z.note && !props.v.pub ? <span class="muted"> · {x.z.note}</span> : null}
           </li>
         ))}
       </ul>
@@ -371,7 +383,7 @@ export function ZoomPage(props: {
             {props.sessions.map((x, i) => (
               <tr class={sel?.id === x.s.id ? "on" : ""}>
                 <td>
-                  <a href={`/ky-luat/zoom?buoi=${x.s.id}`}>{sessionName(x.s, i)}</a>
+                  <a href={L(props.v, `/ky-luat/zoom?buoi=${x.s.id}`)}>{sessionName(x.s, i)}</a>
                 </td>
                 {x.past ? (
                   <>
@@ -403,23 +415,27 @@ export function ZoomPage(props: {
         <>
           <h2>{sessionName(sel, idx)}</h2>
           <h2>Báo cáo camera của trưởng nhóm</h2>
+          {props.v.pub ? (
+            <p class="muted small">Trưởng nhóm báo cáo ai không bật camera sau mỗi buổi. Nhóm chưa báo cáo thì chưa tính lỗi camera.</p>
+          ) : (
           <p class="muted small">
             Mỗi buổi, trưởng nhóm <b>phải báo cáo</b> dù cả nhóm đều bật camera: đánh dấu người không bật rồi bấm "Lưu", hoặc bấm "Xác nhận: tất cả đều bật camera". Chưa báo cáo thì nhóm hiện
             nhãn đỏ và chưa tính lỗi camera. Lưu lại lần nữa sẽ thay báo cáo cũ của nhóm.
           </p>
+          )}
           {teams
             .filter((team) => props.v.teams === null || props.v.teams.includes(team))
             .map((team) => {
               const present = rows.filter((x) => x.r.l.team === team && (x.z.state === "dung-gio" || x.z.state === "tre"));
               const rep = reported(team);
               return (
-                <details class="card-item" open={props.v.teams !== null}>
+                <details class="card-item" open={props.v.teams !== null && !props.v.pub}>
                   <summary>
                     <b>{teamLabel(team)}</b>{" "}
                     <CamReport rep={rep} withTime />
-                    {rep ? <span class="muted small"> · {rep.by}</span> : null}
+                    {rep && !props.v.pub ? <span class="muted small"> · {rep.by}</span> : null}
                   </summary>
-                  {present.length ? (
+                  {props.v.pub ? null : present.length ? (
                     <form method="post" action="/ky-luat/zoom/camera">
                       <input type="hidden" name="buoi" value={String(sel.id)} />
                       <input type="hidden" name="doi" value={team} />
@@ -513,7 +529,7 @@ export function HomeworkPage(props: { v: Viewer; assignments: DAssignment[]; res
                   return (
                     <tr class={props.selected?.id === a.id ? "on" : ""}>
                       <td>
-                        <a href={`/ky-luat/bai-tap?bt=${a.id}`}>{shortTitle(a.title)}</a>
+                        <a href={L(props.v, `/ky-luat/bai-tap?bt=${a.id}`)}>{shortTitle(a.title)}</a>
                       </td>
                       <td class="small">{when(a.dueAt)}</td>
                       <td>{s.ok}</td>
@@ -583,7 +599,7 @@ export function HomeworkPage(props: { v: Viewer; assignments: DAssignment[]; res
             <ul class="small people">
               {missing.map((x) => (
                 <li>
-                  <a href={`/ky-luat/hv/${x.r.l.id}`}>{x.r.l.name}</a> <span class="muted">· {teamLabel(x.r.l.team)}</span> <State s={BAI_STATE[x.b.state]} />
+                  <a href={L(props.v, `/ky-luat/hv/${x.r.l.id}`)}>{x.r.l.name}</a> <span class="muted">· {teamLabel(x.r.l.team)}</span> <State s={BAI_STATE[x.b.state]} />
                 </li>
               ))}
             </ul>
@@ -607,7 +623,7 @@ export function MembersPage(props: { v: Viewer; results: LearnerResult[]; sort: 
   else rs.sort((a, b) => b.points - a.points || b.nang - a.nang || a.l.name.localeCompare(b.l.name, "vi"));
   const Th = (p: { k: string; label: string }) => (
     <th>
-      <a href={`/ky-luat/thanh-vien?xep=${p.k}`} class={props.sort === p.k || (p.k === "loi" && !["ten", "nhom"].includes(props.sort)) ? "on" : ""}>
+      <a href={L(props.v, `/ky-luat/thanh-vien?xep=${p.k}`)} class={props.sort === p.k || (p.k === "loi" && !["ten", "nhom"].includes(props.sort)) ? "on" : ""}>
         {p.label}
       </a>
     </th>
@@ -631,7 +647,7 @@ export function MembersPage(props: { v: Viewer; results: LearnerResult[]; sort: 
             {rs.map((r) => (
               <tr class={r.active ? "" : "muted"}>
                 <td>
-                  <a href={`/ky-luat/hv/${r.l.id}`}>{r.l.name}</a>
+                  <a href={L(props.v, `/ky-luat/hv/${r.l.id}`)}>{r.l.name}</a>
                   {r.active ? null : <span class="small"> (đã dừng)</span>}
                 </td>
                 <td>{teamLabel(r.l.team)}</td>
@@ -712,7 +728,7 @@ export function LearnerPage(props: { v: Viewer; r: LearnerResult; notice?: strin
                   <td>
                     <State s={BAI_STATE[b.state]} />
                     {b.submittedAt ? <div class="small muted">nộp {when(b.submittedAt)}</div> : null}
-                    {b.note ? <div class="small muted">Lý do: {b.note}</div> : null}
+                    {b.note && !props.v.pub ? <div class="small muted">Lý do: {b.note}</div> : null}
                   </td>
                   <td>
                     <FaultList f={b.faults} />
@@ -729,7 +745,7 @@ export function LearnerPage(props: { v: Viewer; r: LearnerResult; notice?: strin
   return (
     <DisciplineShell tab="/ky-luat/thanh-vien" title={r.l.name} v={props.v} notice={props.notice}>
       <p>
-        <a href={`/ky-luat/nhom/${r.l.team}`}>{teamLabel(r.l.team)}</a>
+        <a href={L(props.v, `/ky-luat/nhom/${r.l.team}`)}>{teamLabel(r.l.team)}</a>
         {r.active ? null : <span class="badge">Đã dừng tham gia từ {ddmm(r.l.stoppedFrom!)}</span>}
       </p>
       <div class="tiles">
@@ -777,7 +793,7 @@ export function LearnerPage(props: { v: Viewer; r: LearnerResult; notice?: strin
                 <td>
                   <State s={ZOOM_STATE[z.state]} />
                   {z.attendedAt ? <div class="small muted">vào {z.attendedAt.slice(11, 16)}</div> : null}
-                  {z.note ? <div class="small muted">Lý do: {z.note}</div> : null}
+                  {z.note && !props.v.pub ? <div class="small muted">Lý do: {z.note}</div> : null}
                 </td>
                 <td class="small">{z.camera ? <span class={z.camera === "tat" ? "badge bad" : z.camera === "chua-bao-cao" ? "badge" : ""}>{CAMERA_LABEL[z.camera]}</span> : ""}</td>
                 <td>
@@ -824,7 +840,7 @@ export function LearnerPage(props: { v: Viewer; r: LearnerResult; notice?: strin
 export function TeamsPage(props: { v: Viewer; teams: TeamResult[]; journals: Set<string>; currentWeek: number }) {
   return (
     <DisciplineShell tab="/ky-luat/nhom" title={`${COURSE.teams.count} nhóm`} v={props.v}>
-      <TeamTable teams={props.teams} journals={props.journals} journalWeek={props.currentWeek} />
+      <TeamTable v={props.v} teams={props.teams} journals={props.journals} journalWeek={props.currentWeek} />
       <RuleNote />
     </DisciplineShell>
   );
@@ -891,7 +907,7 @@ export function TeamPage(props: {
               .map((r) => (
                 <tr class={r.active ? "" : "muted"}>
                   <td>
-                    <a href={`/ky-luat/hv/${r.l.id}`}>{r.l.name}</a>
+                    <a href={L(props.v, `/ky-luat/hv/${r.l.id}`)}>{r.l.name}</a>
                     {r.active ? null : <span class="small"> (đã dừng)</span>}
                   </td>
                   <td>
@@ -920,7 +936,7 @@ export function TeamPage(props: {
             <li>
               Camera {sessionName(s, props.sessions.indexOf(s) >= 0 ? props.sessions.indexOf(s) : i)}:{" "}
               <CamReport rep={rep} withTime />{" "}
-              {props.canWrite ? <a href={`/ky-luat/zoom?buoi=${s.id}`}>Báo cáo →</a> : null}
+              {props.canWrite ? <a href={L(props.v, `/ky-luat/zoom?buoi=${s.id}`)}>Báo cáo →</a> : null}
             </li>
           );
         })}
@@ -929,7 +945,7 @@ export function TeamPage(props: {
           return (
             <li>
               Nhật ký tuần {w}: {has ? <span class="badge ok">Đã gửi</span> : <span class="badge bad">Chưa gửi</span>}{" "}
-              <a href={`/ky-luat/nhom/${props.team}?tuan=${w}#nhat-ky`}>Xem{props.canWrite ? " / viết" : ""} →</a>
+              <a href={L(props.v, `/ky-luat/nhom/${props.team}?tuan=${w}#nhat-ky`)}>Xem{props.canWrite ? " / viết" : ""} →</a>
             </li>
           );
         })}
@@ -940,13 +956,13 @@ export function TeamPage(props: {
       </h2>
       <nav class="chips" aria-label="Chọn tuần">
         {Array.from({ length: CFG.weeks }, (_, i) => i + 1).map((w) => (
-          <a class={`chip${w === props.week ? " on" : ""}`} href={`/ky-luat/nhom/${props.team}?tuan=${w}#nhat-ky`}>
+          <a class={`chip${w === props.week ? " on" : ""}`} href={L(props.v, `/ky-luat/nhom/${props.team}?tuan=${w}#nhat-ky`)}>
             Tuần {w}
             {props.journals.some((x) => x.ref === String(w)) ? " ✓" : ""}
           </a>
         ))}
       </nav>
-      {j ? <p class="small muted">Gửi lúc {formatVN(j.at)} · {j.by}</p> : null}
+      {j ? <p class="small muted">Gửi lúc {formatVN(j.at)}{props.v.pub ? "" : ` · ${j.by}`}</p> : null}
       {props.canWrite ? (
         <form method="post" action={`/ky-luat/nhom/${props.team}/nhat-ky`} class="auth-form journal">
           <input type="hidden" name="tuan" value={String(props.week)} />
@@ -960,6 +976,8 @@ export function TeamPage(props: {
           ))}
           <button>{j ? "Cập nhật nhật ký" : "Gửi nhật ký tuần " + props.week}</button>
         </form>
+      ) : j && props.v.pub ? (
+        <p class="muted">Nhóm đã gửi nhật ký tuần này (nội dung chỉ BTC xem).</p>
       ) : j ? (
         <dl class="journal-view">
           {CFG.journalFields.map((f) => (
@@ -984,7 +1002,7 @@ export function ExemptionsPage(props: { v: Viewer; exemptions: Exemption[]; resu
   return (
     <DisciplineShell tab="/ky-luat/mien" title="Duyệt miễn, dừng tham gia" v={props.v}>
       <p class="muted small">
-        Để duyệt miễn: mở trang của thành viên (mục <a href="/ky-luat/thanh-vien">Từng thành viên</a>), bấm "Duyệt miễn" ở dòng bài tập / buổi Zoom, ghi lý do. Mục được miễn không tính lỗi.
+        Để duyệt miễn: mở trang của thành viên (mục <a href={L(props.v, "/ky-luat/thanh-vien")}>Từng thành viên</a>), bấm "Duyệt miễn" ở dòng bài tập / buổi Zoom, ghi lý do. Mục được miễn không tính lỗi.
       </p>
       <h2>Đã duyệt miễn ({props.exemptions.length})</h2>
       {props.exemptions.length ? (
@@ -1004,7 +1022,7 @@ export function ExemptionsPage(props: { v: Viewer; exemptions: Exemption[]; resu
                 return (
                   <tr>
                     <td>
-                      <a href={`/ky-luat/hv/${e.learnerId}`}>{r?.l.name ?? `#${e.learnerId}`}</a>
+                      <a href={L(props.v, `/ky-luat/hv/${e.learnerId}`)}>{r?.l.name ?? `#${e.learnerId}`}</a>
                       {r ? <span class="muted small"> · {teamLabel(r.l.team)}</span> : null}
                     </td>
                     <td>{props.titles.get(`${e.kind}:${e.ref}`) ?? `${e.kind === "zoom" ? "Buổi Zoom" : "Bài"} #${e.ref}`}</td>
@@ -1027,7 +1045,7 @@ export function ExemptionsPage(props: { v: Viewer; exemptions: Exemption[]; resu
         <ul>
           {stopped.map((r) => (
             <li>
-              <a href={`/ky-luat/hv/${r.l.id}`}>{r.l.name}</a> <span class="muted small">· {teamLabel(r.l.team)} · từ {ddmm(r.l.stoppedFrom!)}{r.l.stopReason ? ` · ${r.l.stopReason}` : ""}</span>
+              <a href={L(props.v, `/ky-luat/hv/${r.l.id}`)}>{r.l.name}</a> <span class="muted small">· {teamLabel(r.l.team)} · từ {ddmm(r.l.stoppedFrom!)}{r.l.stopReason ? ` · ${r.l.stopReason}` : ""}</span>
             </li>
           ))}
         </ul>

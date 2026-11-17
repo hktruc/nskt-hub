@@ -1,4 +1,14 @@
+import { COURSE, featureOn } from "../course";
 import { Layout } from "../layout";
+
+/** Ai dùng trang nội bộ, theo tính năng của khóa. */
+const STAFF = featureOn("discipline") ? "BTC, coach và trưởng nhóm" : "BTC, coach và ban phụng sự";
+/** Nhắc học viên dùng link công khai (không ghi link để không lộ đường dẫn). */
+function LearnerHint() {
+  return featureOn("discipline") && COURSE.publicPath ? (
+    <p class="small notice">Bạn là học viên? Hãy dùng <b>link công khai</b> BTC gửi trong nhóm lớp, không cần đăng nhập.</p>
+  ) : null;
+}
 import { ROLE_LABEL, type User } from "../users/accounts";
 import { teamLabel } from "../domain/teams";
 
@@ -12,7 +22,8 @@ export function LoginPage(props: { error?: string; phone?: string; next?: string
     <Layout title="Đăng nhập" publicPage>
       <div class="auth-box">
         <h1>Đăng nhập</h1>
-        <p class="muted small">Dành cho BTC, coach và ban phụng sự.</p>
+        <p class="muted small">Dành cho {STAFF}.</p>
+        <LearnerHint />
         {props.notice ? <p class="notice small">{props.notice}</p> : null}
         {props.error ? <p class="warn small">{props.error}</p> : null}
         <form method="post" action="/dang-nhap" class="auth-form">
@@ -63,7 +74,8 @@ export function NeedLoginPage(props: { path: string; message?: string }) {
     <Layout title="Cần đăng nhập" publicPage>
       <div class="auth-box">
         <h1>Cần đăng nhập</h1>
-        <p>Trang này chỉ dành cho BTC, coach và ban phụng sự.</p>
+        <p>Trang này chỉ dành cho {STAFF}.</p>
+        <LearnerHint />
         {props.message ? <p class="muted small">{props.message}</p> : null}
         <p>
           <a class="btn" href={`/dang-nhap?tiep=${encodeURIComponent(props.path)}`}>
@@ -77,7 +89,7 @@ export function NeedLoginPage(props: { path: string; message?: string }) {
 
 export function ForbiddenPage(props: { user: User; message: string }) {
   return (
-    <Layout title="Không có quyền" nav={props.user.role === "phung_su" ? "grader" : "full"}>
+    <Layout title="Không có quyền" nav={props.user.role === "phung_su" ? "grader" : props.user.role === "truong_nhom" ? "leader" : "full"}>
       <h1>Không có quyền</h1>
       <p>{props.message}</p>
       <p>

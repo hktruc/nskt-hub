@@ -173,4 +173,42 @@ describe("45N-K02: kỷ luật", () => {
     expect((await call("/ky-luat/truong-nhom", { cookie: lead })).status).toBe(403);
     expect((await call("/ky-luat/truong-nhom/tao", { method: "POST", cookie: lead, body: form({ ten: "Y", sdt: "0900000888", doi: "T01" }) })).status).toBe(403);
   });
+
+  it("link công khai /45ngaydonghanh: không đăng nhập, chỉ xem 5 trang, ẩn thông tin nhạy cảm", async () => {
+    const { call, btc, lead } = await setup();
+    // BTC duyệt miễn có lý do, trưởng nhóm viết nhật ký: phần công khai không được lộ.
+    await call("/ky-luat/hv/2/mien", { method: "POST", cookie: btc, body: form({ loai: "bai", ma: "11", ly_do: "Lý do riêng tư" }) });
+    await call("/ky-luat/nhom/T01/nhat-ky", { method: "POST", cookie: lead, body: form({ tuan: "1", kho_khan: "Chuyện riêng của nhóm" }) });
+    await call("/ky-luat/zoom/camera", { method: "POST", cookie: lead, body: form({ buoi: "100", doi: "T01", tatca: "1" }) });
+    const P = "/45ngaydonghanh";
+    for (const path of ["", "/zoom", "/zoom?buoi=100", "/bai-tap", "/bai-tap?bt=11", "/nhom", "/nhom/T01?tuan=1", "/thanh-vien", "/hv/2", "/hv/1"]) {
+      const res = await call(P + path);
+      expect(res.status, path).toBe(200);
+      const html = await res.text();
+      expect(html).not.toContain("Lý do riêng tư");
+      expect(html).not.toContain("Chuyện riêng của nhóm");
+      expect(html).not.toContain("Trưởng Nhóm Giả");
+      expect(html).not.toContain("<form");
+      expect(html).not.toContain('href="/ky-luat');
+      expect(html).not.toContain('href="/quan-tri"');
+      expect(html).not.toContain("Duyệt miễn");
+    }
+    const home = await (await call(P)).text();
+    expect(home).toContain("<h1>Dashboard</h1>");
+    expect(home).toContain(`href="${P}/zoom"`);
+    expect(home).toContain(`href="${P}/nhom/T01"`);
+    expect(await (await call(P + "/hv/2")).text()).toContain("Được miễn");
+    expect(await (await call(P + "/nhom/T01?tuan=1")).text()).toContain("Nhóm đã gửi nhật ký tuần này");
+    // Phần BTC vẫn cần đăng nhập; trang đăng nhập nhắc học viên dùng link công khai (không ghi link).
+    for (const path of ["/", "/ky-luat/zoom", "/ky-luat/mien", "/ky-luat/truong-nhom", "/nop-bai"]) {
+      const res = await call(path);
+      expect(res.status, path).not.toBe(200);
+      const html = await res.text();
+      expect(html).toContain("link công khai");
+      expect(html).not.toContain(P);
+    }
+    // Không ghi được gì qua đường dẫn công khai.
+    expect((await call(P + "/zoom/camera", { method: "POST", body: form({ buoi: "100", doi: "T01", tatca: "1" }) })).status).not.toBe(303);
+    expect((await call(P + "/mien")).status).not.toBe(200);
+  });
 });
