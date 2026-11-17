@@ -90,7 +90,7 @@ export function ForbiddenPage(props: { user: User; message: string }) {
 export function AccountPage(props: { user: User; error?: string; notice?: string }) {
   const u = props.user;
   return (
-    <Layout title="Tài khoản" nav={u.role === "phung_su" ? "grader" : "full"}>
+    <Layout title="Tài khoản" nav={u.role === "phung_su" ? "grader" : u.role === "truong_nhom" ? "leader" : "full"}>
       <h1>Tài khoản</h1>
       {props.notice ? <p class="notice toast" role="status">✓ {props.notice}</p> : null}
       <p>

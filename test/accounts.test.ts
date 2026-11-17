@@ -38,6 +38,19 @@ async function setup() {
 }
 
 describe("tài khoản nội bộ", () => {
+  it("đầu mỗi trang nội bộ hiện tên và vai trò người đang đăng nhập", async () => {
+    const { codes, call, activateAs } = await setup();
+    const cookie = await activateAs("0900000111", codes.coach);
+    for (const path of ["/", "/nop-bai", "/tai-khoan"]) {
+      const html = await (await call(path, { cookie })).text();
+      expect(html).toContain('class="who"');
+      expect(html).toContain("<b>Coach Giả</b><small>Coach</small>");
+      expect(html).not.toContain("<!--nguoi-dang-nhap-->");
+    }
+    const ps = await activateAs("0900000222", codes.ps);
+    expect(await (await call("/cham", { cookie: ps })).text()).toContain("<b>Phụng Sự Giả</b><small>Ban phụng sự</small>");
+  });
+
   it("kích hoạt bằng mã một lần, đặt mật khẩu, đăng nhập lại được; mã không dùng lại được", async () => {
     const { raw, codes, call, activateAs } = await setup();
     const cookie = await activateAs("0900000111", codes.coach.toLowerCase()); // không phân biệt hoa thường

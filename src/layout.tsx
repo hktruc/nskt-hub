@@ -315,6 +315,14 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .lsum tr.rk-xanh td:first-child { box-shadow:inset 4px 0 0 #22C55E; } .lsum tr.rk-vang td:first-child { box-shadow:inset 4px 0 0 #FACC15; } .lsum tr.rk-do td:first-child { box-shadow:inset 4px 0 0 #F87171; }
 .plist { list-style:none; margin:8px 0 0; padding:0; columns:2 220px; } .plist li { padding:3px 0; break-inside:avoid; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+/* Người đang đăng nhập (góc trên phải) */
+.who { display:inline-flex; align-items:center; gap:8px; margin-left:8px; text-decoration:none; color:inherit; padding:4px 6px; border-radius:999px; }
+.who:hover { background:var(--soft); }
+.who .av { width:32px; height:32px; border-radius:50%; background:var(--accent); color:var(--on-accent); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:.8125rem; flex:none; }
+.who-t { display:none; line-height:1.15; max-width:160px; }
+.who-t b { display:block; font-size:.8125rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.who-t small { display:block; font-size:.75rem; color:var(--muted); }
+@media (min-width: 1100px) { .who-t { display:block; } }
 /* Kỷ luật */
 .grid2 { display:grid; grid-template-columns:1fr; gap:4px 20px; }
 @media (min-width: 720px) { .grid2 { grid-template-columns:1fr 1fr; } }
@@ -401,6 +409,16 @@ const LEADER_NAV: NavItem[] = [
 // Đánh dấu mục đang mở (đường dẫn dài nhất khớp).
 const ACTIVE_JS = `(()=>{const p=location.pathname;let best=null,len=-1;document.querySelectorAll('[data-nav]').forEach(a=>{const h=a.getAttribute('href');const ok=h==='/'?p==='/':(p===h||p.startsWith(h+'/'));if(ok&&h.length>len){best=h;len=h.length;}});if(best)document.querySelectorAll('[data-nav][href="'+best+'"]').forEach(a=>a.setAttribute('aria-current','page'));})();`;
 
+/** Chỗ hiện người đang đăng nhập ở đầu trang; ứng dụng điền vào sau khi dựng trang (xem `whoChip`). */
+export const WHO_SLOT = "<!--nguoi-dang-nhap-->";
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+/** Tên + vai trò người đang đăng nhập, bấm vào mở trang Tài khoản. */
+export function whoChip(name: string, role: string): string {
+  const initials = name.trim().split(/\s+/).slice(-2).map((w) => w[0] ?? "").join("").toUpperCase() || "?";
+  return `<a href="/tai-khoan" class="who" title="Đang đăng nhập: ${esc(name)} (${esc(role)}). Bấm để xem tài khoản, đăng xuất"><span class="av" aria-hidden="true">${esc(initials)}</span><span class="who-t"><b>${esc(name)}</b><small>${esc(role)}</small></span></a>`;
+}
+
 export type Og = { title: string; description: string; url: string; image: string };
 
 export function Layout(props: { title: string; children?: Child; publicPage?: boolean; nav?: "full" | "grader" | "leader"; og?: Og }) {
@@ -476,6 +494,7 @@ export function Layout(props: { title: string; children?: Child; publicPage?: bo
                 )}
               </nav>
             ) : null}
+            {withNav ? raw(WHO_SLOT) : null}
           </div>
         </header>
         <main>{props.children}</main>

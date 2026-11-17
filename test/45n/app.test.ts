@@ -93,6 +93,7 @@ describe("45N-K02: kỷ luật", () => {
 
   it("trưởng nhóm: chỉ vào nhóm mình, viết nhật ký; không duyệt miễn được", async () => {
     const { call, lead } = await setup();
+    expect(await (await call("/ky-luat/nhom/T01", { cookie: lead })).text()).toContain("<small>Trưởng nhóm</small>");
     const home = await call("/", { cookie: lead });
     expect(home.headers.get("location")).toBe("/ky-luat/nhom");
     expect((await call("/ky-luat/nhom", { cookie: lead })).headers.get("location")).toBe("/ky-luat/nhom/T01");

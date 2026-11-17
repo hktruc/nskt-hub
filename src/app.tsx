@@ -9,7 +9,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { authenticate } from "./auth";
 import { addDays, vietnamDay } from "./dates";
 import type { Env } from "./env";
-import { Layout } from "./layout";
+import { Layout, WHO_SLOT, whoChip } from "./layout";
 import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
 import { loadOverview, OverviewPage } from "./pages/overview";
@@ -25,7 +25,7 @@ import { FOCUS_OPTIONS, PROGRESS, SPIRIT } from "./grading/rubric";
 import { allowedTeams, focusOf, gradableAssignments, loadQueue, loadSheet, saveReview, setFocus, validate, type SaveInput } from "./grading/store";
 import { AdminPage, type IssuedCode } from "./pages/admin";
 import {
-  AccountError, cleanPhone, SESSION_COOKIE, SESSION_MAX_AGE, activate, canUseFullApp, changePassword, createUser, listUsers, login, logout,
+  AccountError, cleanPhone, ROLE_LABEL, SESSION_COOKIE, SESSION_MAX_AGE, activate, canUseFullApp, changePassword, createUser, listUsers, login, logout,
   reissueCode, sessionUser, setActive, setRole, setTeams, userLabel, type User,
 } from "./users/accounts";
 import { LeaderboardPage, LearnerDetailPage, LearnerDetailView } from "./pages/leaderboard";
@@ -192,6 +192,14 @@ app.use("*", async (c, next) => {
   c.set("user", user);
   c.set("email", userLabel(user));
   await next();
+  // Hiện tên + vai trò người đang đăng nhập ở đầu mọi trang nội bộ.
+  if (c.res.headers.get("content-type")?.startsWith("text/html")) {
+    const html = await c.res.text();
+    if (html.includes(WHO_SLOT)) {
+      const label = user.viaAccess ? "Admin (Cloudflare Access)" : ROLE_LABEL[user.role];
+      c.res = new Response(html.replace(WHO_SLOT, whoChip(user.name, label)), c.res);
+    } else c.res = new Response(html, c.res);
+  }
 });
 
 // ---- Tài khoản của chính mình ----
