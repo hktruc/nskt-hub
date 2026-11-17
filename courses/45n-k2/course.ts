@@ -9,13 +9,13 @@ export const COURSE: CourseConfig = {
   ...NSKT, // các phần không dùng ở khóa này (điểm %, tiêu chí chấm video) giữ như NSKT cho đủ cấu trúc
   id: "45n-k2",
   brand: {
-    name: "Hành trình 45N · Gắn kết & Nâng tầm đội ngũ",
-    short: "45N K2",
+    name: "45 Ngày Gắn kết & Nâng tầm đội ngũ",
+    short: "Dashboard", // chủ dự án 17/11: tên trang là "Dashboard"
     tagline: "Gắn kết & Nâng tầm đội ngũ",
     logo: "/brand/logo.svg",
     themeColor: "#0F766E",
-    shareTitle: "45N K2",
-    shareDescription: "Theo dõi hành trình 45 ngày Gắn kết & Nâng tầm đội ngũ.",
+    shareTitle: "Dashboard · 45 Ngày Gắn kết & Nâng tầm đội ngũ",
+    shareDescription: "Dashboard theo dõi 45 Ngày Gắn kết & Nâng tầm đội ngũ.",
     shareImage: "/brand/logo.svg",
   },
   teams: {

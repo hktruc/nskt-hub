@@ -30,7 +30,7 @@ const shortTitle = (t: string) => t.replace(/\s+/g, " ").trim();
 export const sessionName = (s: DSession, i?: number) => `${i !== undefined ? `Buổi ${i + 1} · ` : ""}${ddmm(s.startAt)} ${s.startAt.slice(11, 16)}${s.title ? ` · ${s.title}` : ""}`;
 
 const TABS: [string, string][] = [
-  ["/", "Tổng quan"],
+  ["/", "Dashboard"],
   ["/ky-luat/zoom", "Điểm danh Zoom"],
   ["/ky-luat/bai-tap", "Bài tập"],
   ["/ky-luat/nhom", "Nhóm"],
@@ -236,7 +236,7 @@ export function DisciplineHomePage(props: {
 }) {
   const t = props.t;
   return (
-    <DisciplineShell tab="/" title={`Tổng quan ${COURSE.brand.short}`} v={props.v}>
+    <DisciplineShell tab="/" title="Dashboard" v={props.v}>
       <p class="muted small">
         {COURSE.brand.name} · tuần {props.currentWeek}/{CFG.weeks} · dữ liệu dh3g cập nhật {formatVN(props.updatedAt)}
       </p>

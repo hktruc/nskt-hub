@@ -56,7 +56,8 @@ describe("45N-K02: kỷ luật", () => {
   it("trang chủ là tổng quan kỷ luật; không có bảng xếp hạng điểm, không công khai", async () => {
     const { call, btc } = await setup();
     const html = await (await call("/", { cookie: btc })).text();
-    expect(html).toContain("Tổng quan 45N K2");
+    expect(html).toContain("<h1>Dashboard</h1>");
+    expect(html).toContain("45 Ngày Gắn kết &amp; Nâng tầm đội ngũ");
     expect(html).toContain("Bảng xếp hạng 7 nhóm");
     expect(html).toContain('href="/ky-luat/nhom/T01"');
     expect(html).not.toContain("Người BTC");
