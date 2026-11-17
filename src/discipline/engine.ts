@@ -74,6 +74,15 @@ export function addMinutes(at: string, min: number): string {
   return new Date(Date.parse(`${at.slice(0, 19)}Z`) + min * 60_000).toISOString().slice(0, 19);
 }
 
+/** Giờ bắt đầu tính điểm danh của buổi: giờ cố định của khóa (nếu có) trong ngày buổi học, không thì giờ bắt đầu trên dh3g. */
+export function checkinStart(cfg: DCfg, s: DSession): string {
+  return cfg.zoomCheckinTime ? `${s.startAt.slice(0, 10)}T${cfg.zoomCheckinTime}:00` : s.startAt.slice(0, 19);
+}
+/** Vào sau mốc này là vào trễ. */
+export function lateAfter(cfg: DCfg, s: DSession): string {
+  return addMinutes(checkinStart(cfg, s), cfg.zoomLateMinutes);
+}
+
 const isDaily = (type: string) => type === "NORMAL";
 const fault = (sev: Severity, label: string): Fault[] => (sev ? [{ severity: sev, label }] : []);
 
@@ -135,7 +144,7 @@ export function computeDiscipline(input: DisciplineInput, cfg: DCfg): LearnerRes
       let faults: Fault[] = [];
       if (stopped(s.startAt)) state = "dung";
       else if (exempt !== undefined) state = "mien";
-      else if (att?.attended) state = att.attendedAt && att.attendedAt.slice(0, 19) > addMinutes(s.startAt, cfg.zoomLateMinutes) ? "tre" : "dung-gio";
+      else if (att?.attended) state = att.attendedAt && att.attendedAt.slice(0, 19) > lateAfter(cfg, s) ? "tre" : "dung-gio";
       else state = over ? "vang" : "chua-dien-ra";
 
       if (state === "tre") faults = fault(cfg.rules.zoomLate, "Vào Zoom trễ");

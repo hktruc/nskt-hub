@@ -22,6 +22,11 @@ import type { Exemption, TeamReport } from "../discipline/data";
 import { Layout } from "../layout";
 
 const CFG = COURSE.discipline;
+/** "vào sau giờ bắt đầu tính điểm danh (20h), quá 15 phút" hoặc "vào sau giờ bắt đầu quá 5 phút". */
+const hourLabel = (t: string) => (t.endsWith(":00") ? `${Number(t.slice(0, 2))}h` : t.replace(":", "h"));
+const LATE_RULE = CFG.zoomCheckinTime
+  ? `vào sau giờ bắt đầu tính điểm danh (${hourLabel(CFG.zoomCheckinTime)}), quá ${CFG.zoomLateMinutes} phút`
+  : `vào sau giờ bắt đầu quá ${CFG.zoomLateMinutes} phút`;
 export type Viewer = { full: boolean; teams: string[] | null; nav: "full" | "leader" };
 
 const ddmm = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
@@ -141,7 +146,7 @@ function RuleNote() {
         <li>Bài ngày qua hạn mà không nộp: {lab(r.dailyMissing)}. Nộp bù sau hạn: {lab(r.dailyLate)} (vẫn ghi "nộp trễ").</li>
         <li>Bài tuần nộp trễ: {lab(r.weeklyLate)}. Qua hạn mà không nộp: {lab(r.weeklyMissing)}.</li>
         <li>
-          Zoom: vào sau giờ bắt đầu quá {CFG.zoomLateMinutes} phút: {lab(r.zoomLate)}. Vắng: {lab(r.zoomAbsent)}. Không bật camera (trưởng nhóm báo): {lab(r.cameraOff)}.
+          Zoom: {LATE_RULE}: {lab(r.zoomLate)}. Vắng: {lab(r.zoomAbsent)}. Không bật camera (trưởng nhóm báo): {lab(r.cameraOff)}.
         </li>
         <li>Có mặt đúng giờ và bật camera, mục chưa tới hạn, mục BTC duyệt miễn: không lỗi.</li>
         <li>
@@ -345,7 +350,7 @@ export function ZoomPage(props: {
   return (
     <DisciplineShell tab="/ky-luat/zoom" title="Điểm danh Zoom" v={props.v} notice={props.notice}>
       <p class="muted small">
-        Có mặt / vào trễ / vắng lấy tự động từ dh3g (vào sau giờ bắt đầu quá {CFG.zoomLateMinutes} phút là trễ). Bật camera: dh3g không ghi nhận, <b>trưởng nhóm báo</b> ngay trên trang này.
+        Có mặt đúng giờ / vào trễ / vắng lấy tự động từ dh3g ({LATE_RULE} là trễ). Bật camera: dh3g không ghi nhận, <b>trưởng nhóm báo</b> ngay trên trang này.
       </p>
       <h2>Tổng hợp {props.sessions.length} buổi</h2>
       {props.sessions.length === 0 ? <p class="muted">dh3g chưa có buổi Zoom nào từ {ddmm(CFG.startDate)}.</p> : null}

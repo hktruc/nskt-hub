@@ -31,7 +31,7 @@ async function setup() {
       (2,10,'OVERDUE','2026-11-13T08:00:00','h','${t}','${t}','${t}'), (2,11,'NOT_SUBMITTED',NULL,'h','${t}','${t}','${t}'),
       (3,10,'NOT_SUBMITTED',NULL,'h','${t}','${t}','${t}'), (3,11,'DONE','2026-11-15T10:00:00','h','${t}','${t}','${t}');
     INSERT INTO sessions VALUES (100,'','2026-11-12T19:45:00','2026-11-12T20:30:00',96,'${t}','${t}');
-    INSERT INTO attendances VALUES (1,100,1,'2026-11-12T19:44:00','${t}'), (2,100,1,'2026-11-12T19:58:00','${t}'), (3,100,0,NULL,'${t}');
+    INSERT INTO attendances VALUES (1,100,1,'2026-11-12T19:44:00','${t}'), (2,100,1,'2026-11-12T20:16:00','${t}'), (3,100,0,NULL,'${t}');
   `);
   const now = new Date();
   const btcCode = await createUser(d1, { phone: "0900000444", name: "BTC Giả", role: "btc" }, "test", now);
@@ -78,6 +78,7 @@ describe("45N-K02: kỷ luật", () => {
     expect(html).toMatch(/Có mặt đúng giờ \(1\)/);
     expect(html).toMatch(/Vào trễ \(1\)/);
     expect(html).toMatch(/Vắng \(1\)/);
+    expect(html).toContain("vào sau giờ bắt đầu tính điểm danh (20h), quá 15 phút là trễ");
     // Trưởng nhóm Nhóm 1 chỉ thấy và báo được nhóm mình.
     html = await (await call("/ky-luat/zoom?buoi=100", { cookie: lead })).text();
     expect(html).not.toContain("Học Viên Ba");

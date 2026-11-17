@@ -35,7 +35,9 @@ export const COURSE: CourseConfig = {
   discipline: {
     startDate: "2026-11-11", // ngày khai giảng K02: buổi Zoom khai giảng là buổi 1/6; bài tập đầu tiên hạn 12/11
     weeks: 6,
-    zoomLateMinutes: 5, // BTC 45N đồng ý: vào sau giờ bắt đầu quá 5 phút là trễ
+    // Chủ dự án 17/11: giờ bắt đầu tính điểm danh 20:00 (dh3g ghi buổi bắt đầu 19:45), vào sau 20:15 là trễ.
+    zoomCheckinTime: "20:00",
+    zoomLateMinutes: 15,
     points: { nhe: 1, nang: 3 },
     rules: {
       dailyMissing: "nhe", // "Không làm bài tập ngày sau deadline: 1 lỗi nhẹ"
