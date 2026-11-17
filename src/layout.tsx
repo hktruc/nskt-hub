@@ -362,7 +362,7 @@ export function Icon(props: { name: string }) {
 type NavItem = { href: string; label: string; icon: string };
 const discipline = featureOn("discipline");
 const MAIN_NAV: NavItem[] = [
-  { href: "/", label: "Tổng quan", icon: "home" },
+  { href: "/", label: discipline ? "Dashboard" : "Tổng quan", icon: "home" },
   ...(discipline
     ? [
         { href: "/ky-luat/zoom", label: "Zoom", icon: "video" },
