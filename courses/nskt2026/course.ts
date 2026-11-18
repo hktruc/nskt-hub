@@ -103,6 +103,7 @@ export const COURSE: CourseConfig = {
     reports: true,
     leaderboard: true,
     faq: true,
+    chamCheo: true,
     discipline: false,
   },
 };

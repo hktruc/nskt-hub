@@ -68,6 +68,7 @@ export const COURSE: CourseConfig = {
     reports: false, // thay bằng các trang Kỷ luật (tổng quan, Zoom, bài tập, cá nhân, nhóm)
     leaderboard: false,
     faq: false,
+    chamCheo: false,
     discipline: true,
   },
 };

@@ -47,6 +47,7 @@ Chủ dự án không phải lập trình viên. Báo cáo, PR và giao diện �
 | Cloudflare Access (chỉ khóa `/quan-tri`) | ứng dụng "nskt-hub - Cloudflare Workers" (`2e2a4c1a-…`), AUD `cd04f88b…` | ứng dụng "45n-hub - quan-tri" (`f572a1ca-…`), AUD `837bbf85…` |
 | Chính sách Access | dùng chung chính sách "Long Mon staging owner only" (`c16e402a-…`): chỉ email chủ dự án | (như bên trái) |
 | Secret trên Cloudflare | `DH3G_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON` (đều đã nhập) | `DH3G_API_KEY` (đã nhập); không có OpenAI |
+| Nối với Worker khác | service binding `CHAM_CHEO` → Worker `nskt-cham-cheo-stage` (màn hình chiếu chấm chéo), biến `CHAM_CHEO_ORIGIN` | không |
 | Đồng bộ dh3g | `DH3G_COMMUNITY_ID=44`, `SYNC_START_DATE=2026-09-23` | `DH3G_COMMUNITY_ID=47`, `SYNC_START_DATE=2026-11-09` |
 
 Tài khoản Cloudflare `6cf1ac5bfc7c2176ed31399545ce50db` (mã này không phải bí mật). Khóa Cloudflare của phiên Claude làm được những việc sau: D1 (tạo, truy vấn, migration), Access (đọc, tạo ứng dụng), `wrangler d1 …`. Khóa này **không** tạo hay triển khai được worker và không đọc được secret. Mỗi worker mới do chủ dự án tạo bằng Workers Builds, hướng dẫn ở `docs/KHOA-HOC-MOI.md`.
@@ -67,6 +68,7 @@ Tài khoản Cloudflare `6cf1ac5bfc7c2176ed31399545ce50db` (mã này không ph�
 | `aiGrading` | AI chấm gợi ý câu tự luận | ✅ | ❌ |
 | `reports` | Mục Báo cáo thống kê `/bao-cao` | ✅ | ❌ |
 | `faq` | Câu hỏi học viên → FAQ (AI biên tập) + FAQ công khai | ✅ | ❌ |
+| `chamCheo` | Màn hình chiếu chấm chéo lớp offline gắn vào `/cham-cheo` (Worker riêng, nskt-hub chỉ chuyển tiếp) | ✅ | ❌ |
 | `discipline` | Kỷ luật: lỗi nhẹ / nặng, Zoom, camera, trưởng nhóm, duyệt miễn | ❌ (chưa định nghĩa) | ✅ |
 
 Các trường khác của hồ sơ: `home` (trang chủ là `overview` hoặc `discipline`), `publicPath` (link công khai của phần kỷ luật), `discipline` (quy tắc lỗi, giờ Zoom, các mục nhật ký nhóm), `faq.sources` (câu nào trong bài tuần là nguồn FAQ), `scoring`, `grading`, `attendance`, `teams`, `brand`.
@@ -106,6 +108,19 @@ Các trường khác của hồ sơ: `home` (trang chủ là `overview` hoặc `
 | 2026-11-13 | **Chấm nhiều người:** giao đội **theo tuần, luân phiên** (bảng `grader_team_plans`; tuần không giao lại thì giữ như tuần trước). Nhiều người có thể chấm trùng đội; coach / BTC chấm bất kỳ. **Lưu mọi bản chấm** (`reviews_week`, `reviews_item`); điểm chính thức = **trung bình các bản**. Người chấm không thấy điểm người khác trước khi tự lưu. Bàn chấm đưa **"chưa ai chấm"** lên đầu. |
 | 2026-11-13 | **Bảng xếp hạng đồng đội** (`/bang-xep-hang?xem=doi`): điểm đội = **trung bình điểm thành viên**, có ghi số thành viên. Thêm **5 danh hiệu tuần**, không cộng điểm: 🏆 dẫn đầu, 📈 tiến bộ nhất, 🤝 đồng đều nhất, ✅ chuyên cần, 💬 tương trợ. Chủ dự án nói "giữ theo hiện tại cho dễ hiểu"; PR #31 (ghi rõ danh hiệu không cộng điểm) đã đóng không gộp ngày 18/11. |
 | 2026-11-18 | **Câu hỏi học viên → FAQ** (`/faq`, chỉ BTC / coach / admin). Nguồn: câu không bắt buộc của bài tuần "Bạn có khó khăn & câu hỏi gì đến BTC/Thầy?" và "03 điểm cần cải thiện" (`faq.sources`); bỏ câu không có nội dung. AI gộp câu trùng ý thành câu hỏi FAQ, kèm tóm tắt, chủ đề, mức độ **Cấp bách / Quan trọng / Thường**; **không gửi tên học viên cho AI**. Có hai phạm vi: từ đầu khóa và từng tuần. Chữ nhỏ ghi ai hỏi, đội, tuần; bấm vào thì mở câu gốc kèm link `/bai`. BTC soạn câu trả lời ở `/faq/dang`; câu "đăng công khai" hiện ở mục **Câu hỏi thường gặp** cuối `/bang-xep-hang`. Chủ dự án nói "admin đăng bài"; hiện admin, BTC và coach đều đăng được, chờ chủ dự án xác nhận. |
+
+## [nskt-hub] Màn hình chiếu chấm chéo (lớp offline thứ Sáu) — hệ thống riêng, nskt-hub chỉ chuyển tiếp
+
+**Là gì:** màn hình chiếu trong lớp offline thứ Sáu. Học viên chia nhóm ngẫu nhiên; một người trình bày, người khác đặt câu hỏi và chấm chéo. Màn hình chiếu người chấm → người được chấm kèm nhận xét **nguyên văn**. Là một **Worker riêng `nskt-cham-cheo-stage`** (không thuộc repo này, không có kho Git: mã chỉ có trên máy Admin-PC của chủ dự án), do ChatGPT làm trước đây. Luồng: mini-app `nskt2026.dh3g.vn/chamdiem` → Google Sheet `CHAM_CHEO_LOG` → Apps Script bridge (chỉ đọc) → Worker → màn hình. Bàn giao gốc: do chủ dự án cung cấp ngày 18/11 (không nằm trong repo).
+
+**Quyết định 18/11 (chủ dự án chọn phương án B):** gắn vào cùng link nskt-hub bằng cách **chuyển tiếp**, không viết lại. `nskt-hub.hktruc.workers.dev/cham-cheo` hiện trang chính của trang cũ. Mã ở `src/chamcheo/proxy.ts` (danh sách trắng), kiểm thử `test/cham-cheo.test.ts`. Trang cũ và link cũ **giữ nguyên, không sửa**.
+- Trang cũ dùng đường dẫn tuyệt đối từ gốc nên các đường dẫn sau được **dành riêng ở gốc nskt-hub**: `/index.html`, `/login`, `/sim23/<tệp>`, `/assets/roster.json`, `/api/session`, `/api/results` (GET), `/api/unlock` và `/api/logout` (POST). **Không đặt đường dẫn nskt-hub trùng các tên này.** Chuyển hướng về `/` của trang cũ được đổi thành `/cham-cheo`.
+- **Cố ý không chuyển tiếp** `/api/insights` và `/plan.html`: trang cũ không dùng; `GET /api/insights` và `GET /api/results` của trang cũ có **ghi dữ liệu nội bộ vào D1 của nó** (không phải "chỉ đọc"). Không tự gọi hai đường này khi chỉ kiểm tra.
+- Quyền xem do trang cũ quyết định: `/cham-cheo` mở như trang cũ (không cần đăng nhập nskt-hub); ô "Đăng nhập BTC" bên trong, cookie `nskt_stage` (12 giờ, `Path=/`) vẫn do trang cũ quản lý. Dữ liệu công khai theo phạm vi chủ dự án cho phép 30/10: tên, đội, cặp chấm, điểm, nhận xét trong ngày.
+- POST đi qua nskt-hub vẫn bị kiểm tra `Origin` như mọi trang khác.
+- **Claude không kiểm được trang thật**: máy của phiên không ra được `workers.dev`, khóa Cloudflare không xem được Worker đó. Kiểm thử dùng trang cũ giả. Sau khi triển khai chủ dự án phải tự thử (xem PR).
+- Nếu Worker `nskt-cham-cheo-stage` bị đổi tên hoặc xóa, bản triển khai nskt-hub báo lỗi (bản đang chạy vẫn giữ); sửa `services` trong `wrangler.jsonc`.
+- Chưa làm: đưa dữ liệu `CHAM_CHEO_LOG` (chấm chéo offline) vào báo cáo `/bao-cao` và danh hiệu tương trợ (file chưa chia sẻ cho tài khoản dịch vụ Google); phần AI phân loại góp ý của trang cũ (Workers AI, 5 điểm 0–2 chưa rõ ý nghĩa) **không** dùng trong nskt-hub.
 
 ## [45n-hub] Quyết định của khóa 45N K02
 
@@ -162,6 +177,8 @@ Nguồn yêu cầu: phiếu của BTC 45N "Tieu chi XD dashboard HT45N K2" (Goog
 - [nskt-hub] Tiêu chí chấm **bài thi**. Duyệt **độ mờ dần (nửa đời 3 tuần)** và **ngưỡng vàng 50%**. **Định nghĩa "kỷ luật"**: bộ kỷ luật của 45N bật được cho NSKT bằng `features.discipline` khi đã chốt quy tắc. Buổi khai giảng 29/09 có tính điểm danh không (hiện không tính). Chỉ admin hay cả BTC / coach được đăng FAQ. Chia sẻ file chấm chéo offline cho tài khoản dịch vụ (tùy chọn).
 - [45n-hub] BTC 45N xác nhận 7 điểm đề xuất (chủ dự án đã đồng ý); logo thật; mẫu Excel nhật ký nhóm (hiện dùng 5 mục tự đặt); có tính buổi khai giảng là buổi 1 không (hiện có tính).
 - Cả hai khóa: **danh sách tính năng đề xuất 17/11**, chủ dự án chưa chọn. Thứ tự ưu tiên Claude gợi ý: (1) nhắc việc tự động qua Telegram (hoặc Zalo, cần hỏi kênh); (2) danh sách "nguy cơ bỏ cuộc" kèm ghi chăm sóc; (3) trang cho học viên tự xem và tự xin miễn; sau đó là bản tin tuần cho BTC, điều kiện tốt nghiệp và chứng nhận, khảo sát sau buổi, xuất Excel / PDF, so sánh giữa các khóa, tự báo sự cố, nhật ký thao tác, mở khóa mới bằng biểu mẫu.
+
+- [nskt-hub] Sau khi gắn `/cham-cheo`: chủ dự án thử thật ở buổi học và báo kết quả; buổi 20/11 khuyên vẫn dùng link cũ. Còn chờ: hỏi chủ dự án có muốn đưa `CHAM_CHEO_LOG` vào báo cáo / danh hiệu tương trợ không (cần chia sẻ file cho tài khoản dịch vụ).
 
 **Câu mở đầu gợi ý cho phiên mới (chủ dự án dán):** "Đọc kỹ CLAUDE.md và docs/KHOA-HOC-MOI.md, xem 5 PR gần nhất trên GitHub. Tóm tắt cho tôi tình trạng hiện tại của [nskt-hub] và [45n-hub] trước khi làm việc mới. Không bắt đầu sửa gì khi tôi chưa duyệt."
 

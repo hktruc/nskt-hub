@@ -11,6 +11,7 @@ export type Feature =
   | "publicLeaderboard" // bảng xếp hạng công khai (tắt: phải đăng nhập mới xem)
   | "reports" // mục Báo cáo thống kê
   | "leaderboard" // bảng xếp hạng theo điểm % (bài tập + đi học)
+  | "chamCheo" // màn hình chiếu chấm chéo lớp offline, gắn vào /cham-cheo (Worker riêng, chuyển tiếp)
   | "faq" // tổng hợp câu hỏi học viên gửi BTC (AI biên tập) + FAQ công khai cuối bảng xếp hạng
   | "discipline"; // kỷ luật: lỗi nhẹ / lỗi nặng (bài tập, Zoom, camera), trưởng nhóm, BTC duyệt miễn
 

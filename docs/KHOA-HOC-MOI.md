@@ -21,6 +21,7 @@ Dữ liệu các khóa **không lẫn vào nhau** (mỗi khóa một D1). Sửa 
 | `reports` | Báo cáo thống kê |
 | `leaderboard` | Bảng xếp hạng theo điểm % (bài tập + đi học) |
 | `faq` | Câu hỏi học viên gửi BTC → AI biên tập thành FAQ (trang BTC `/faq`) + mục Câu hỏi thường gặp cuối bảng xếp hạng |
+| `chamCheo` | Gắn màn hình chiếu chấm chéo (Worker riêng) vào `/cham-cheo`, cần service binding `CHAM_CHEO` trong cấu hình khóa |
 | `discipline` | Kỷ luật: lỗi nhẹ / lỗi nặng (bài tập, Zoom, camera), trưởng nhóm, BTC duyệt miễn, nhật ký nhóm |
 
 Các trường khác trong hồ sơ: `home` (trang chủ `overview` hay `discipline`), `publicPath` (link công khai của phần kỷ luật, vd. `/45ngaydonghanh`), `discipline` (quy tắc lỗi, `zoomCheckinTime`, `zoomLateMinutes`, điểm lỗi, các mục nhật ký nhóm), `faq.sources` (câu nào của bài tuần là nguồn FAQ), `teams` (số đội, cách đọc tên đội trên dh3g), `brand`, `scoring`, `grading`, `attendance`. Hồ sơ mới có thể kế thừa hồ sơ có sẵn (`...NSKT`) rồi chỉ ghi đè phần khác, như `courses/45n-k2/course.ts`.

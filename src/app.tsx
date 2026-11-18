@@ -7,6 +7,7 @@ import { collectFaqItems } from "./faq/collect";
 import { FaqError, deletePost, listPosts, loadFaqView, requestRun, savePost } from "./faq/store";
 import { teamCodes } from "./domain/teams";
 import { PUBLIC_VIEWER } from "./pages/discipline";
+import { STAGE_HOME, STAGE_ROUTES, forwardToStage } from "./chamcheo/proxy";
 import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -180,6 +181,21 @@ if (PUB) {
   pub.get("/thanh-vien", (c) => membersPage(c));
   pub.get("/hv/:id", (c) => learnerPage(c));
   app.route(PUB, pub);
+}
+
+// ---- Màn hình chiếu chấm chéo (Worker riêng): chuyển tiếp, không cần đăng nhập nskt-hub (như trang cũ) ----
+// Chỉ chuyển tiếp đúng danh sách trắng ở src/chamcheo/proxy.ts; mọi đường dẫn khác đi tiếp như bình thường.
+if (featureOn("chamCheo")) {
+  app.use("*", async (c, next) => {
+    const path = new URL(c.req.url).pathname;
+    const method = c.req.method === "HEAD" ? "GET" : c.req.method;
+    if (method === "GET" && (path === STAGE_HOME || path === `${STAGE_HOME}/`)) return forwardToStage(c.env, c.req.raw, "/");
+    const route = STAGE_ROUTES.find((r) => r.method === method && r.path.test(path));
+    if (!route) return next();
+    // Thao tác ghi chỉ nhận từ chính trang này (cùng một kiểm tra với mọi trang khác của nskt-hub).
+    if (route.method === "POST" && !sameOrigin(c)) return c.text("Yêu cầu không hợp lệ.", 403);
+    return forwardToStage(c.env, c.req.raw, path);
+  });
 }
 
 app.use("*", async (c, next) => {
