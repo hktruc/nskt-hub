@@ -63,6 +63,10 @@ describe("câu hỏi học viên → FAQ", () => {
   it("lọc câu không có nội dung", () => {
     for (const t of ["không", "Không có.", "ko", "chưa có gì", "...", "ok"]) expect(meaningful(t), t).toBe(false);
     expect(meaningful("Nên gửi lịch học sớm hơn")).toBe(true);
+    // Câu "cho có": không đếm, không liệt kê.
+    for (const t of ["(Chưa trả lời)", "Hiện chưa có.", "Hiện tại chưa có góp ý gì ạ", "Không có ý kiến gì thêm", "Tạm thời mình chưa có câu hỏi", "Cảm ơn BTC ạ", "Mọi thứ đều tốt", "Tốt ạ", "Rất hài lòng"]) expect(meaningful(t), t).toBe(false);
+    // Câu thật, kể cả ngắn hoặc có chữ "không/chưa" ở giữa, vẫn được giữ.
+    for (const t of ["Bài tập nhiều quá huhu", "Chưa hiểu cách nộp video lên web", "Không tải được ảnh lên web", "Chấm bài cần chặt chẽ hơn", "Hiện chưa có hướng dẫn cụ thể để đọc sơ đồ"]) expect(meaningful(t), t).toBe(true);
   });
 
   it("chỉ lấy câu góp ý gửi BTC của bài tuần, của học viên 12 đội", async () => {

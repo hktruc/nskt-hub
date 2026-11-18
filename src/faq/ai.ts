@@ -51,7 +51,7 @@ Mỗi mục có số thứ tự (id), nguồn ("câu hỏi" = khó khăn & câu 
 Yêu cầu:
 - Gộp vào một nhóm CHỈ những mục nói về CÙNG MỘT vấn đề cụ thể (vd. "không tải được ảnh khi nộp bài", "muốn có lịch học sớm hơn"). KHÔNG gộp theo chủ đề rộng như "góp ý chung" hay "khó khăn học tập".
 - Một mục có nhiều ý: xếp theo ý chính. Mỗi id chỉ thuộc tối đa một nhóm. Thường sẽ có nhiều nhóm nhỏ (1–10 mục); nhóm lớn hơn chỉ khi thật sự cùng một ý.
-- Bỏ qua (không đưa vào nhóm nào) mục không có nội dung cụ thể: chỉ cảm ơn, khen chung chung, "không có", "chưa có".
+- Bỏ qua (không đưa vào nhóm nào) mục không có nội dung cụ thể: chỉ cảm ơn, khen chung chung, "không có", "chưa có", "chưa trả lời", trả lời cho có.
 ${RULES}
 Chỉ trả về JSON đúng cấu trúc yêu cầu.`;
 

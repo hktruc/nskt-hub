@@ -18,11 +18,17 @@ export type FaqItem = {
 
 const EMPTY_RE = /^(?:không|khong|ko|k|chưa|chua|không có|khong co|chưa có|chua co|không có gì|chưa có gì|không ạ|chưa ạ|ok|oke|none|no|n\/a|có|co)[\s.!,…:-]*$/i;
 
+// Câu trả lời "cho có": chưa trả lời, "hiện chưa có", "không có góp ý gì", chỉ cảm ơn hoặc khen chung ("tốt", "mọi thứ đều ổn"…).
+// Đây là câu hỏi không bắt buộc nên bỏ hẳn, không đếm, không liệt kê.
+const NO_ANSWER_RE = /^\(?\s*(?:chưa|chua)\s+(?:có\s+)?trả\s+lời\s*\)?[\s.!,…:-]*$/i;
+const NOTHING_RE = /^(?:(?:hiện\s+(?:tại|nay)|hiện|tạm\s+thời|lúc\s+này|đến\s+nay)\s+)?(?:(?:mình|em|con|tôi)\s+)?(?:chưa|không|ko|khong|chua|k)\s+(?:có|co)?\s*(?:(?:gì|j|vấn\s+đề|khó\s+khăn|câu\s+hỏi|góp\s+ý|ý\s+kiến|đề\s+xuất|đóng\s+góp|thắc\s+mắc|điều\s+gì|thêm|khác|nào|đặc\s+biệt)\s*)*\s*(?:ạ|à|ah|nhé|nha|cả|hết)?[\s.!,…:-]*$/i;
+const GENERIC_RE = /^(?:(?:xin\s+)?(?:cảm\s+ơn|c[aả]m\s+on)(?:\s+(?:thầy|cô|btc|ban\s+tổ\s+chức|anh|chị|các\s+thầy|mọi\s+người))*|(?:mọi\s+thứ|tất\s+cả|mọi\s+việc|khóa\s+học|chương\s+trình)?\s*(?:đều\s+|đang\s+|đã\s+)?(?:rất\s+)?(?:tốt|ổn|ok|oke|hay|tuyệt\s+vời|bình\s+thường|tạm\s+ổn|hài\s+lòng))(?:\s+(?:rồi|ạ|nhé|nha|lắm|thầy|cô))*[\s.!,…:-]*$/i;
+
 /** Câu trả lời có nội dung đáng đọc. */
 export function meaningful(text: string): boolean {
   const t = text.replace(/\s+/g, " ").trim();
   if (t.length < 6) return false;
-  if (EMPTY_RE.test(t)) return false;
+  if (EMPTY_RE.test(t) || NO_ANSWER_RE.test(t) || NOTHING_RE.test(t) || GENERIC_RE.test(t)) return false;
   if (!/\p{L}{2,}/u.test(t)) return false;
   return true;
 }
