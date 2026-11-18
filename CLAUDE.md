@@ -129,7 +129,7 @@ Chủ dự án chọn phương án A (18/11): xây lại màn hình chiếu ch�
 - **Máy chủ** `src/chamcheo/live.ts` + hai đường dẫn ở `src/app.tsx`: `/cham-cheo-moi/api/phien` và `/cham-cheo-moi/api/ket-qua?ngay=`. **Chỉ đọc**, không ghi D1 hay bảng tính. Ai xem cũng được (như trang cũ); người đã đăng nhập nskt-hub (admin, BTC, coach) là "BTC": thấy nút Tổng quan, kiểm nguồn, người vắng.
 - Nguồn: file Google Sheet "NSKT2026 - CHẤM CHÉO BÀI TẬP" (`SHEET_CHAMCHEO_ID` trong `wrangler.jsonc`, trang `CHAM_CHEO_LOG`; cột theo bản bàn giao cũ, **khoá nhận dạng ở cột Y "Khoá"**). Danh sách đội lấy từ trang CHECK_IN của file điểm danh. Kiểm tra đầu bảng: đổi cột thì dừng đọc và báo lỗi thay vì hiện sai. Đội của mỗi người lấy từ **mã người** (T01xx…), không từ cột Thôn, nên lượt liên đội không bị mất như bản cũ từng bị. Đệm 8 giây để nhiều máy cùng hỏi không làm nặng Google.
 - **Chưa kiểm được trên bảng tính thật** (phiên không có khóa Google): file đang chia sẻ "ai có link đều xem" nhưng cần xác nhận tài khoản dịch vụ đọc được; lần đọc thật đầu tiên là sau khi gộp. Cần đối chiếu với màn hình cũ ở một buổi học: số lượt, đội nhận, "Buổi N" (đếm từ 02/10), người vắng.
-- Còn chờ: ảnh QR chính thức (đặt tên `qr.png` vào thư mục giao diện); chủ dự án xác nhận mặc định công khai.
+- Ảnh QR chính thức do chủ dự án gửi 18/11 (`qr.png`, 227×229 điểm ảnh nên hiển thị kiểu điểm ảnh rõ nét). Còn chờ: chủ dự án quét thử bằng Zalo và xác nhận mặc định công khai.
 
 ## [45n-hub] Quyết định của khóa 45N K02
 
