@@ -11,6 +11,7 @@ export type Feature =
   | "publicLeaderboard" // bảng xếp hạng công khai (tắt: phải đăng nhập mới xem)
   | "reports" // mục Báo cáo thống kê
   | "leaderboard" // bảng xếp hạng theo điểm % (bài tập + đi học)
+  | "faq" // tổng hợp câu hỏi học viên gửi BTC (AI biên tập) + FAQ công khai cuối bảng xếp hạng
   | "discipline"; // kỷ luật: lỗi nhẹ / lỗi nặng (bài tập, Zoom, camera), trưởng nhóm, BTC duyệt miễn
 
 /** Mức lỗi: nhẹ, nặng, hoặc không tính. */
@@ -68,6 +69,8 @@ export type CourseConfig = {
     dueDays: number;
   };
   ai: { context: string }; // mô tả khóa học cho AI chấm
+  /** Câu góp ý không bắt buộc của bài tập tuần dùng làm nguồn câu hỏi FAQ (nhận theo nội dung đề). */
+  faq: { sources: { key: string; label: string; re: RegExp }[] };
   /** Trang chủ "/": tổng quan điểm (NSKT) hay tổng quan kỷ luật. */
   home: "overview" | "discipline";
   /** Đường dẫn trang công khai cho học viên, không cần đăng nhập (vd. "/45ngaydonghanh"). Không đặt: không có trang công khai kỷ luật. */

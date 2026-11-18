@@ -323,6 +323,18 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .who-t b { display:block; font-size:.8125rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .who-t small { display:block; font-size:.75rem; color:var(--muted); }
 @media (min-width: 1100px) { .who-t { display:block; } }
+/* FAQ */
+.faq-g summary { list-style:none; } .faq-g summary::-webkit-details-marker { display:none; }
+.faq-g .faq-q { display:block; margin:6px 0 2px; font-size:1rem; }
+.faq-g.u-cap-bach { border-left:4px solid var(--bad-fg); }
+.faq-g.u-quan-trong { border-left:4px solid var(--orange); }
+.faq-who { display:block; font-size:.6875rem; line-height:1.4; color:var(--muted); margin-top:2px; }
+ol.faq-src { padding-left:20px; margin:8px 0; }
+ol.faq-src li { margin:0 0 10px; }
+.faq-text { white-space:pre-wrap; font-size:.9375rem; }
+.faq-answer { white-space:pre-wrap; margin-top:8px; }
+form.faq-form textarea { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:var(--radius); background:var(--card); color:var(--fg); }
+.faq-public { margin-top:28px; }
 /* Kỷ luật */
 .grid2 { display:grid; grid-template-columns:1fr; gap:4px 20px; }
 @media (min-width: 720px) { .grid2 { grid-template-columns:1fr 1fr; } }
@@ -360,6 +372,7 @@ const ICON: Record<string, string> = {
   video: '<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   chart: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17.5h.01"/>',
 };
 export function Icon(props: { name: string }) {
   return raw(
@@ -390,6 +403,7 @@ const MORE_NAV: NavItem[] = [
         { href: "/nop-bai", label: "Theo dõi nộp bài (chi tiết)", icon: "inbox" },
       ]
     : []),
+  ...(featureOn("faq") ? [{ href: "/faq", label: "Câu hỏi học viên (FAQ)", icon: "help" }] : []),
   ...(featureOn("reports") ? [{ href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" }] : []),
   { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },
   { href: "/du-lieu", label: "Dữ liệu", icon: "db" },

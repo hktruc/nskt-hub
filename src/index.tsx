@@ -1,5 +1,6 @@
 import app from "./app";
 import { featureOn } from "./course";
+import { faqTick } from "./faq/store";
 import type { Env } from "./env";
 import { isHourlySlot, syncOfflineAttendance } from "./attendance/offline";
 import { scoringTick } from "./scoring/run";
@@ -23,6 +24,11 @@ export default {
               const a = await syncOfflineAttendance(env, now);
               if (a.status !== "chua-cau-hinh") console.log("điểm danh offline:", JSON.stringify(a));
             }
+          }
+          // FAQ: chạy lần biên tập đang chờ (BTC bấm nút); mỗi giờ xem có câu hỏi mới để tự biên tập lại.
+          if (featureOn("faq")) {
+            const f = await faqTick(env, now, { auto: isHourlySlot(now) });
+            if (f.status === "done" || f.status === "failed") console.log("faq:", JSON.stringify(f));
           }
           const r = await workQueue(env, now);
           if (r.done > 0 || r.failed > 0) console.log("sync: xử lý hàng đợi", JSON.stringify(r));
