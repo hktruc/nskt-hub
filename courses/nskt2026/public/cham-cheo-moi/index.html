@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Màn hình chấm chéo · Nhân Sự Kế Thừa 2026</title>
+<link rel="stylesheet" href="/cham-cheo-moi/stage.css">
+</head>
+<body data-role="khach">
+<div class="water" aria-hidden="true"><i>🐟</i><i>🐠</i><i>🐟</i></div>
+<main id="stage">
+  <header>
+    <div class="brand"><span class="fish">🐟</span><div><b>NHÂN SỰ KẾ THỪA</b><small>HÀNH TRÌNH 2026</small></div></div>
+    <div class="title"><small>TRAO LỜI GÓP Ý · CÙNG NHAU TRƯỞNG THÀNH</small><h1>CÁ CHÉP CÙNG VƯỢT LONG MÔN</h1></div>
+    <div class="session">
+      <div class="row"><b id="sessionName">CHẤM CHÉO ĐỒNG ĐỘI &amp; LIÊN ĐỘI</b><label class="date-picker">Ngày <input id="dayInput" type="date" aria-label="Chọn ngày dữ liệu"></label></div>
+      <em id="status" data-state="loading">ĐANG TẢI DỮ LIỆU</em>
+    </div>
+  </header>
+
+  <nav id="teams" aria-label="12 đội"></nav>
+
+  <section class="layout">
+    <aside class="roster-panel">
+      <div class="team-head"><div><small>ĐỘI ĐANG HIỆN</small><h2 id="teamTitle">ĐỘI CÁ CHÉP 01</h2></div><button id="pin" type="button" aria-pressed="false">Ghim đội</button></div>
+      <div id="roster" class="roster"></div>
+      <div class="qr-card">
+        <div id="qrPending" class="qr-pending"><strong>QR CHẤM CHÉO</strong><span>Đang chờ ảnh mã QR chính thức</span></div>
+        <div id="qrCrop" class="qr-crop" hidden><img id="qr" alt="Mã QR chấm chéo cho học viên"></div>
+        <div class="qr-label"><b>QUÉT BẰNG ZALO</b><span>Mã QR luôn hiển thị, không bị hiệu ứng che</span></div>
+      </div>
+    </aside>
+
+    <article id="review" class="review same">
+      <div class="event-banner"><span id="eventType">CHẤM NỘI BỘ</span><time id="eventTime">—</time></div>
+      <div class="pair">
+        <div><small>NGƯỜI CHẤM</small><strong id="fromName">—</strong><span id="fromTeam">—</span></div>
+        <div class="journey"><span>🐟</span><b>→</b></div>
+        <div><small>NGƯỜI ĐƯỢC CHẤM</small><strong id="toName">—</strong><span id="toTeam">—</span></div>
+      </div>
+      <section class="comment">
+        <div class="comment-head"><b>NGUYÊN VĂN NHẬN XÉT</b><span id="page">TRANG 0/0</span></div>
+        <div id="commentBody"></div>
+      </section>
+      <footer><span id="progress">Chưa có dữ liệu</span><span>Giữ nhận xét gần nhất sau hiệu ứng</span></footer>
+    </article>
+  </section>
+
+  <nav class="controls" aria-label="Điều khiển trình chiếu">
+    <button id="play" type="button">▶ Phát</button>
+    <button id="prev" type="button">← Lượt trước</button>
+    <button id="next" type="button">Lượt sau →</button>
+    <button id="restart" type="button">↻ Từ đầu</button>
+    <label>Tốc độ <select id="speed"><option value="1">Trình chiếu</option><option value="0.35">Nhanh (kiểm tra)</option></select></label>
+    <button id="fullscreen" type="button">⛶ Toàn màn hình</button>
+  </nav>
+</main>
+
+<div id="account" class="account"></div>
+
+<dialog id="person" aria-labelledby="personName">
+  <div class="person-detail">
+    <button type="button" class="close" id="closePerson" aria-label="Đóng chi tiết">×</button>
+    <p class="detail-date" id="personDay"></p>
+    <h2 id="personName"></h2>
+    <p id="personTeam"></p>
+    <div class="detail-columns">
+      <section><h3 id="givenTitle"></h3><ol id="givenList"></ol></section>
+      <section><h3 id="receivedTitle"></h3><ol id="receivedList"></ol></section>
+    </div>
+  </div>
+</dialog>
+
+<script type="module" src="/cham-cheo-moi/start.js"></script>
+</body>
+</html>

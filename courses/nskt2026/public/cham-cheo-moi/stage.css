@@ -1,0 +1,185 @@
+/* Màn hình chấm chéo (chiếu lớp offline). Giữ đúng bố cục, màu và cỡ chữ của màn hình cũ (style + layout-enhancements + qr-crop),
+   gộp thành một tệp; thêm bố cục cho điện thoại. */
+:root {
+  --canvas: #f7faf9; --panel: #fff; --raised: #eef5f3; --text: #102f2b; --secondary: #365b55; --muted: #56726d;
+  --edge: #668f86; --gold: #744f0b; --teal: #176b5d; --focus: #0b6ebd;
+  --t01: #f4cf9b; --t02: #f0aaa8; --t03: #c7b7ea; --t04: #9ecbf0; --t05: #9edfc5; --t06: #d8dc94;
+  --t07: #f2bd84; --t08: #d5a7cf; --t09: #94d8d8; --t10: #b5d59b; --t11: #f2c5a8; --t12: #aebbe6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; color: var(--text); font-family: "Segoe UI", Arial, sans-serif; overflow: hidden;
+  background: radial-gradient(circle at 50% 0, #fff, var(--canvas) 60%, #e8f3f0);
+}
+[hidden] { display: none !important; }
+
+/* Khung: đầu trang, dải 12 đội, vùng chính, thanh điều khiển — vừa khít một màn hình */
+#stage { height: 100vh; display: grid; grid-template-rows: 82px 58px minmax(0, 1fr) 58px; padding: 0 24px 12px; position: relative; z-index: 2; }
+header { display: grid; grid-template-columns: 280px 1fr 380px; align-items: center; border-bottom: 1px solid #b9cec9; }
+.brand { display: flex; align-items: center; gap: 12px; letter-spacing: 2px; }
+.brand .fish { font-size: 38px; filter: drop-shadow(0 2px 1px #176b5d66); }
+.brand small, .title small { display: block; color: var(--secondary); font-size: 11px; letter-spacing: 3px; }
+.title { text-align: center; }
+.title h1 { font-size: 28px; margin: 7px 0 0; letter-spacing: 1px; }
+.session { text-align: right; }
+.session .row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.session b { white-space: nowrap; }
+.session em { display: block; margin-top: 8px; font-style: normal; font-size: 12px; font-weight: 800; letter-spacing: 2px; color: var(--gold); }
+.session em[data-state="loading"] { color: #7a5711; }
+.session em[data-state="error"] { color: #a22424; }
+.session em[data-state="ready"] { color: var(--teal); }
+.date-picker { display: inline-flex; align-items: center; gap: 7px; color: var(--secondary); font-size: 12px; font-weight: 800; }
+.date-picker input { min-width: 142px; border: 1px solid var(--edge); border-radius: 9px; background: #fff; color: var(--text); padding: 6px 8px; font: 700 13px/1 "Segoe UI", Arial, sans-serif; }
+
+/* Dải 12 đội */
+#teams { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; align-items: center; }
+.team-chip { height: 39px; border: 1px solid var(--edge); border-radius: 10px; background: #fff; color: var(--text); font-weight: 800; position: relative; cursor: pointer; }
+.team-chip.active { outline: 3px solid var(--focus); outline-offset: 1px; }
+.team-chip.pending { box-shadow: inset 0 -4px 0 #8d300f; }
+.team-chip .badge { position: absolute; right: -5px; top: -8px; background: #8d300f; color: #fff; border-radius: 99px; min-width: 20px; padding: 2px 5px; font-size: 11px; }
+.team-chip.signal {
+  z-index: 2; color: #071b2f !important; font-weight: 1000; outline: 6px solid #ff5a00; outline-offset: 3px;
+  box-shadow: 0 0 0 10px #ffe000cc, 0 0 34px 14px #ff6a00e6; animation: team-signal 3.6s cubic-bezier(.2, .8, .2, 1) 1;
+}
+@keyframes team-signal {
+  0%, 100% { filter: saturate(1.7) brightness(1.12); transform: scale(1); }
+  18%, 62% { filter: saturate(2.6) brightness(1.42); transform: scale(1.1); }
+  38%, 82% { filter: saturate(2.15) brightness(1.25); transform: scale(1.045); }
+}
+
+/* Hai cột: danh sách đội + QR bên trái, thẻ nhận xét bên phải */
+.layout { display: grid; grid-template-columns: minmax(250px, 25%) 1fr; gap: 18px; min-height: 0; }
+.roster-panel, .review { background: var(--panel); border: 1px solid #a9c1bb; border-radius: 20px; box-shadow: 0 12px 35px #1735321f; min-height: 0; }
+.roster-panel { padding: 16px; display: grid; grid-template-rows: auto minmax(120px, 1fr) minmax(260px, 46%); overflow: hidden; }
+.team-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d7e3e0; padding-bottom: 10px; }
+.team-head small { color: var(--muted); font-weight: 800; }
+.team-head h2 { font-size: 19px; margin: 4px 0 0; }
+.team-head button, .controls button, .controls select { background: #fff; border: 1px solid var(--edge); color: var(--text); border-radius: 10px; padding: 9px 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.team-head button:hover, .controls button:hover { background: var(--raised); }
+button:focus-visible, select:focus-visible, input:focus-visible, .team-chip:focus-visible, .person-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: min-content; align-content: start; column-gap: 8px; row-gap: 4px; overflow: auto; padding: 10px 0 8px; }
+.roster .muted { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.person { display: flex; align-items: center; gap: 6px; min-width: 0; border-radius: 8px; padding: 5px 7px; font-size: clamp(10px, .72vw, 13px); line-height: 1.18; border: 1px solid transparent; }
+.person span { min-width: 0; overflow-wrap: anywhere; }
+.person .dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--edge); }
+.person.absent { opacity: .52; }
+.person.recipient { background: #fff0a8; border: 2px solid #c34c00; font-weight: 900; box-shadow: 0 0 0 3px #ffc40088; }
+.person.recipient.signal { animation: person-signal 3.6s cubic-bezier(.2, .8, .2, 1) 1; }
+@keyframes person-signal {
+  0%, 100% { filter: saturate(1.35) brightness(1.05); }
+  40% { filter: saturate(2) brightness(1.28); box-shadow: 0 0 0 6px #ffc400aa, 0 0 20px #ff7b00aa; }
+}
+.person-link { cursor: pointer; }
+.person-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* QR cố định, không bị hiệu ứng che */
+.qr-card { display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; align-items: center; gap: 6px; border-top: 1px solid #d7e3e0; padding-top: 8px; min-height: 0; overflow: hidden; }
+.qr-crop { height: 100%; max-height: 320px; max-width: 100%; aspect-ratio: 1; overflow: hidden; background: #fff; border: 10px solid #fff; box-shadow: 0 0 0 1px #b9cec9; border-radius: 8px; flex: none; }
+.qr-crop img { display: block; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.qr-pending { align-self: stretch; width: 100%; border: 2px dashed var(--edge); padding: 8px; border-radius: 9px; font-size: 11px; color: var(--secondary); text-align: center; display: grid; align-content: center; gap: 4px; }
+.qr-label { text-align: center; background: #fff; padding: 2px 8px; z-index: 1; }
+.qr-label b { display: block; font-size: 13px; letter-spacing: 1px; color: var(--text); }
+.qr-label span { display: block; font-size: 11px; color: var(--secondary); margin-top: 2px; }
+
+/* Thẻ nhận xét */
+.review { padding: 18px; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; overflow: hidden; position: relative; }
+.review::before { content: ""; position: absolute; inset: 0; background: var(--event-bg, var(--t01)); opacity: .42; z-index: 0; }
+.review > * { position: relative; z-index: 1; }
+.review.cross::before { background: linear-gradient(90deg, var(--from) 0 50%, var(--to) 50% 100%); }
+.event-banner { display: flex; justify-content: space-between; color: var(--gold); font-weight: 900; letter-spacing: 2px; }
+.event-banner time { color: var(--secondary); letter-spacing: 0; }
+.pair { display: grid; grid-template-columns: 1fr 90px 1fr; align-items: center; text-align: center; padding: 10px 20px; }
+.pair small, .pair span { display: block; color: var(--secondary); font-weight: 800; }
+.pair strong { display: block; font-size: clamp(24px, 2.6vw, 46px); margin: 4px 0; overflow-wrap: anywhere; }
+.journey span { font-size: 34px; }
+.journey b { font-size: 34px; color: var(--teal); }
+.comment { background: #fff; border: 2px solid var(--edge); border-radius: 16px; box-shadow: 0 12px 28px #17353224; padding: 14px 20px; min-height: 0; overflow: hidden; }
+.comment-head { display: flex; justify-content: space-between; border-bottom: 1px solid #cbdad6; padding-bottom: 8px; color: var(--gold); letter-spacing: 1px; }
+.comment-head span { color: var(--muted); }
+#commentBody { font-size: clamp(18px, 1.55vw, 28px); line-height: 1.43; font-weight: 600; padding: 10px 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.field { display: inline; }
+.field b { color: var(--teal); }
+.field + .field::before { content: "  —  "; color: #8aa19c; font-weight: 400; }
+.review footer { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; padding-top: 8px; }
+
+/* Thanh điều khiển */
+.controls { display: flex; justify-content: center; align-items: center; gap: 8px; }
+
+/* Cá bơi nền */
+.water { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+.water i { position: absolute; font-style: normal; font-size: 28px; opacity: .45; filter: saturate(1.2) drop-shadow(0 1px 1px #176b5d88); animation: swim 24s linear infinite; }
+.water i:nth-child(1) { top: 16%; left: -5%; }
+.water i:nth-child(2) { top: 72%; left: -8%; animation-delay: -8s; }
+.water i:nth-child(3) { top: 45%; left: -10%; animation-delay: -16s; }
+@keyframes swim { to { transform: translateX(112vw); } }
+
+/* Tài khoản BTC (góc dưới bên phải) */
+.account { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; align-items: center; gap: 8px; }
+.account a, .account button { display: inline-block; padding: 10px 14px; border: 2px solid #17324d; border-radius: 10px; background: #fff; color: #17324d; font: 700 14px system-ui; text-decoration: none; cursor: pointer; }
+.account .who { background: #fff; border: 1px solid var(--edge); border-radius: 10px; padding: 8px 12px; font-size: 13px; color: var(--secondary); }
+.account form { margin: 0; }
+
+/* Hộp xem một thành viên (BTC) */
+dialog { width: min(800px, 90vw); border: 1px solid var(--edge); border-radius: 18px; padding: 0; }
+dialog::backdrop { background: #0b1f2a88; }
+.person-detail { padding: 24px; }
+.person-detail h2 { font-size: 28px; margin: 3px 0; }
+.person-detail > p { color: var(--secondary); margin: 4px 0; }
+.detail-date { font-weight: 900; letter-spacing: 1px; }
+.close { float: right; font-size: 24px; border: 0; background: none; cursor: pointer; }
+.detail-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+.detail-columns section { background: var(--raised); border: 1px solid var(--edge); border-radius: 14px; padding: 14px; min-width: 0; }
+.detail-columns h3 { margin: 0 0 10px; color: var(--gold); }
+.detail-columns ol { margin: 0; padding-left: 24px; max-height: 48vh; overflow: auto; }
+.detail-columns li { padding: 7px 4px; border-bottom: 1px solid #cbdad6; }
+.detail-columns li:last-child { border-bottom: 0; }
+.detail-columns li b, .detail-columns li span { display: block; }
+.detail-columns li span { font-size: 12px; color: var(--secondary); margin-top: 2px; }
+.detail-columns .empty { list-style: none; color: var(--muted); }
+
+/* Laptop nhỏ */
+@media (max-width: 1100px) {
+  #stage { padding: 0 12px 8px; }
+  .layout { grid-template-columns: 280px 1fr; }
+  .pair strong { font-size: 24px; }
+  .title h1 { font-size: 22px; }
+  .brand { font-size: 11px; }
+  header { grid-template-columns: 200px 1fr 330px; }
+  .person { font-size: 10px; padding: 4px 5px; }
+  .roster-panel { grid-template-rows: auto minmax(150px, 1fr) minmax(220px, 40%); }
+}
+
+/* Điện thoại: một cột, cuộn dọc; thẻ nhận xét lên trước, danh sách đội và QR xuống dưới */
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  #stage { height: auto; min-height: 100vh; grid-template-rows: none; gap: 10px; padding: 0 10px 84px; }
+  header { grid-template-columns: 1fr; gap: 6px; padding: 8px 0; text-align: center; }
+  .brand { justify-content: center; }
+  .title h1 { font-size: 18px; }
+  .session { text-align: center; }
+  .session .row { justify-content: center; flex-wrap: wrap; gap: 8px; }
+  #teams { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .team-chip { height: 36px; }
+  .layout { grid-template-columns: 1fr; gap: 12px; }
+  .review { order: 1; padding: 12px; }
+  .roster-panel { order: 2; grid-template-rows: auto auto auto; }
+  .roster { overflow: visible; }
+  .person { font-size: 13px; }
+  .qr-crop { width: min(60vw, 260px); }
+  .pair { grid-template-columns: 1fr; gap: 4px; padding: 8px 4px; }
+  .journey { display: none; }
+  .pair strong { font-size: 22px; }
+  #commentBody { font-size: 17px; }
+  .review footer { flex-direction: column; gap: 2px; }
+  .controls { flex-wrap: wrap; }
+  .detail-columns { grid-template-columns: 1fr; }
+  .detail-columns ol { max-height: 25vh; }
+  .account { right: 10px; bottom: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-chip.signal, .person.recipient.signal { animation: none; }
+  .team-chip.signal { filter: saturate(1.8) brightness(1.22); }
+  .water i { animation: none; }
+}
