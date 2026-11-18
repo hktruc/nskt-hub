@@ -131,7 +131,7 @@ export function FaqPage(props: { view: FaqView; weekId: number | null; weeks: We
                     </li>
                   ))}
                 </ol>
-                {gone ? <p class="muted small">{gone} câu gốc đã bị học viên sửa hoặc xóa sau lần biên tập.</p> : null}
+                {gone ? <p class="muted small">{gone} câu gốc không còn hiển thị (học viên đã sửa hoặc xóa, hoặc là câu trả lời “cho có” như “chưa trả lời”, “hiện chưa có”). Lần biên tập tới sẽ cập nhật lại.</p> : null}
                 {g.urgency === "chua-xep" ? null : (
                   <p>
                     <a class="btn secondary" href={`/faq/dang?cauhoi=${encodeURIComponent(g.question)}#soan`}>
