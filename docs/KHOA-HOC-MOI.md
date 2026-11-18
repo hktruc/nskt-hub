@@ -20,7 +20,12 @@ Dữ liệu các khóa **không lẫn vào nhau** (mỗi khóa một D1). Sửa 
 | `publicLeaderboard` | Bảng xếp hạng công khai (tắt: phải đăng nhập mới xem) |
 | `reports` | Báo cáo thống kê |
 | `leaderboard` | Bảng xếp hạng theo điểm % (bài tập + đi học) |
+| `faq` | Câu hỏi học viên gửi BTC → AI biên tập thành FAQ (trang BTC `/faq`) + mục Câu hỏi thường gặp cuối bảng xếp hạng |
 | `discipline` | Kỷ luật: lỗi nhẹ / lỗi nặng (bài tập, Zoom, camera), trưởng nhóm, BTC duyệt miễn, nhật ký nhóm |
+
+Các trường khác trong hồ sơ: `home` (trang chủ `overview` hay `discipline`), `publicPath` (link công khai của phần kỷ luật, vd. `/45ngaydonghanh`), `discipline` (quy tắc lỗi, `zoomCheckinTime`, `zoomLateMinutes`, điểm lỗi, các mục nhật ký nhóm), `faq.sources` (câu nào của bài tuần là nguồn FAQ), `teams` (số đội, cách đọc tên đội trên dh3g), `brand`, `scoring`, `grading`, `attendance`. Hồ sơ mới có thể kế thừa hồ sơ có sẵn (`...NSKT`) rồi chỉ ghi đè phần khác, như `courses/45n-k2/course.ts`.
+
+**Trước khi viết hồ sơ:** gọi dh3g cho cộng đồng mới (chỉ đếm số lượng, đọc đề bài, không in dữ liệu cá nhân) để biết các khóa trong cộng đồng (`courseId`), tên đội, loại bài, cấu trúc câu hỏi, có điểm danh Zoom hay không. Một cộng đồng có thể chứa nhiều khóa (như cộng đồng 47 có K01 và K02).
 
 ## Các khóa đang có
 
@@ -35,7 +40,9 @@ Tắt tính năng nào thì trang đó ẩn khỏi menu, đường dẫn trả "
 
 1. Chép `courses/nskt2026/` thành `courses/<mã-khóa>/`, sửa hồ sơ theo khóa mới.
 2. Chép `courses/45n-k2/wrangler.jsonc` sang thư mục khóa mới, sửa tên worker, D1, `DH3G_COMMUNITY_ID`; thêm lệnh đóng gói thử vào `npm run build`.
-3. Tạo D1 mới, chạy toàn bộ `migrations/` lên D1 đó.
+3. Tạo D1 mới **ở châu Á** (`primary_location_hint: "apac"`; không chỉ định thì có thể bị đặt ở Mỹ, trang chậm), chạy toàn bộ `migrations/` lên D1 đó. Từ đó mọi migration mới phải chạy lên D1 của mọi khóa trước khi gộp.
+3b. Tạo ứng dụng Cloudflare Access riêng cho `<tên-worker>.hktruc.workers.dev/quan-tri`, dùng lại chính sách "Long Mon staging owner only"; ghi `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` vào cấu hình khóa.
+3c. Thêm hồ sơ kiểm thử `vitest.<mã>.config.ts` và thư mục `test/<mã>/` nếu khóa có tính năng riêng; đưa vào `npm test`.
 4. Chủ dự án nhập secret cho worker mới (`DH3G_API_KEY`, và nếu dùng: `OPENAI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`).
 5. Triển khai: `npx wrangler deploy -c courses/<mã-khóa>/wrangler.jsonc`; admin tạo tài khoản BTC cho khóa ở `/quan-tri`.
 
