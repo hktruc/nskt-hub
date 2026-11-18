@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import app from "../src/app";
 import { collectFaqItems, meaningful } from "../src/faq/collect";
 import { faqTick, requestRun } from "../src/faq/store";
+import { CHUNK, SYSTEM_MERGE, groupFaq } from "../src/faq/ai";
+import type { FaqItem } from "../src/faq/collect";
 import { createUser } from "../src/users/accounts";
 import { createTestDb } from "./helpers/d1";
 import { testEnv } from "./helpers/fixtures";
@@ -127,5 +129,45 @@ describe("câu hỏi học viên → FAQ", () => {
     expect((await call("/faq", { cookie: ps })).status).toBe(403);
     expect((await call("/faq")).status).not.toBe(200);
     expect((await call("/faq/dang", { method: "POST", body: form({ cauhoi: "x", traloi: "y" }) })).status).not.toBe(303);
+  });
+
+  it("nhiều câu: gộp từng phần rồi nối nhóm trùng vấn đề giữa các phần", async () => {
+    const n = CHUNK * 2 + 5;
+    const items: FaqItem[] = Array.from({ length: n }, (_, i) => ({
+      key: `${i}:1:0`, learnerId: i, name: `HV ${i}`, team: "T01", assignmentId: 1, assignmentTitle: "Bài tập tuần 01", dueAt: "2026-10-01", source: "cau-hoi",
+      text: i % 2 ? "Không tải được ảnh khi nộp bài" : "Muốn có lịch học sớm hơn",
+    }));
+    const calls: { system: string; effort?: string; user: string }[] = [];
+    const fake = (async (_u: string, init: RequestInit) => {
+      const b = JSON.parse(String(init.body)) as { messages: { content: string }[]; reasoning_effort?: string };
+      const system = b.messages[0]!.content;
+      const user = b.messages[1]!.content;
+      calls.push({ system, effort: b.reasoning_effort, user });
+      let out: unknown;
+      if (system === SYSTEM_MERGE) {
+        // Nối các nhóm cùng câu hỏi.
+        const gs = [...user.matchAll(/\{"id":(\d+),"cau_hoi":"([^"]*)"/g)].map((m) => ({ id: Number(m[1]), q: m[2]! }));
+        const byQ = new Map<string, number[]>();
+        for (const g of gs) byQ.set(g.q, [...(byQ.get(g.q) ?? []), g.id]);
+        out = { groups: [...byQ].map(([q, parts]) => ({ question: q, summary: "", topic: "", urgency: "thuong", parts })) };
+      } else {
+        const rows = [...user.matchAll(/\{"id":(\d+),"nguon":"[^"]*","noi_dung":"([^"]*)"\}/g)];
+        const g = (re: RegExp, q: string, u: string) => ({ question: q, summary: "", topic: "", urgency: u, ids: rows.filter((m) => re.test(m[2]!)).map((m) => Number(m[1])) });
+        out = { groups: [g(/ảnh/, "Không tải được ảnh?", "cap-bach"), g(/lịch/, "Lịch học sớm hơn?", "thuong")] };
+      }
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(out) } }] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const r = await groupFaq({ apiKey: "k", model: "m", reasoningEffort: "minimal", fetchImpl: fake }, items, (k) => k);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(calls.filter((c) => c.system !== SYSTEM_MERGE)).toHaveLength(3); // 3 phần
+    expect(calls.filter((c) => c.system === SYSTEM_MERGE).map((c) => c.effort)).toEqual(["low"]);
+    expect(r.groups.map((g) => [g.question, g.urgency, g.ids.length])).toEqual([
+      ["Không tải được ảnh?", "cap-bach", 82],
+      ["Lịch học sớm hơn?", "thuong", 83],
+    ]);
+    // Mọi câu đều nằm đúng một nhóm, số thứ tự toàn cục.
+    expect(new Set(r.groups.flatMap((g) => g.ids)).size).toBe(n);
+    expect(Math.max(...r.groups.flatMap((g) => g.ids))).toBe(n);
   });
 });
