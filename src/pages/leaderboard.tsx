@@ -1,3 +1,5 @@
+import { FaqPublic } from "./faq";
+import type { FaqPost } from "../faq/store";
 import { COURSE, featureOn } from "../course";
 import { formatVN } from "../dates";
 import { teamLabel } from "../domain/teams";
@@ -21,6 +23,8 @@ export function LeaderboardPage(props: {
   /** "doi": bảng xếp hạng đồng đội (điểm đội = trung bình thành viên). */
   mode?: "ca-nhan" | "doi";
   awards?: Award[];
+  /** Câu trả lời BTC đăng công khai (mục "Câu hỏi thường gặp" cuối trang). */
+  faq?: FaqPost[];
 }) {
   const teamMode = props.mode === "doi" && !props.team;
   const filtered = props.team ? props.ranked.filter((r) => r.team === props.team) : props.ranked;
@@ -195,6 +199,7 @@ export function LeaderboardPage(props: {
           </li>
         </ul>
       </section>
+      <FaqPublic posts={props.faq ?? []} />
       <dialog id="hv" class="sheet" aria-label="Chi tiết học viên">
         <div class="sheet-body" />
       </dialog>

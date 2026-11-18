@@ -2,6 +2,9 @@ import { COURSE, featureOfPath, featureOn } from "./course";
 import { byWeek, journeyWeek, rankTeams, totals, type LearnerResult } from "./discipline/engine";
 import { listExemptions, loadDiscipline, loadTeamReports, removeExemption, saveCamera, saveJournal, setExemption, setStopped } from "./discipline/data";
 import { LeadersPage } from "./pages/leaders";
+import { FaqPage, FaqPostsPage, type WeekOption } from "./pages/faq";
+import { collectFaqItems } from "./faq/collect";
+import { FaqError, deletePost, listPosts, loadFaqView, requestRun, savePost } from "./faq/store";
 import { teamCodes } from "./domain/teams";
 import { PUBLIC_VIEWER } from "./pages/discipline";
 import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
@@ -92,6 +95,7 @@ app.get("/bang-xep-hang", async (c) => {
       viewerNav={viewerNav}
       mode={teamMode ? "doi" : "ca-nhan"}
       awards={awards}
+      faq={featureOn("faq") ? await listPosts(c.env.DB, true) : []}
     />,
   );
 });
@@ -521,6 +525,74 @@ async function disciplineHome(c: Context<AppEnv>) {
 }
 
 app.get("/ky-luat", (c) => c.redirect("/", 301));
+
+// ---- Câu hỏi học viên gửi BTC: AI biên tập thành FAQ (chỉ BTC / coach / admin) + câu trả lời công khai ----
+const FAQ_NOTICES: Record<string, string> = {
+  "da-xep": "Đã gửi yêu cầu. AI biên tập chạy nền, tải lại trang sau khoảng 5 phút.",
+  "dang-chay": "Phạm vi này đang được biên tập, chờ xong rồi tải lại trang.",
+  "da-dang": "Đã lưu câu trả lời.",
+  "da-xoa": "Đã xóa câu trả lời.",
+};
+app.get("/faq", async (c) => {
+  const all = await collectFaqItems(c.env.DB);
+  const weeks = new Map<number, WeekOption>();
+  for (const i of all) {
+    const w = weeks.get(i.assignmentId) ?? { id: i.assignmentId, title: i.assignmentTitle, dueAt: i.dueAt, count: 0 };
+    w.count++;
+    weeks.set(i.assignmentId, w);
+  }
+  const weekList = [...weeks.values()].sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  const t = Number(c.req.query("tuan"));
+  const weekId = weekList.some((w) => w.id === t) ? t : null;
+  const [view, posts] = await Promise.all([loadFaqView(c.env.DB, weekId ? { scope: "week", ref: weekId } : { scope: "all" }), listPosts(c.env.DB, false)]);
+  return c.html(
+    <FaqPage
+      view={view}
+      weekId={weekId}
+      weeks={weekList}
+      postCount={posts.length}
+      notice={FAQ_NOTICES[c.req.query("tb") ?? ""]}
+      error={c.env.OPENAI_API_KEY ? undefined : "Chưa có khóa OpenAI (secret OPENAI_API_KEY) nên AI chưa biên tập được; vẫn xem được câu gốc."}
+    />,
+  );
+});
+app.post("/faq/bien-tap", async (c) => {
+  const f = await c.req.formData();
+  const t = Number(f.get("tuan"));
+  const scope = Number.isSafeInteger(t) && t > 0 ? ({ scope: "week", ref: t } as const) : ({ scope: "all" } as const);
+  const ok = await requestRun(c.env.DB, scope, c.get("email"), new Date());
+  return c.redirect(`/faq?${scope.scope === "week" ? `tuan=${scope.ref}&` : ""}tb=${ok ? "da-xep" : "dang-chay"}`, 303);
+});
+app.get("/faq/dang", async (c) =>
+  c.html(<FaqPostsPage posts={await listPosts(c.env.DB, false)} question={c.req.query("cauhoi")?.slice(0, 500)} notice={FAQ_NOTICES[c.req.query("tb") ?? ""]} />),
+);
+app.post("/faq/dang", async (c) => {
+  const f = await c.req.formData();
+  const id = Number(f.get("id"));
+  try {
+    await savePost(
+      c.env.DB,
+      {
+        id: Number.isSafeInteger(id) && id > 0 ? id : undefined,
+        question: String(f.get("cauhoi") ?? ""),
+        answer: String(f.get("traloi") ?? ""),
+        published: f.get("cong_khai") === "1",
+        sortOrder: Number(f.get("thutu") ?? 0),
+      },
+      c.get("email"),
+      new Date(),
+    );
+  } catch (e) {
+    if (!(e instanceof FaqError)) throw e;
+    return c.html(<FaqPostsPage posts={await listPosts(c.env.DB, false)} question={String(f.get("cauhoi") ?? "")} error={e.message} />, 400);
+  }
+  return c.redirect("/faq/dang?tb=da-dang", 303);
+});
+app.post("/faq/xoa", async (c) => {
+  const id = Number((await c.req.formData()).get("id"));
+  if (Number.isSafeInteger(id)) await deletePost(c.env.DB, id);
+  return c.redirect("/faq/dang?tb=da-xoa", 303);
+});
 
 app.get("/ky-luat/zoom", (c) => zoomPage(c));
 async function zoomPage(c: Context<AppEnv>) {

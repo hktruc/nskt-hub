@@ -77,6 +77,12 @@ export const COURSE: CourseConfig = {
     dueDays: 3,
   },
   ai: { context: "khóa học NSKT2026 (kể chuyện, rèn tâm trí)" },
+  faq: {
+    sources: [
+      { key: "cau-hoi", label: "Khó khăn & câu hỏi", re: /khó khăn\s*(&|và)\s*câu hỏi/i },
+      { key: "cai-thien", label: "Điểm cần cải thiện", re: /điểm cần cải thiện/i },
+    ],
+  },
   home: "overview",
   // Chưa dùng cho NSKT (chủ dự án chưa định nghĩa "kỷ luật"); bật tính năng "discipline" khi đã chốt.
   discipline: {
@@ -96,6 +102,7 @@ export const COURSE: CourseConfig = {
     publicLeaderboard: true,
     reports: true,
     leaderboard: true,
+    faq: true,
     discipline: false,
   },
 };
