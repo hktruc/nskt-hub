@@ -51,6 +51,8 @@ export type CourseConfig = {
     lateTextFactor: number;
     attendance: { share: number; halfLifeWeeks: number; points: Record<string, number> };
   };
+  /** Màn hình chấm chéo bản mới (/cham-cheo-moi). `firstSessionDay`: ngày buổi offline đầu tiên, để đếm "Buổi N". */
+  chamCheo?: { firstSessionDay: string };
   attendance: {
     checkInFile: string; // tên file Google Sheet (chỉ để hiển thị)
     rosterFile: string;

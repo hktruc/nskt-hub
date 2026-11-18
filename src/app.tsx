@@ -8,6 +8,7 @@ import { FaqError, deletePost, listPosts, loadFaqView, requestRun, savePost } fr
 import { teamCodes } from "./domain/teams";
 import { PUBLIC_VIEWER } from "./pages/discipline";
 import { STAGE_HOME, STAGE_ROUTES, forwardToStage } from "./chamcheo/proxy";
+import { buildDay, loadSource } from "./chamcheo/live";
 import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -19,6 +20,7 @@ import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
 import { loadOverview, OverviewPage } from "./pages/overview";
 import { syncOfflineAttendance } from "./attendance/offline";
+import { SheetsError } from "./google/sheets";
 import { AccountPage, ActivatePage, ForbiddenPage, LoginPage, NeedLoginPage } from "./pages/account";
 import { QueuePage, SheetPage } from "./pages/grading";
 import { GradersPage } from "./pages/graders";
@@ -195,6 +197,41 @@ if (featureOn("chamCheo")) {
     // Thao tác ghi chỉ nhận từ chính trang này (cùng một kiểm tra với mọi trang khác của nskt-hub).
     if (route.method === "POST" && !sameOrigin(c)) return c.text("Yêu cầu không hợp lệ.", 403);
     return forwardToStage(c.env, c.req.raw, path);
+  });
+}
+
+// ---- Màn hình chấm chéo bản mới: giao diện là tệp tĩnh ở /cham-cheo-moi/; đây là phần dữ liệu (chỉ đọc, ai xem cũng được như trang cũ) ----
+if (featureOn("chamCheo")) {
+  const stageUser = async (c: Context<AppEnv>) => {
+    try {
+      const token = getCookie(c, SESSION_COOKIE);
+      const u = token ? await sessionUser(c.env.DB, token, new Date()) : null;
+      return u && canUseFullApp(u) ? u : null;
+    } catch {
+      return null;
+    }
+  };
+  const noStore = (c: Context<AppEnv>) => {
+    c.header("Cache-Control", "private, no-store");
+    c.header("Vary", "Cookie");
+    c.header("X-Robots-Tag", "noindex, nofollow");
+  };
+  app.get("/cham-cheo-moi/api/phien", async (c) => {
+    noStore(c);
+    const u = await stageUser(c);
+    return c.json(u ? { vaiTro: "btc", ten: u.name } : { vaiTro: "khach" });
+  });
+  app.get("/cham-cheo-moi/api/ket-qua", async (c) => {
+    noStore(c);
+    const day = c.req.query("ngay") ?? "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || Number.isNaN(Date.parse(day))) return c.json({ loi: "Ngày không hợp lệ." }, 400);
+    try {
+      const src = await loadSource(c.env, new Date());
+      if (src.status === "chua-cau-hinh") return c.json({ loi: "Chưa cấu hình nguồn chấm chéo." }, 503);
+      return c.json(buildDay(src.value, day, (await stageUser(c)) !== null));
+    } catch (e) {
+      return c.json({ loi: e instanceof SheetsError ? e.message : "Không đọc được dữ liệu chấm chéo." }, 502);
+    }
   });
 }
 

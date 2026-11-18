@@ -491,7 +491,7 @@ export function startStage(opts) {
     $("#overviewSummary").textContent = `${S.records.length} lượt · ${gave.size} người đã chấm · ${noGive} người chưa chấm · ${noGet} người chưa được chấm`;
     const n = S.nguon;
     $("#overviewSource").innerHTML = n
-      ? `<b>Kiểm nguồn:</b> bảng tính có ${n.tongDong} dòng · hiển thị ${n.hienThi} · bỏ ${n.bo}${n.bo && n.lyDo?.length ? `<ul>${n.lyDo.map((x) => `<li>${esc(x.lyDo)}: ${x.soDong} dòng</li>`).join("")}</ul>` : ""}`
+      ? `<b>Kiểm nguồn:</b> bảng tính có ${n.tongDong} dòng · hiển thị được ${n.hienThi}${n.gop ? ` (đã gộp ${n.gop} dòng sửa lại)` : ""} · bỏ ${n.bo}${n.trongNgay !== undefined ? ` · ngày này có ${n.trongNgay} lượt` : ""}${n.bo && n.lyDo?.length ? `<ul>${n.lyDo.map((x) => `<li>${esc(x.lyDo)}: ${x.soDong} dòng</li>`).join("")}</ul>` : ""}`
       : "<b>Kiểm nguồn:</b> chưa có số liệu từ bảng tính.";
     $("#overviewToggle").textContent = onlyMissing ? "Đang chỉ hiện người chưa chấm hoặc chưa được chấm · bấm để xem tất cả" : "Đang hiện tất cả · bấm để chỉ xem người chưa tham gia đủ";
     const rows = [];

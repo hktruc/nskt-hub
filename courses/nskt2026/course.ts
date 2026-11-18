@@ -36,6 +36,7 @@ export const COURSE: CourseConfig = {
     lateTextFactor: 0.5,
     attendance: { share: 0.5, halfLifeWeeks: 6, points: { OK: 1, M: 0.7, X: 0.6, M1: 0.4, CANH_BAO: 0.5, P: 0.3, VANG: 0 } },
   },
+  chamCheo: { firstSessionDay: "2026-10-02" },
   attendance: {
     checkInFile: "NSKT2026 - KỶ LUẬT - HỌC VIÊN",
     rosterFile: "NSKT 2026 CHIA THÔN HỌC VIÊN",
