@@ -122,6 +122,15 @@ Các trường khác của hồ sơ: `home` (trang chủ là `overview` hoặc `
 - Nếu Worker `nskt-cham-cheo-stage` bị đổi tên hoặc xóa, bản triển khai nskt-hub báo lỗi (bản đang chạy vẫn giữ); sửa `services` trong `wrangler.jsonc`.
 - Chưa làm: đưa dữ liệu `CHAM_CHEO_LOG` (chấm chéo offline) vào báo cáo `/bao-cao` và danh hiệu tương trợ (file chưa chia sẻ cho tài khoản dịch vụ Google); phần AI phân loại góp ý của trang cũ (Workers AI, 5 điểm 0–2 chưa rõ ý nghĩa) **không** dùng trong nskt-hub.
 
+## [nskt-hub] Màn hình chấm chéo bản mới `/cham-cheo-moi` (do chính nskt-hub làm, chạy song song bản cũ)
+
+Chủ dự án chọn phương án A (18/11): xây lại màn hình chiếu chấm chéo thành bản chính chủ, **bản cũ `/cham-cheo` giữ nguyên** cho đến khi bản mới được thử ở lớp thật (khuyên thử buổi 27/11; buổi 20/11 vẫn dùng link cũ).
+- **Giao diện** là tệp tĩnh `courses/nskt2026/public/cham-cheo-moi/` (JavaScript thuần: `logic.js` xử lý thuần có kiểm thử `test/cham-cheo-moi-logic.test.ts`, `stage.js` điều khiển, `api.js` nối máy chủ). Chủ dự án đã duyệt: hiển thị theo khối có sao (có thể chọn "Liền mạch"), phím tắt, thanh thời gian đọc, cỡ chữ, mức hiệu ứng, âm báo (mặc định tắt), độ mới dữ liệu, tự ẩn thanh điều khiển, QR lớn khi chưa có lượt, "Tổng quan" cho BTC (ai chưa chấm / chưa được chấm, kiểm nguồn).
+- **Máy chủ** `src/chamcheo/live.ts` + hai đường dẫn ở `src/app.tsx`: `/cham-cheo-moi/api/phien` và `/cham-cheo-moi/api/ket-qua?ngay=`. **Chỉ đọc**, không ghi D1 hay bảng tính. Ai xem cũng được (như trang cũ); người đã đăng nhập nskt-hub (admin, BTC, coach) là "BTC": thấy nút Tổng quan, kiểm nguồn, người vắng.
+- Nguồn: file Google Sheet "NSKT2026 - CHẤM CHÉO BÀI TẬP" (`SHEET_CHAMCHEO_ID` trong `wrangler.jsonc`, trang `CHAM_CHEO_LOG`; cột theo bản bàn giao cũ, **khoá nhận dạng ở cột Y "Khoá"**). Danh sách đội lấy từ trang CHECK_IN của file điểm danh. Kiểm tra đầu bảng: đổi cột thì dừng đọc và báo lỗi thay vì hiện sai. Đội của mỗi người lấy từ **mã người** (T01xx…), không từ cột Thôn, nên lượt liên đội không bị mất như bản cũ từng bị. Đệm 8 giây để nhiều máy cùng hỏi không làm nặng Google.
+- **Chưa kiểm được trên bảng tính thật** (phiên không có khóa Google): file đang chia sẻ "ai có link đều xem" nhưng cần xác nhận tài khoản dịch vụ đọc được; lần đọc thật đầu tiên là sau khi gộp. Cần đối chiếu với màn hình cũ ở một buổi học: số lượt, đội nhận, "Buổi N" (đếm từ 02/10), người vắng.
+- Còn chờ: ảnh QR chính thức (đặt tên `qr.png` vào thư mục giao diện); chủ dự án xác nhận mặc định công khai.
+
 ## [45n-hub] Quyết định của khóa 45N K02
 
 Nguồn yêu cầu: phiếu của BTC 45N "Tieu chi XD dashboard HT45N K2" (Google Docs `1NvnKZc7ndLU30zBpZvJCMZFYYfvUKoJB0N6SOSDvZio`). Trọng tâm là **kỷ luật**: theo dõi 6 buổi Zoom, bài tập ngày và bài tập tuần, tổng hợp theo cá nhân, trưởng nhóm và 7 nhóm.

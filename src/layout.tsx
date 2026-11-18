@@ -403,7 +403,12 @@ const MORE_NAV: NavItem[] = [
         { href: "/nop-bai", label: "Theo dõi nộp bài (chi tiết)", icon: "inbox" },
       ]
     : []),
-  ...(featureOn("chamCheo") ? [{ href: "/cham-cheo", label: "Màn hình chấm chéo (chiếu lớp)", icon: "video" }] : []),
+  ...(featureOn("chamCheo")
+    ? [
+        { href: "/cham-cheo", label: "Màn hình chấm chéo (chiếu lớp)", icon: "video" },
+        { href: "/cham-cheo-moi/", label: "Màn hình chấm chéo bản mới (thử)", icon: "video" },
+      ]
+    : []),
   ...(featureOn("faq") ? [{ href: "/faq", label: "Câu hỏi học viên (FAQ)", icon: "help" }] : []),
   ...(featureOn("reports") ? [{ href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" }] : []),
   { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },

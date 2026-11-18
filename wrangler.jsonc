@@ -28,6 +28,7 @@
     // muốn đọc được phải chia sẻ quyền xem cho tài khoản dịch vụ (secret GOOGLE_SERVICE_ACCOUNT_JSON).
     "SHEET_ATTENDANCE_ID": "12nRGFRi67UkqFmzSZ7d6favIgxLp0ucyuyAH9vDMxYE",
     "SHEET_ROSTER_ID": "1REe5rdJTf4BZVx03LCVwhrX81LQuLq9uaqHfLx8VuBg",
+    "SHEET_CHAMCHEO_ID": "14aPCcMln8BwT98a_LVCqbrFjFJuNQbJF3uYjlbzmCAY",
     // Cloudflare Access (không phải bí mật): ứng dụng "nskt-hub - Cloudflare Workers".
     "ACCESS_TEAM_DOMAIN": "hidden-art-d8b9.cloudflareaccess.com",
     "ACCESS_AUD": "cd04f88badc957f8cecaefefb0e646276500084e90c67baf5557c0eb9070133c"
