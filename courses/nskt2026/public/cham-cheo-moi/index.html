@@ -54,7 +54,13 @@
     <button id="next" type="button" title="Phím tắt: → hoặc PageDown">Lượt sau →</button>
     <button id="restart" type="button" title="Phím tắt: Home">↻ Từ đầu</button>
     <label>Tốc độ <select id="speed"><option value="1.6">Đọc chậm</option><option value="1" selected>Trình chiếu</option><option value="0.35">Nhanh (kiểm tra)</option></select></label>
+    <details id="moreOpts" class="more"><summary>⚙ Tuỳ chọn</summary><div class="more-pop">
+    <label>Kiểu <select id="layoutMode"><option value="khoi" selected>Theo khối</option><option value="lien">Liền mạch</option></select></label>
+    <label>Hiệu ứng <select id="fx"><option value="manh" selected>Mạnh</option><option value="nhe">Nhẹ</option><option value="tat">Tắt</option></select></label>
+    <label>Âm báo <select id="sound"><option value="0" selected>Tắt</option><option value="1">Bật</option></select></label>
     <label>Cỡ chữ <select id="fontSize"><option value="1" selected>Vừa</option><option value="1.3">Lớn</option><option value="1.6">Rất lớn</option></select></label>
+    </div></details>
+    <button id="overviewBtn" class="btc-only" type="button">📋 Tổng quan</button>
     <button id="fullscreen" type="button" title="Phím tắt: F">⛶ Toàn màn hình</button>
   </nav>
 </main>
@@ -71,6 +77,18 @@
       <section><h3 id="givenTitle"></h3><ol id="givenList"></ol></section>
       <section><h3 id="receivedTitle"></h3><ol id="receivedList"></ol></section>
     </div>
+  </div>
+</dialog>
+
+<dialog id="overview" aria-labelledby="overviewTitle">
+  <div class="person-detail">
+    <button type="button" class="close" id="closeOverview" aria-label="Đóng tổng quan">×</button>
+    <p class="detail-date" id="overviewDay"></p>
+    <h2 id="overviewTitle">Tổng quan trong ngày</h2>
+    <p id="overviewSummary" class="overview-summary"></p>
+    <p id="overviewSource" class="overview-source"></p>
+    <div class="overview-tools"><button type="button" id="overviewToggle"></button></div>
+    <div id="overviewTable"></div>
   </div>
 </dialog>
 

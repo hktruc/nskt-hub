@@ -28,7 +28,7 @@ export function startStage(opts) {
   const S = {
     role: "khach", user: "", day: "", doi: new Map(), records: [], index: 0, page: 0, pages: [], playing: false,
     focus: "T01", pinned: null, pending: new Map(), known: new Set(), queue: [], eventMode: false,
-    loading: false, loaded: false, version: 0, signal: "", speed: 1, lastOk: 0, userPaused: false, invite: null, qrOk: false,
+    loading: false, loaded: false, version: 0, signal: "", speed: 1, lastOk: 0, userPaused: false, layout: "khoi", fx: "manh", sound: false, beeps: 0, nguon: null, invite: null, qrOk: false,
   };
   let readTimer = null, idleTimer = null, signalTimer = null, pollTimer = null, freshTimer = null, quietTimer = null, controller = null;
   let wasPlaying = false, hadIdle = false;
@@ -113,15 +113,37 @@ export function startStage(opts) {
     if (!S.pinned) startIdle();
   }
 
-  const pageHtml = (group) => group.map((f) => `<span class="field"><b>${esc(f.label)}${f.label ? ":" : ""}</b> ${esc(f.text)}</span>`).join("");
+  const stars = (n) => { const k = Math.max(0, Math.min(5, Math.round(n))); return "★".repeat(k) + "☆".repeat(5 - k); };
+  function pageHtml(group) {
+    if (S.layout === "lien") return group.map((f) => `<span class="field"><b>${esc(f.label)}${f.label ? ":" : ""}</b> ${esc(f.text)}</span>`).join("");
+    return group.map((f) => {
+      const m = String(f.text).match(/^(\d+(?:[.,]\d+)?) điểm(?: · )?([\s\S]*)$/);
+      const avg = f.label === "Điểm trung bình" ? " avg" : "";
+      if (m) return `<div class="field block${avg}"><div class="fhead"><b>${esc(f.label)}</b><span class="stars" aria-label="${esc(m[1])} điểm">${stars(parseFloat(m[1].replace(",", ".")))}<em>${esc(m[1])} điểm</em></span></div>${m[2] ? `<p class="ftext">${esc(m[2])}</p>` : ""}</div>`;
+      return `<div class="field block${avg}"><div class="fhead"><b>${esc(f.label)}</b></div><p class="ftext">${esc(f.text)}</p></div>`;
+    }).join("");
+  }
 
   /** Chia trang cho vừa khung nhận xét: không co chữ, không cắt ý. Trang nào tràn khung thì chia nhỏ hơn. */
   function fitPages(fields) {
     const box = $(".comment"), body = $("#commentBody");
     if (!box || box.clientHeight === 0) return paginate(fields);
     const fits = (group) => { body.innerHTML = pageHtml(group); return box.scrollHeight <= box.clientHeight + 1; };
-    let limit = PAGE_LIMIT, pages = paginate(fields, limit);
-    for (let tries = 0; tries < 8 && !pages.every(fits); tries++) { limit = Math.floor(limit * 0.8); pages = paginate(fields, limit); }
+    // Mỗi mục được cắt cho vừa một khung, rồi xếp lần lượt nhiều mục nhất có thể vào mỗi trang (đo thật trên màn hình).
+    let limit = PAGE_LIMIT, pieces = [];
+    for (let tries = 0; tries < 8; tries++) {
+      pieces = fields.flatMap((f) => paginate([f], limit).flat());
+      if (pieces.every((x) => fits([x]))) break;
+      limit = Math.floor(limit * 0.8);
+    }
+    if (!pieces.length) return paginate(fields);
+    const pages = [];
+    let cur = [];
+    for (const x of pieces) {
+      if (cur.length && !fits([...cur, x])) { pages.push(cur); cur = []; }
+      cur.push(x);
+    }
+    if (cur.length) pages.push(cur);
     return pages;
   }
 
@@ -159,7 +181,7 @@ export function startStage(opts) {
     renderRoster(r.nguoiNhan.id, animate);
     if (animate) signalReceiver(S.focus);
     renderPage();
-    if (animate) card.animate?.([{ opacity: 0.65, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 650, easing: "cubic-bezier(.16,1,.3,1)" });
+    if (animate && S.fx === "manh") card.animate?.([{ opacity: 0.65, transform: "translateY(12px) scale(.985)" }, { opacity: 1, transform: "none" }], { duration: 650, easing: "cubic-bezier(.16,1,.3,1)" });
   }
 
   // ---------- Phát, hàng đợi, luân phiên ----------
@@ -219,6 +241,7 @@ export function startStage(opts) {
 
   function applyDay(data) {
     S.doi = new Map((data.doi || []).map((d) => [d.ma, d.thanhVien || []]));
+    S.nguon = data.nguon || null;
     $("#sessionName").textContent = data.buoi ? `BUỔI ${data.buoi.so} · TUẦN ${data.buoi.tuan}` : "CHẤM CHÉO ĐỒNG ĐỘI & LIÊN ĐỘI";
   }
 
@@ -256,9 +279,10 @@ export function startStage(opts) {
         const currentKey = S.records[S.index]?.khoa;
         S.records = next;
         if (currentKey) { const at = next.findIndex((r) => r.khoa === currentKey); if (at >= 0) S.index = at; }
+        if (fresh.length) beep();
         for (const r of fresh) { S.known.add(r.khoa); S.queue.push(r.khoa); S.pending.set(r.nguoiNhan.doi, (S.pending.get(r.nguoiNhan.doi) || 0) + 1); }
         if (!S.eventMode && !S.playing) renderRoster(); else buildTeams();
-        if (S.queue.length && !S.eventMode && !$("#person").open) startNextEvent();
+        if (S.queue.length && !S.eventMode && !root.querySelector("dialog[open]")) startNextEvent();
       }
       S.lastOk = Date.now(); updateFresh();
       setStatus(isToday() ? "ĐANG CHẠY THỰC TẾ" : "ĐANG XEM LỊCH SỬ");
@@ -362,18 +386,42 @@ export function startStage(opts) {
   const OPT_KEY = "nskt-chamcheo-tuychon";
   const saveOpts = (o) => { try { storage.setItem(OPT_KEY, JSON.stringify(o)); } catch { /* bỏ qua */ } };
   const loadOpts = () => { try { return JSON.parse(storage.getItem(OPT_KEY) || "{}") || {}; } catch { return {}; } };
-  function applyFont(v, refit = true) {
-    const n = Number(v) || 1;
-    document.documentElement.style.setProperty("--chu", String(n));
-    $("#fontSize").value = String(n);
-    if (!refit) return;
+  function refit() {
     const r = S.records[S.index];
     if (!r) return;
     S.pages = fitPages(fieldsOf(r)); S.page = Math.min(S.page, S.pages.length - 1); renderPage();
   }
+  function applyFont(v, doRefit = true) {
+    const n = Number(v) || 1;
+    document.documentElement.style.setProperty("--chu", String(n));
+    $("#fontSize").value = String(n);
+    if (doRefit) refit();
+  }
+  function applyLayout(v, doRefit = true) {
+    S.layout = v === "lien" ? "lien" : "khoi";
+    document.body.dataset.layout = S.layout;
+    $("#layoutMode").value = S.layout;
+    if (doRefit) refit();
+  }
+  function applyFx(v) { S.fx = ["manh", "nhe", "tat"].includes(v) ? v : "manh"; document.body.dataset.fx = S.fx; $("#fx").value = S.fx; }
+  let audio = null;
+  function beep() {
+    if (!S.sound || !audio) return;
+    S.beeps++;
+    try { const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 880; g.gain.value = 0.05; o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + 0.18); } catch { /* bỏ qua */ }
+  }
   const opts0 = loadOpts();
   if (opts0.speed) { S.speed = Number(opts0.speed) || 1; if ([...$("#speed").options].some((o) => o.value === String(S.speed))) $("#speed").value = String(S.speed); else S.speed = 1; }
   if (opts0.font) applyFont(opts0.font, false);
+  applyLayout(opts0.layout, false);
+  applyFx(opts0.fx);
+  on($("#layoutMode"), "change", (e) => { applyLayout(e.target.value); saveOpts({ ...loadOpts(), layout: S.layout }); });
+  on($("#fx"), "change", (e) => { applyFx(e.target.value); saveOpts({ ...loadOpts(), fx: S.fx }); });
+  // Âm báo luôn tắt khi mở trang (trình duyệt chỉ cho phát âm sau khi người dùng bấm chọn).
+  on($("#sound"), "change", (e) => {
+    S.sound = e.target.value === "1";
+    if (S.sound) { try { audio = audio || new (globalThis.AudioContext || globalThis.webkitAudioContext)(); audio.resume?.(); } catch { audio = null; } beep(); }
+  });
   on($("#speed"), "change", (e) => { S.speed = Number(e.target.value) || 1; saveOpts({ ...loadOpts(), speed: S.speed }); if (S.playing) renderPage(); });
   on($("#fontSize"), "change", (e) => { applyFont(e.target.value); saveOpts({ ...loadOpts(), font: Number(e.target.value) || 1 }); });
 
@@ -392,7 +440,7 @@ export function startStage(opts) {
   on(document, "keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target;
-    if (t?.matches?.("input, select, textarea") || $("#person").open) return;
+    if (t?.matches?.("input, select, textarea") || root.querySelector("dialog[open]")) return;
     const click = (id) => { e.preventDefault(); $(id).click(); };
     switch (e.key) {
       case " ": if (t?.matches?.("button, a, .person-link")) return; click("#play"); break;
@@ -412,8 +460,8 @@ export function startStage(opts) {
   function wake() {
     document.body.classList.remove("quiet");
     clearTimeout(quietTimer);
-    if (phone() || $("#person").open) return;
-    quietTimer = setTimeout(() => { if (!$("#person").open && !phone()) document.body.classList.add("quiet"); }, quietMs);
+    if (phone() || root.querySelector("dialog[open]")) return;
+    quietTimer = setTimeout(() => { if (!root.querySelector("dialog[open]") && !phone()) document.body.classList.add("quiet"); }, quietMs);
   }
   for (const ev of ["pointermove", "pointerdown", "touchstart"]) on(document, ev, wake);
   on(document, "keydown", wake);
@@ -432,6 +480,39 @@ export function startStage(opts) {
       renderPage();
     }, 200);
   });
+  // ---------- Tổng quan trong ngày (BTC) ----------
+  let onlyMissing = true;
+  function renderOverview() {
+    const all = [...S.doi].flatMap(([ma, list]) => list.map((p) => ({ ...p, doi: ma })));
+    const gave = new Map(), got = new Map();
+    for (const r of S.records) { gave.set(r.nguoiCham.id, (gave.get(r.nguoiCham.id) || 0) + 1); got.set(r.nguoiNhan.id, (got.get(r.nguoiNhan.id) || 0) + 1); }
+    const noGive = all.filter((p) => !gave.has(p.id)).length, noGet = all.filter((p) => !got.has(p.id)).length;
+    $("#overviewDay").textContent = `Dữ liệu ngày ${formatDate(S.day)}`;
+    $("#overviewSummary").textContent = `${S.records.length} lượt · ${gave.size} người đã chấm · ${noGive} người chưa chấm · ${noGet} người chưa được chấm`;
+    const n = S.nguon;
+    $("#overviewSource").innerHTML = n
+      ? `<b>Kiểm nguồn:</b> bảng tính có ${n.tongDong} dòng · hiển thị ${n.hienThi} · bỏ ${n.bo}${n.bo && n.lyDo?.length ? `<ul>${n.lyDo.map((x) => `<li>${esc(x.lyDo)}: ${x.soDong} dòng</li>`).join("")}</ul>` : ""}`
+      : "<b>Kiểm nguồn:</b> chưa có số liệu từ bảng tính.";
+    $("#overviewToggle").textContent = onlyMissing ? "Đang chỉ hiện người chưa chấm hoặc chưa được chấm · bấm để xem tất cả" : "Đang hiện tất cả · bấm để chỉ xem người chưa tham gia đủ";
+    const rows = [];
+    for (const [ma, list] of S.doi) {
+      const mine = list.filter((p) => !onlyMissing || !gave.has(p.id) || !got.has(p.id));
+      if (!mine.length) continue;
+      rows.push(`<tr class="team"><td colspan="3">ĐỘI ${esc(ma.slice(1))}</td></tr>`);
+      for (const p of mine) rows.push(`<tr><td>${esc(p.ten)}</td><td class="n${gave.has(p.id) ? "" : " zero"}">${gave.get(p.id) || 0}</td><td class="n${got.has(p.id) ? "" : " zero"}">${got.get(p.id) || 0}</td></tr>`);
+    }
+    $("#overviewTable").innerHTML = rows.length ? `<table><thead><tr><th>Thành viên</th><th class="n">Đã chấm</th><th class="n">Được chấm</th></tr></thead><tbody>${rows.join("")}</tbody></table>` : '<p class="muted">Mọi người đều đã chấm và được chấm.</p>';
+  }
+  on($("#overviewBtn"), "click", () => {
+    if (!btc()) return;
+    wasPlaying = S.playing; hadIdle = Boolean(idleTimer);
+    stopRead(); stopIdle();
+    renderOverview();
+    $("#overview").showModal();
+  });
+  on($("#overviewToggle"), "click", () => { onlyMissing = !onlyMissing; renderOverview(); });
+  on($("#closeOverview"), "click", () => $("#overview").close());
+  on($("#overview"), "close", afterPerson);
   on($("#closePerson"), "click", () => $("#person").close());
   on($("#person"), "close", afterPerson);
 
