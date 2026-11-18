@@ -324,7 +324,9 @@ a.btn { display:inline-flex; align-items:center; min-height:44px; padding:8px 16
 .who-t small { display:block; font-size:.75rem; color:var(--muted); }
 @media (min-width: 1100px) { .who-t { display:block; } }
 /* FAQ */
-.faq-g summary { list-style:none; } .faq-g summary::-webkit-details-marker { display:none; }
+.faq-g summary { list-style:none; position:relative; padding-right:30px; cursor:pointer; } .faq-g summary::-webkit-details-marker { display:none; }
+.faq-g summary::after { content:"▾"; position:absolute; right:6px; top:4px; font-size:1.1rem; color:var(--muted); transition:transform .15s; }
+.faq-g[open] summary::after { transform:rotate(180deg); }
 .faq-g .faq-q { display:block; margin:6px 0 2px; font-size:1rem; }
 .faq-g.u-cap-bach { border-left:4px solid var(--bad-fg); }
 .faq-g.u-quan-trong { border-left:4px solid var(--orange); }

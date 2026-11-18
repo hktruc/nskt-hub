@@ -39,15 +39,13 @@ function FaqShell(props: { tab: "tong-hop" | "dang"; children?: unknown; notice?
   );
 }
 
-/** Dòng chữ nhỏ: ai hỏi, đội nào, tuần nào. */
+/** Dòng chữ nhỏ: bao nhiêu lượt, học viên, đội nào, tuần nào. Tên từng người nằm trong phần xổ xuống bên dưới, không dài dòng ở đầu thẻ. */
 function WhoLine(props: { items: FaqItem[] }) {
   const teams = [...new Set(props.items.map((i) => i.team))].sort();
   const weeks = [...new Set(props.items.map((i) => weekOf(i.assignmentTitle)))].sort((a, b) => a.localeCompare(b, "vi", { numeric: true }));
   return (
     <span class="faq-who">
       {props.items.length} lượt · {new Set(props.items.map((i) => i.learnerId)).size} học viên · {teams.map(teamLabel).join(", ")} · tuần {weeks.join(", ")}
-      <br />
-      {props.items.map((i) => `${i.name} (${teamLabel(i.team)}, tuần ${weekOf(i.assignmentTitle)})`).join(" · ")}
     </span>
   );
 }

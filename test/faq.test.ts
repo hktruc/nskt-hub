@@ -93,6 +93,7 @@ describe("câu hỏi học viên → FAQ", () => {
     expect(html).toContain("Không tải được ảnh lên web thì làm sao?");
     expect(html).toContain("Cấp bách");
     expect(html).toMatch(/2 lượt · 1 học viên · Đội 01 · tuần 05, 06/);
+    expect(html).not.toMatch(/\(Đội 01, tuần \d+\)/); // tên từng người không còn nối dài ở đầu thẻ; xem trong phần xổ xuống
     expect(html).toContain('href="/bai?hv=1&amp;bt=50"');
     expect(html).toContain("Các câu AI chưa xếp nhóm");
     expect(html).toContain("Nên gửi lịch học sớm hơn");
