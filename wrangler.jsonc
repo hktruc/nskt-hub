@@ -19,6 +19,7 @@
     "APP_NAME": "nskt-hub",
     "DH3G_BASE_URL": "https://api.dh3g.vn",
     "DH3G_COMMUNITY_ID": "44",
+    "CHAM_CHEO_ORIGIN": "https://nskt-cham-cheo-stage.hktruc.workers.dev",
     "SYNC_START_DATE": "2026-09-23",
     // AI chấm bài: mô hình OpenAI rẻ nhất vừa đủ. Khóa nhập riêng làm secret OPENAI_API_KEY.
     "OPENAI_MODEL": "gpt-5-nano",
@@ -31,6 +32,9 @@
     "ACCESS_TEAM_DOMAIN": "hidden-art-d8b9.cloudflareaccess.com",
     "ACCESS_AUD": "cd04f88badc957f8cecaefefb0e646276500084e90c67baf5557c0eb9070133c"
   },
+  // Màn hình chiếu chấm chéo là Worker riêng (không thuộc repo này); nskt-hub chuyển tiếp /cham-cheo sang đó.
+  // Nếu tên Worker sai hoặc bị xóa thì bản triển khai nskt-hub sẽ báo lỗi (bản đang chạy vẫn giữ nguyên).
+  "services": [{ "binding": "CHAM_CHEO", "service": "nskt-cham-cheo-stage" }],
   "d1_databases": [
     {
       "binding": "DB",

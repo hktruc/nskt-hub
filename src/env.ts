@@ -19,6 +19,10 @@ export type Env = {
   SHEET_ROSTER_ID?: string;
   GOOGLE_SERVICE_ACCOUNT_JSON?: string;
 
+  // Màn hình chiếu chấm chéo (Worker riêng `nskt-cham-cheo-stage`): nối bằng service binding, xem src/chamcheo/proxy.ts.
+  CHAM_CHEO?: Fetcher;
+  CHAM_CHEO_ORIGIN?: string;
+
   // Đăng nhập qua Cloudflare Access.
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;

@@ -211,4 +211,12 @@ describe("45N-K02: kỷ luật", () => {
     expect((await call(P + "/zoom/camera", { method: "POST", body: form({ buoi: "100", doi: "T01", tatca: "1" }) })).status).not.toBe(303);
     expect((await call(P + "/mien")).status).not.toBe(200);
   });
+
+  it("45N không có màn hình chấm chéo: /cham-cheo và các đường dẫn của nó không được chuyển tiếp", async () => {
+    const { call, btc } = await setup();
+    expect((await call("/cham-cheo")).status).not.toBe(200);
+    expect((await call("/cham-cheo", { cookie: btc })).status).toBe(404);
+    expect((await call("/api/session")).status).not.toBe(200);
+    expect((await call("/sim23/app.js")).status).not.toBe(200);
+  });
 });
