@@ -8,7 +8,7 @@
 //  - Ngày cũ: tự phát từ đầu.
 //  - Hết hàng đợi: luân phiên 12 đội, mỗi đội 10 giây (trừ khi đã ghim đội).
 //  - Mỗi 10 giây hỏi dữ liệu mới. Đổi ngày nhanh không để kết quả cũ ghi đè kết quả mới.
-import { COLORS, PAGE_LIMIT, TEAM_IDS, esc, fieldsOf, formatDate, normalizeRecords, paginate, pendingOf, readMs, todayVN } from "./logic.js";
+import { COLORS, PAGE_LIMIT, TEAM_IDS, agoText, esc, fieldsOf, formatDate, normalizeRecords, paginate, pendingOf, readMs, shortTime, todayVN } from "./logic.js";
 
 const safeStorage = () => {
   try {
@@ -22,21 +22,38 @@ const safeStorage = () => {
 };
 
 export function startStage(opts) {
-  const { api, root = document, now = () => new Date(), pollMs = 10000, idleMs = 10000, signalMs = 3600, qrSrc = "/cham-cheo-moi/qr.png", loginHref = "/dang-nhap?tiep=%2Fcham-cheo-moi%2F", logoutAction = "/dang-xuat" } = opts;
+  const { api, root = document, now = () => new Date(), pollMs = 10000, idleMs = 10000, signalMs = 3600, quietMs = 4000, qrSrc = "/cham-cheo-moi/qr.png", loginHref = "/dang-nhap?tiep=%2Fcham-cheo-moi%2F", logoutAction = "/dang-xuat" } = opts;
   const storage = opts.storage ?? safeStorage();
   const $ = (s) => root.querySelector(s);
   const S = {
     role: "khach", user: "", day: "", doi: new Map(), records: [], index: 0, page: 0, pages: [], playing: false,
     focus: "T01", pinned: null, pending: new Map(), known: new Set(), queue: [], eventMode: false,
-    loading: false, loaded: false, version: 0, signal: "", speed: 1,
+    loading: false, loaded: false, version: 0, signal: "", speed: 1, lastOk: 0, userPaused: false, invite: null, qrOk: false,
   };
-  let readTimer = null, idleTimer = null, signalTimer = null, pollTimer = null, controller = null;
+  let readTimer = null, idleTimer = null, signalTimer = null, pollTimer = null, freshTimer = null, quietTimer = null, controller = null;
   let wasPlaying = false, hadIdle = false;
   const today = () => todayVN(now());
   const isToday = () => S.day === today();
   const btc = () => S.role === "btc";
   const setPlayLabel = (t) => { $("#play").textContent = t; };
   const setStatus = (text, state = "ready") => { const el = $("#status"); el.textContent = text; el.dataset.state = state; };
+
+  // ---------- Thanh thời gian đọc (cho người xem biết khi nào đổi trang) ----------
+  function resetReadBar(visible) {
+    const bar = $("#readbar"), fill = bar.firstElementChild;
+    fill.style.transition = "none";
+    fill.style.width = "0%";
+    bar.style.opacity = visible ? "1" : "0";
+    return fill;
+  }
+  function stopRead() { clearTimeout(readTimer); resetReadBar(false); }
+  function startRead(ms) {
+    readTimer = setTimeout(advancePage, ms);
+    const fill = resetReadBar(true);
+    void fill.offsetWidth;
+    fill.style.transition = `width ${Math.round(ms)}ms linear`;
+    fill.style.width = "100%";
+  }
 
   // ---------- Ghi nhớ lượt đã chiếu (theo ngày) ----------
   const seenKey = () => `nskt-chamcheo-seen:${S.day}`;
@@ -78,13 +95,16 @@ export function startStage(opts) {
     $(`#${prefix}Team`).textContent = p ? p.doi : "—";
   }
 
-  function renderEmpty(message) {
-    clearTimeout(readTimer);
+  function renderEmpty(message, { invite = false } = {}) {
+    S.invite = invite ? message : null;
+    stopRead();
     S.playing = false; S.index = 0; S.page = 0; S.pages = [];
     $("#eventType").textContent = isToday() ? "CHỜ LƯỢT CHẤM MỚI" : "KHÔNG CÓ DỮ LIỆU";
     $("#eventTime").textContent = formatDate(S.day);
     setPerson("from", null); setPerson("to", null);
-    $("#commentBody").textContent = message;
+    $("#commentBody").innerHTML = invite && S.qrOk
+      ? `<div class="invite-wrap"><p>${esc(message)}</p><div class="qr-big"><img src="${esc(qrSrc)}" alt="Mã QR chấm chéo cho học viên"></div></div>`
+      : esc(message);
     $("#page").textContent = "TRANG 0/0";
     $("#progress").textContent = `0 lượt · ${formatDate(S.day)}`;
     $("#review").classList.remove("cross"); $("#review").classList.add("same");
@@ -111,9 +131,9 @@ export function startStage(opts) {
     const group = S.pages[S.page];
     $("#commentBody").innerHTML = pageHtml(group);
     $("#page").textContent = `TRANG ${S.page + 1}/${S.pages.length}`;
-    $("#progress").textContent = `Lượt ${S.index + 1}/${S.records.length} · ${r.gui} · ${isToday() ? "TRỰC TIẾP" : "LỊCH SỬ"} ${formatDate(S.day)}`;
-    clearTimeout(readTimer);
-    if (S.playing) readTimer = setTimeout(advancePage, readMs($("#commentBody").textContent.length, S.speed));
+    $("#progress").textContent = `Lượt ${S.index + 1}/${S.records.length} · ${shortTime(r.gui)} · ${isToday() ? "TRỰC TIẾP" : "LỊCH SỬ"} ${formatDate(S.day)}`;
+    stopRead();
+    if (S.playing) startRead(readMs($("#commentBody").textContent.length, S.speed));
   }
 
   function show(i, { animate = true, consume = true } = {}) {
@@ -132,7 +152,7 @@ export function startStage(opts) {
     card.style.setProperty("--from", COLORS[r.nguoiCham.doi]);
     card.style.setProperty("--to", COLORS[r.nguoiNhan.doi]);
     $("#eventType").textContent = cross ? "CHẤM LIÊN ĐỘI" : "CHẤM NỘI BỘ";
-    $("#eventTime").textContent = r.gui;
+    $("#eventTime").textContent = shortTime(r.gui);
     setPerson("from", r.nguoiCham); setPerson("to", r.nguoiNhan);
     S.pages = fitPages(fieldsOf(r));
     if (animate) S.signal = S.focus;
@@ -152,7 +172,7 @@ export function startStage(opts) {
 
   function finishPlayback() {
     S.eventMode = false; S.playing = false;
-    clearTimeout(readTimer);
+    stopRead();
     setPlayLabel("▶ Phát lại");
     if (S.pinned) { S.focus = S.pinned; renderRoster(); } else startIdle();
   }
@@ -216,7 +236,7 @@ export function startStage(opts) {
       const fresh = next.filter((r) => !S.known.has(r.khoa));
       if (first) {
         S.records = next; S.known = new Set(next.map((r) => r.khoa)); S.pending = new Map(); S.queue = []; S.eventMode = false; S.index = 0;
-        if (!next.length) renderEmpty(isToday() ? "Chưa có lượt chấm nào hôm nay. Màn hình đang chờ dữ liệu mới." : "Không có lượt chấm trong ngày đã chọn.");
+        if (!next.length) renderEmpty(isToday() ? "Chưa có lượt chấm nào hôm nay. Mời cả lớp quét mã QR bằng Zalo để bắt đầu chấm chéo; màn hình tự chiếu khi có lượt đầu tiên." : "Không có lượt chấm trong ngày đã chọn.", { invite: isToday() });
         else if (isToday()) {
           S.index = next.length - 1; S.playing = false;
           show(S.index, { animate: false, consume: false });
@@ -240,6 +260,7 @@ export function startStage(opts) {
         if (!S.eventMode && !S.playing) renderRoster(); else buildTeams();
         if (S.queue.length && !S.eventMode && !$("#person").open) startNextEvent();
       }
+      S.lastOk = Date.now(); updateFresh();
       setStatus(isToday() ? "ĐANG CHẠY THỰC TẾ" : "ĐANG XEM LỊCH SỬ");
     } catch (error) {
       if (version !== S.version) return;
@@ -256,8 +277,8 @@ export function startStage(opts) {
     S.version++;
     controller?.abort();
     S.loading = false;
-    clearTimeout(readTimer); stopIdle();
-    S.playing = false; S.loaded = false; S.eventMode = false; S.queue = []; S.known.clear(); S.records = []; S.pending = new Map(); S.day = day;
+    stopRead(); stopIdle();
+    S.playing = false; S.userPaused = false; S.lastOk = 0; updateFresh(); S.loaded = false; S.eventMode = false; S.queue = []; S.known.clear(); S.records = []; S.pending = new Map(); S.day = day;
     $("#dayInput").value = day;
     renderEmpty("Đang tải dữ liệu của ngày đã chọn…");
     await sync(true).catch(() => {});
@@ -271,7 +292,7 @@ export function startStage(opts) {
     return r.nguoiCham.id === id ? r.nguoiCham : r.nguoiNhan;
   }
   const detailItems = (items, dir) => items.length
-    ? items.map((r) => { const o = dir === "given" ? r.nguoiNhan : r.nguoiCham; return `<li><b>${esc(o.ten)}</b><span>${esc(o.doi)} · ${esc(r.gui || "Không có thời gian hợp lệ")}</span></li>`; }).join("")
+    ? items.map((r) => { const o = dir === "given" ? r.nguoiNhan : r.nguoiCham; return `<li><b>${esc(o.ten)}</b><span>${esc(o.doi)} · ${esc(r.gui ? shortTime(r.gui, true) : "Không có thời gian hợp lệ")}</span></li>`; }).join("")
     : '<li class="empty">Không có lượt nào trong ngày đã chọn.</li>';
 
   function openPerson(id) {
@@ -280,7 +301,7 @@ export function startStage(opts) {
     if (!p) return;
     const given = S.records.filter((r) => r.nguoiCham.id === id), received = S.records.filter((r) => r.nguoiNhan.id === id);
     wasPlaying = S.playing; hadIdle = Boolean(idleTimer);
-    clearTimeout(readTimer); stopIdle();
+    stopRead(); stopIdle();
     $("#personDay").textContent = `Dữ liệu ngày ${formatDate(S.day)}`;
     $("#personName").textContent = p.ten;
     $("#personTeam").textContent = p.doi;
@@ -304,8 +325,8 @@ export function startStage(opts) {
   }
   function setupQr() {
     const img = $("#qr");
-    img.onload = () => { $("#qrCrop").hidden = false; $("#qrPending").hidden = true; };
-    img.onerror = () => { $("#qrCrop").hidden = true; $("#qrPending").hidden = false; };
+    img.onload = () => { S.qrOk = true; $("#qrCrop").hidden = false; $("#qrPending").hidden = true; if (S.invite && !S.records.length) renderEmpty(S.invite, { invite: true }); };
+    img.onerror = () => { S.qrOk = false; $("#qrCrop").hidden = true; $("#qrPending").hidden = false; };
     img.src = qrSrc;
   }
 
@@ -322,8 +343,10 @@ export function startStage(opts) {
   });
   on($("#play"), "click", () => {
     S.playing = !S.playing;
+    S.userPaused = !S.playing;
+    updateFresh();
     setPlayLabel(S.playing ? "❚❚ Tạm dừng" : "▶ Tiếp tục");
-    clearTimeout(readTimer); stopIdle();
+    stopRead(); stopIdle();
     if (S.playing) {
       if (S.index === S.records.length - 1 && S.page === S.pages.length - 1) { S.index = 0; S.pending = pendingOf(S.records); show(0, { animate: false }); } else renderPage();
     } else if (S.pinned) { S.focus = S.pinned; renderRoster(); } else startIdle();
@@ -335,7 +358,66 @@ export function startStage(opts) {
     if (S.pinned) { S.pinned = null; $("#pin").setAttribute("aria-pressed", "false"); $("#pin").textContent = "Ghim đội"; if (!S.playing) startIdle(); }
     else { S.pinned = S.focus; stopIdle(); $("#pin").setAttribute("aria-pressed", "true"); $("#pin").textContent = "Bỏ ghim"; }
   });
-  on($("#speed"), "change", (e) => { S.speed = Number(e.target.value) || 1; if (S.playing) renderPage(); });
+  // ---------- Tuỳ chọn (nhớ trong trình duyệt), cỡ chữ ----------
+  const OPT_KEY = "nskt-chamcheo-tuychon";
+  const saveOpts = (o) => { try { storage.setItem(OPT_KEY, JSON.stringify(o)); } catch { /* bỏ qua */ } };
+  const loadOpts = () => { try { return JSON.parse(storage.getItem(OPT_KEY) || "{}") || {}; } catch { return {}; } };
+  function applyFont(v, refit = true) {
+    const n = Number(v) || 1;
+    document.documentElement.style.setProperty("--chu", String(n));
+    $("#fontSize").value = String(n);
+    if (!refit) return;
+    const r = S.records[S.index];
+    if (!r) return;
+    S.pages = fitPages(fieldsOf(r)); S.page = Math.min(S.page, S.pages.length - 1); renderPage();
+  }
+  const opts0 = loadOpts();
+  if (opts0.speed) { S.speed = Number(opts0.speed) || 1; if ([...$("#speed").options].some((o) => o.value === String(S.speed))) $("#speed").value = String(S.speed); else S.speed = 1; }
+  if (opts0.font) applyFont(opts0.font, false);
+  on($("#speed"), "change", (e) => { S.speed = Number(e.target.value) || 1; saveOpts({ ...loadOpts(), speed: S.speed }); if (S.playing) renderPage(); });
+  on($("#fontSize"), "change", (e) => { applyFont(e.target.value); saveOpts({ ...loadOpts(), font: Number(e.target.value) || 1 }); });
+
+  // ---------- Độ mới của dữ liệu ----------
+  function updateFresh() {
+    const el = $("#fresh");
+    if (!el) return;
+    if (!isToday() || !S.lastOk) { el.textContent = ""; el.dataset.stale = "false"; return; }
+    const sec = Math.floor((Date.now() - S.lastOk) / 1000);
+    el.textContent = agoText(sec) + (S.userPaused ? " · ❚❚ ĐÃ TẠM DỪNG" : "");
+    el.dataset.stale = sec > 30 ? "true" : "false";
+  }
+  freshTimer = setInterval(updateFresh, 1000);
+
+  // ---------- Phím tắt ----------
+  on(document, "keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t?.matches?.("input, select, textarea") || $("#person").open) return;
+    const click = (id) => { e.preventDefault(); $(id).click(); };
+    switch (e.key) {
+      case " ": if (t?.matches?.("button, a, .person-link")) return; click("#play"); break;
+      case "ArrowRight": case "PageDown": click("#next"); break;
+      case "ArrowLeft": case "PageUp": click("#prev"); break;
+      case "Home": click("#restart"); break;
+      case "f": case "F": click("#fullscreen"); break;
+      case "p": case "P": click("#pin"); break;
+      default: return;
+    }
+  });
+  // Bấm nút xong thì bỏ tiêu điểm để phím Cách không bấm lại nút đó.
+  on($(".controls"), "click", (e) => { const b = e.target.closest?.("button"); if (b) b.blur(); });
+
+  // ---------- Chế độ chiếu: vài giây không chạm thì ẩn thanh điều khiển ----------
+  const phone = () => window.matchMedia?.("(max-width: 760px)").matches;
+  function wake() {
+    document.body.classList.remove("quiet");
+    clearTimeout(quietTimer);
+    if (phone() || $("#person").open) return;
+    quietTimer = setTimeout(() => { if (!$("#person").open && !phone()) document.body.classList.add("quiet"); }, quietMs);
+  }
+  for (const ev of ["pointermove", "pointerdown", "touchstart"]) on(document, ev, wake);
+  on(document, "keydown", wake);
+  wake();
   on($("#fullscreen"), "click", () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.()));
   on($("#dayInput"), "change", (e) => switchDay(e.target.value));
   let resizeTimer = null;
@@ -372,6 +454,6 @@ export function startStage(opts) {
     switchDay,
     /** Nhảy tới trang n của lượt đang chiếu (dùng khi kiểm tra). */
     showPage(n) { S.page = Math.max(0, Math.min(n, S.pages.length - 1)); renderPage(); },
-    destroy() { clearTimeout(readTimer); clearTimeout(signalTimer); clearInterval(idleTimer); clearInterval(pollTimer); controller?.abort(); },
+    destroy() { stopRead(); clearInterval(freshTimer); clearTimeout(quietTimer); clearTimeout(signalTimer); clearInterval(idleTimer); clearInterval(pollTimer); controller?.abort(); },
   };
 }

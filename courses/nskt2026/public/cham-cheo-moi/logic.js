@@ -105,6 +105,19 @@ export function formatDate(iso) {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso || "—";
 }
 
+/** "20/11/2026 19:11:34" → "19:11" (hoặc "19:11:34" khi withSeconds); không đọc được thì trả nguyên chuỗi. */
+export function shortTime(gui, withSeconds = false) {
+  const m = String(gui || "").match(/(\d\d):(\d\d):(\d\d)/);
+  return m ? (withSeconds ? `${m[1]}:${m[2]}:${m[3]}` : `${m[1]}:${m[2]}`) : String(gui || "");
+}
+
+/** "Đã cập nhật 3 giây trước" cho số giây đã qua kể từ lần lấy dữ liệu thành công. */
+export function agoText(sec) {
+  if (sec < 2) return "Đã cập nhật vừa xong";
+  if (sec < 60) return `Đã cập nhật ${sec} giây trước`;
+  return `Đã cập nhật ${Math.floor(sec / 60)} phút trước`;
+}
+
 /** Ngày hôm nay theo giờ Việt Nam, dạng YYYY-MM-DD. */
 export function todayVN(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);

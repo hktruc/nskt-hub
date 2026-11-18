@@ -79,6 +79,15 @@ describe("màn hình chấm chéo: xử lý thuần", () => {
     expect([...L.pendingOf(rs, 2)]).toEqual([["T05", 1]]);
   });
 
+  it("giờ ngắn và câu báo độ mới", () => {
+    expect(L.shortTime("20/11/2026 19:11:34")).toBe("19:11");
+    expect(L.shortTime("20/11/2026 19:11:34", true)).toBe("19:11:34");
+    expect(L.shortTime("")).toBe("");
+    expect(L.agoText(0)).toBe("Đã cập nhật vừa xong");
+    expect(L.agoText(12)).toBe("Đã cập nhật 12 giây trước");
+    expect(L.agoText(130)).toBe("Đã cập nhật 2 phút trước");
+  });
+
   it("12 đội, mỗi đội một màu", () => {
     expect(L.TEAM_IDS).toHaveLength(12);
     expect(new Set(Object.values(L.COLORS)).size).toBe(12);

@@ -15,7 +15,7 @@
     <div class="title"><small>TRAO LỜI GÓP Ý · CÙNG NHAU TRƯỞNG THÀNH</small><h1>CÁ CHÉP CÙNG VƯỢT LONG MÔN</h1></div>
     <div class="session">
       <div class="row"><b id="sessionName">CHẤM CHÉO ĐỒNG ĐỘI &amp; LIÊN ĐỘI</b><label class="date-picker">Ngày <input id="dayInput" type="date" aria-label="Chọn ngày dữ liệu"></label></div>
-      <em id="status" data-state="loading">ĐANG TẢI DỮ LIỆU</em>
+      <div class="statusline"><em id="status" data-state="loading">ĐANG TẢI DỮ LIỆU</em><span id="fresh" data-stale="false"></span></div>
     </div>
   </header>
 
@@ -23,7 +23,7 @@
 
   <section class="layout">
     <aside class="roster-panel">
-      <div class="team-head"><div><small>ĐỘI ĐANG HIỆN</small><h2 id="teamTitle">ĐỘI CÁ CHÉP 01</h2></div><button id="pin" type="button" aria-pressed="false">Ghim đội</button></div>
+      <div class="team-head"><div><small>ĐỘI ĐANG HIỆN</small><h2 id="teamTitle">ĐỘI CÁ CHÉP 01</h2></div><button id="pin" type="button" aria-pressed="false" title="Phím tắt: P">Ghim đội</button></div>
       <div id="roster" class="roster"></div>
       <div class="qr-card">
         <div id="qrPending" class="qr-pending"><strong>QR CHẤM CHÉO</strong><span>Đang chờ ảnh mã QR chính thức</span></div>
@@ -41,19 +41,21 @@
       </div>
       <section class="comment">
         <div class="comment-head"><b>NGUYÊN VĂN NHẬN XÉT</b><span id="page">TRANG 0/0</span></div>
+        <div class="readbar" id="readbar" aria-hidden="true"><i></i></div>
         <div id="commentBody"></div>
       </section>
-      <footer><span id="progress">Chưa có dữ liệu</span><span>Giữ nhận xét gần nhất sau hiệu ứng</span></footer>
+      <footer><span id="progress">Chưa có dữ liệu</span></footer>
     </article>
   </section>
 
   <nav class="controls" aria-label="Điều khiển trình chiếu">
-    <button id="play" type="button">▶ Phát</button>
-    <button id="prev" type="button">← Lượt trước</button>
-    <button id="next" type="button">Lượt sau →</button>
-    <button id="restart" type="button">↻ Từ đầu</button>
-    <label>Tốc độ <select id="speed"><option value="1">Trình chiếu</option><option value="0.35">Nhanh (kiểm tra)</option></select></label>
-    <button id="fullscreen" type="button">⛶ Toàn màn hình</button>
+    <button id="play" type="button" title="Phím tắt: Cách">▶ Phát</button>
+    <button id="prev" type="button" title="Phím tắt: ← hoặc PageUp">← Lượt trước</button>
+    <button id="next" type="button" title="Phím tắt: → hoặc PageDown">Lượt sau →</button>
+    <button id="restart" type="button" title="Phím tắt: Home">↻ Từ đầu</button>
+    <label>Tốc độ <select id="speed"><option value="1.6">Đọc chậm</option><option value="1" selected>Trình chiếu</option><option value="0.35">Nhanh (kiểm tra)</option></select></label>
+    <label>Cỡ chữ <select id="fontSize"><option value="1" selected>Vừa</option><option value="1.3">Lớn</option><option value="1.6">Rất lớn</option></select></label>
+    <button id="fullscreen" type="button" title="Phím tắt: F">⛶ Toàn màn hình</button>
   </nav>
 </main>
 

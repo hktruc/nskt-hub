@@ -24,10 +24,13 @@ header { display: grid; grid-template-columns: 280px 1fr 380px; align-items: cen
 .session { text-align: right; }
 .session .row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
 .session b { white-space: nowrap; }
-.session em { display: block; margin-top: 8px; font-style: normal; font-size: 12px; font-weight: 800; letter-spacing: 2px; color: var(--gold); }
+.session em { display: inline; font-style: normal; font-size: 12px; font-weight: 800; letter-spacing: 2px; color: var(--gold); }
 .session em[data-state="loading"] { color: #7a5711; }
 .session em[data-state="error"] { color: #a22424; }
 .session em[data-state="ready"] { color: var(--teal); }
+.statusline { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 8px; }
+#fresh { font-size: 12px; font-weight: 700; color: var(--muted); }
+#fresh[data-stale="true"] { color: #a85d00; }
 .date-picker { display: inline-flex; align-items: center; gap: 7px; color: var(--secondary); font-size: 12px; font-weight: 800; }
 .date-picker input { min-width: 142px; border: 1px solid var(--edge); border-radius: 9px; background: #fff; color: var(--text); padding: 6px 8px; font: 700 13px/1 "Segoe UI", Arial, sans-serif; }
 
@@ -97,7 +100,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, .team-chip:focu
 .comment { background: #fff; border: 2px solid var(--edge); border-radius: 16px; box-shadow: 0 12px 28px #17353224; padding: 14px 20px; min-height: 0; overflow: hidden; }
 .comment-head { display: flex; justify-content: space-between; border-bottom: 1px solid #cbdad6; padding-bottom: 8px; color: var(--gold); letter-spacing: 1px; }
 .comment-head span { color: var(--muted); }
-#commentBody { font-size: clamp(18px, 1.55vw, 28px); line-height: 1.43; font-weight: 600; padding: 10px 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+#commentBody { font-size: calc(clamp(18px, 1.55vw, 28px) * var(--chu, 1)); line-height: 1.43; font-weight: 600; padding: 10px 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.readbar { height: 4px; border-radius: 99px; background: #e1ece9; overflow: hidden; margin: 0 0 2px; opacity: 0; transition: opacity .3s; }
+.readbar i { display: block; height: 100%; width: 0; background: var(--teal); }
+.invite-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 28px; padding-top: 4px; }
+.invite-wrap p { flex: 1 1 260px; margin: 0; }
+.qr-big { width: min(28vh, 300px); aspect-ratio: 1; background: #fff; border: 10px solid #fff; box-shadow: 0 0 0 1px #b9cec9; border-radius: 8px; flex: none; }
+.qr-big img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .field { display: inline; }
 .field b { color: var(--teal); }
 .field + .field::before { content: "  —  "; color: #8aa19c; font-weight: 400; }
@@ -105,6 +114,11 @@ button:focus-visible, select:focus-visible, input:focus-visible, .team-chip:focu
 
 /* Thanh điều khiển */
 .controls { display: flex; justify-content: center; align-items: center; gap: 8px; }
+
+/* Chế độ chiếu: sau vài giây không chạm chuột, ẩn thanh điều khiển và con trỏ cho gọn */
+.controls, .account { transition: opacity .4s; }
+body.quiet .controls, body.quiet .account { opacity: 0; pointer-events: none; }
+body.quiet, body.quiet * { cursor: none !important; }
 
 /* Cá bơi nền */
 .water { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
@@ -170,7 +184,8 @@ dialog::backdrop { background: #0b1f2a88; }
   .pair { grid-template-columns: 1fr; gap: 4px; padding: 8px 4px; }
   .journey { display: none; }
   .pair strong { font-size: 22px; }
-  #commentBody { font-size: 17px; }
+  #commentBody { font-size: calc(17px * var(--chu, 1)); }
+  .qr-big { width: min(60vw, 260px); }
   .review footer { flex-direction: column; gap: 2px; }
   .controls { flex-wrap: wrap; }
   .detail-columns { grid-template-columns: 1fr; }
