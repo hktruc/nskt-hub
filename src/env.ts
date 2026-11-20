@@ -20,6 +20,8 @@ export type Env = {
   GOOGLE_SERVICE_ACCOUNT_JSON?: string;
   // Màn hình chấm chéo bản mới (/cham-cheo-moi): id file "NSKT2026 - CHẤM CHÉO BÀI TẬP" (không bí mật). Chưa đặt thì màn hình báo "chưa cấu hình".
   SHEET_CHAMCHEO_ID?: string;
+  // Quỹ gieo hạt (/gieo-hat): id file "NSKT2026 — KỶ LUẬT TỔNG" (không bí mật), tab TONG_HOP.
+  SHEET_KYLUAT_ID?: string;
 
   // Màn hình chiếu chấm chéo (Worker riêng `nskt-cham-cheo-stage`): nối bằng service binding, xem src/chamcheo/proxy.ts.
   CHAM_CHEO?: Fetcher;
