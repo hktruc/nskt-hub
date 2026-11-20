@@ -177,7 +177,21 @@ export async function assignmentReport(db: D1Database, type: "NORMAL" | "WEEK" |
 
 // ---------------- Toàn khóa theo tuần ----------------
 
-export type WeekRow = { from: string; attendance: number | null; dailyOnTime: number | null; dailyDone: number | null; weeklyDone: number | null; feedbacks: number };
+export type WeekRow = {
+  from: string;
+  attendance: number | null;
+  dailyOnTime: number | null;
+  dailyDone: number | null;
+  weeklyDone: number | null;
+  feedbacks: number;
+  // Số lượt thật (học viên × bài) đã tới hạn trong tuần: phải nộp / đã nộp (gồm cả nộp trễ), và số bài tập tương ứng.
+  dailyDue: number;
+  dailySubmitted: number;
+  dailyAssignments: number;
+  weeklyDue: number;
+  weeklySubmitted: number;
+  weeklyAssignments: number;
+};
 
 export async function courseByWeek(db: D1Database, now = new Date()): Promise<WeekRow[]> {
   const today = vietnamDay(now);
@@ -185,15 +199,15 @@ export async function courseByWeek(db: D1Database, now = new Date()): Promise<We
   const [att, subs, fb] = await db.batch([
     db.prepare("SELECT learner_id, session_day, code FROM offline_attendance"),
     db.prepare(
-      `SELECT s.learner_id, s.status, a.type, substr(a.due_at,1,10) AS day FROM submissions s JOIN assignments a ON a.id = s.assignment_id
+      `SELECT s.learner_id, s.status, a.type, a.id AS aid, substr(a.due_at,1,10) AS day FROM submissions s JOIN assignments a ON a.id = s.assignment_id
        WHERE a.type IN ('NORMAL','WEEK') AND substr(a.due_at,1,10) >= ? AND a.due_at <= ?`,
     ).bind(SCORING.startDate, `${today}T23:59:59`),
     db.prepare("SELECT substr(json_extract(value,'$.createdAt'),1,10) AS day FROM submissions s, json_each(s.feedbacks_json) WHERE s.feedback_count > 0"),
   ]);
-  const weeks = new Map<string, { attN: number; attP: number; dN: number; dOn: number; dDone: number; wN: number; wDone: number; fb: number }>();
+  const weeks = new Map<string, { attN: number; attP: number; dN: number; dOn: number; dDone: number; wN: number; wDone: number; fb: number; dIds: Set<number>; wIds: Set<number> }>();
   const w = (day: string) => {
     const k = mondayOf(day);
-    const e = weeks.get(k) ?? { attN: 0, attP: 0, dN: 0, dOn: 0, dDone: 0, wN: 0, wDone: 0, fb: 0 };
+    const e = weeks.get(k) ?? { attN: 0, attP: 0, dN: 0, dOn: 0, dDone: 0, wN: 0, wDone: 0, fb: 0, dIds: new Set<number>(), wIds: new Set<number>() };
     weeks.set(k, e);
     return e;
   };
@@ -203,15 +217,17 @@ export async function courseByWeek(db: D1Database, now = new Date()): Promise<We
     e.attN++;
     if (["OK", "M", "X", "M1", "CANH_BAO"].includes(r.code)) e.attP++;
   }
-  for (const r of (subs?.results ?? []) as { learner_id: number; status: string | null; type: string; day: string }[]) {
+  for (const r of (subs?.results ?? []) as { learner_id: number; status: string | null; type: string; aid: number; day: string }[]) {
     if (!roster.has(r.learner_id)) continue;
     const e = w(r.day);
     const done = r.status === "DONE" || r.status === "OVERDUE" || r.status === "LATE";
     if (r.type === "NORMAL") {
+      e.dIds.add(r.aid);
       e.dN++;
       if (r.status === "DONE") e.dOn++;
       if (done) e.dDone++;
     } else {
+      e.wIds.add(r.aid);
       e.wN++;
       if (done) e.wDone++;
     }
@@ -227,6 +243,12 @@ export async function courseByWeek(db: D1Database, now = new Date()): Promise<We
       dailyDone: e.dN ? pct(e.dDone, e.dN) : null,
       weeklyDone: e.wN ? pct(e.wDone, e.wN) : null,
       feedbacks: e.fb,
+      dailyDue: e.dN,
+      dailySubmitted: e.dDone,
+      dailyAssignments: e.dIds.size,
+      weeklyDue: e.wN,
+      weeklySubmitted: e.wDone,
+      weeklyAssignments: e.wIds.size,
     }));
 }
 
