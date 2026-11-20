@@ -107,10 +107,11 @@ button:focus-visible, select:focus-visible, input:focus-visible, .team-chip:focu
 .readbar { height: 4px; border-radius: 99px; background: #e1ece9; overflow: hidden; margin: 0 0 2px; opacity: 0; transition: opacity .3s; }
 .readbar i { display: block; height: 100%; width: 0; background: var(--teal); }
 /* Chưa có lượt chấm: hướng dẫn + một mã QR lớn */
-body[data-waiting="1"] #review .pair, body[data-waiting="1"] .comment-head, body[data-waiting="1"] .readbar { display: none; }
-body[data-qrmain="1"] .qr-card { display: none; }
-body[data-qrmain="1"] .roster-panel { grid-template-rows: auto minmax(0, 1fr); }
-.guide { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 28px; align-items: center; white-space: normal; line-height: 1.32; font-weight: 600; }
+/* Màn hình hướng dẫn chiếu toàn khung (ẩn danh sách đội và khung chấm). Hiện khi chưa có lượt nào, và định kỳ khoảng 5 phút một lần trong buổi học. */
+.guide-panel { display: none; background: #fff; border: 2px solid var(--edge); border-radius: 20px; box-shadow: 0 12px 28px #17353224; padding: 18px 28px; min-height: 0; overflow: hidden; grid-column: 1 / -1; }
+body[data-guide="1"] .roster-panel, body[data-guide="1"] #review { display: none; }
+body[data-guide="1"] .guide-panel { display: block; }
+.guide { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 40px; align-items: center; height: 100%; white-space: normal; line-height: 1.32; font-weight: 600; }
 .guide p, .guide ul { margin: 0 0 .45em; }
 .guide ul { padding-left: 1.2em; }
 .guide li { margin-bottom: .25em; }
@@ -120,7 +121,7 @@ body[data-qrmain="1"] .roster-panel { grid-template-rows: auto minmax(0, 1fr); }
 .guide em { color: #d71920; font-style: normal; font-weight: 800; }
 .guide mark { background: #ffd23f; padding: 0 4px; font-weight: 800; }
 .g-qr { display: grid; justify-items: center; gap: 8px; text-align: center; }
-.g-qr .qr-big { width: min(46vh, 30vw, 460px); }
+.g-qr .qr-big { width: min(56vh, 34vw, 600px); }
 .g-qr b { font-size: .8em; letter-spacing: .04em; }
 .invite-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 28px; padding-top: 4px; }
 .invite-wrap p { flex: 1 1 260px; margin: 0; }
@@ -238,7 +239,8 @@ dialog::backdrop { background: #0b1f2a88; }
   .pair strong { font-size: 22px; }
   #commentBody { font-size: calc(17px * var(--chu, 1)); }
   .qr-big { width: min(60vw, 260px); }
-  .guide { grid-template-columns: 1fr; }
+  .guide-panel { overflow: auto; padding: 14px 16px; }
+  .guide { grid-template-columns: 1fr; height: auto; }
   .g-qr .qr-big { width: min(70vw, 300px); }
   .review footer { flex-direction: column; gap: 2px; }
   .controls { flex-wrap: wrap; }
