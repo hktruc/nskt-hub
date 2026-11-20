@@ -8,7 +8,7 @@
 //  - Ngày cũ: tự phát từ đầu.
 //  - Hết hàng đợi: luân phiên 12 đội, mỗi đội 10 giây (trừ khi đã ghim đội).
 //  - Mỗi 10 giây hỏi dữ liệu mới. Đổi ngày nhanh không để kết quả cũ ghi đè kết quả mới.
-import { COLORS, PAGE_LIMIT, TEAM_IDS, agoText, esc, fieldsOf, formatDate, normalizeRecords, paginate, pendingOf, readMs, shortTime, todayVN } from "./logic.js";
+import { COLORS, PAGE_LIMIT, TEAM_IDS, agoText, esc, fieldsOf, formatDate, GUIDE_HTML, normalizeRecords, paginate, pendingOf, readMs, shortTime, todayVN } from "./logic.js";
 
 const safeStorage = () => {
   try {
@@ -95,16 +95,30 @@ export function startStage(opts) {
     $(`#${prefix}Team`).textContent = p ? p.doi : "—";
   }
 
+  // Hôm nay chưa có lượt: chiếu hướng dẫn "Tranh biện nhóm" kèm một mã QR lớn (bỏ mã QR nhỏ ở cột trái để chỉ còn một mã).
+  function setWaiting(on) {
+    document.body.dataset.waiting = on ? "1" : "0";
+    document.body.dataset.qrmain = on && S.qrOk ? "1" : "0";
+  }
+  function fitGuide() {
+    const box = $(".comment"), g = $("#commentBody .guide");
+    if (!box || !g || box.clientHeight === 0) return;
+    let size = Math.min(26, Math.max(14, window.innerWidth * 0.0165));
+    g.style.fontSize = `${size}px`;
+    while (box.scrollHeight > box.clientHeight + 1 && size > 10) { size -= 0.5; g.style.fontSize = `${size}px`; }
+  }
   function renderEmpty(message, { invite = false } = {}) {
     S.invite = invite ? message : null;
+    setWaiting(invite);
     stopRead();
     S.playing = false; S.index = 0; S.page = 0; S.pages = [];
     $("#eventType").textContent = isToday() ? "CHỜ LƯỢT CHẤM MỚI" : "KHÔNG CÓ DỮ LIỆU";
     $("#eventTime").textContent = formatDate(S.day);
     setPerson("from", null); setPerson("to", null);
-    $("#commentBody").innerHTML = invite && S.qrOk
-      ? `<div class="invite-wrap"><p>${esc(message)}</p><div class="qr-big"><img src="${esc(qrSrc)}" alt="Mã QR chấm chéo cho học viên"></div></div>`
+    $("#commentBody").innerHTML = invite
+      ? `<div class="guide">${GUIDE_HTML}${S.qrOk ? `<div class="g-qr"><div class="qr-big"><img src="${esc(qrSrc)}" alt="Mã QR chấm chéo cho học viên"></div><b>QUÉT BẰNG ZALO ĐỂ CHẤM CHÉO</b></div>` : ""}</div>`
       : esc(message);
+    if (invite) fitGuide();
     $("#page").textContent = "TRANG 0/0";
     $("#progress").textContent = `0 lượt · ${formatDate(S.day)}`;
     $("#review").classList.remove("cross"); $("#review").classList.add("same");
@@ -160,6 +174,7 @@ export function startStage(opts) {
 
   function show(i, { animate = true, consume = true } = {}) {
     if (!S.records.length) return;
+    setWaiting(false);
     stopIdle();
     S.index = Math.max(0, Math.min(i, S.records.length - 1));
     S.page = 0;
@@ -472,6 +487,7 @@ export function startStage(opts) {
   on(window, "resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      if (S.invite) { fitGuide(); return; }
       const r = S.records[S.index];
       if (!r) return;
       const ratio = S.page / Math.max(1, S.pages.length);

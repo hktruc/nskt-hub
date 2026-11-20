@@ -106,6 +106,22 @@ button:focus-visible, select:focus-visible, input:focus-visible, .team-chip:focu
 #commentBody { font-size: calc(clamp(18px, 1.55vw, 28px) * var(--chu, 1)); line-height: 1.43; font-weight: 600; padding: 10px 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .readbar { height: 4px; border-radius: 99px; background: #e1ece9; overflow: hidden; margin: 0 0 2px; opacity: 0; transition: opacity .3s; }
 .readbar i { display: block; height: 100%; width: 0; background: var(--teal); }
+/* Chưa có lượt chấm: hướng dẫn + một mã QR lớn */
+body[data-waiting="1"] #review .pair, body[data-waiting="1"] .comment-head, body[data-waiting="1"] .readbar { display: none; }
+body[data-qrmain="1"] .qr-card { display: none; }
+body[data-qrmain="1"] .roster-panel { grid-template-rows: auto minmax(0, 1fr); }
+.guide { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 28px; align-items: center; white-space: normal; line-height: 1.32; font-weight: 600; }
+.guide p, .guide ul { margin: 0 0 .45em; }
+.guide ul { padding-left: 1.2em; }
+.guide li { margin-bottom: .25em; }
+.guide h2 { margin: 0; font-size: 1.9em; line-height: 1.1; letter-spacing: 0; }
+.guide .g-sub { display: inline-block; background: #ffd23f; padding: 2px 10px; margin: .3em 0 .6em; font-weight: 800; }
+.guide .g-h { text-decoration: underline; font-weight: 800; }
+.guide em { color: #d71920; font-style: normal; font-weight: 800; }
+.guide mark { background: #ffd23f; padding: 0 4px; font-weight: 800; }
+.g-qr { display: grid; justify-items: center; gap: 8px; text-align: center; }
+.g-qr .qr-big { width: min(46vh, 30vw, 460px); }
+.g-qr b { font-size: .8em; letter-spacing: .04em; }
 .invite-wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 28px; padding-top: 4px; }
 .invite-wrap p { flex: 1 1 260px; margin: 0; }
 .qr-big { width: min(28vh, 300px); aspect-ratio: 1; background: #fff; border: 10px solid #fff; box-shadow: 0 0 0 1px #b9cec9; border-radius: 8px; flex: none; }
@@ -222,6 +238,8 @@ dialog::backdrop { background: #0b1f2a88; }
   .pair strong { font-size: 22px; }
   #commentBody { font-size: calc(17px * var(--chu, 1)); }
   .qr-big { width: min(60vw, 260px); }
+  .guide { grid-template-columns: 1fr; }
+  .g-qr .qr-big { width: min(70vw, 300px); }
   .review footer { flex-direction: column; gap: 2px; }
   .controls { flex-wrap: wrap; }
   .detail-columns { grid-template-columns: 1fr; }
