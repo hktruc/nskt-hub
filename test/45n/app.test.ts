@@ -66,6 +66,7 @@ describe("45N-K02: kỷ luật", () => {
     expect((await call("/bang-xep-hang")).status).toBe(404);
     expect((await call("/cham", { cookie: btc })).status).toBe(404);
     expect((await call("/bao-cao", { cookie: btc })).status).toBe(404);
+    expect((await call("/gieo-hat", { cookie: btc })).status).toBe(404); // quỹ gieo hạt chỉ có ở NSKT
     // Chưa đăng nhập thì không xem được gì.
     const anon = await call("/");
     expect(anon.status).not.toBe(200);

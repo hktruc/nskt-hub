@@ -69,6 +69,7 @@ Tài khoản Cloudflare `6cf1ac5bfc7c2176ed31399545ce50db` (mã này không ph�
 | `reports` | Mục Báo cáo thống kê `/bao-cao` | ✅ | ❌ |
 | `faq` | Câu hỏi học viên → FAQ (AI biên tập) + FAQ công khai | ✅ | ❌ |
 | `chamCheo` | Màn hình chiếu chấm chéo lớp offline gắn vào `/cham-cheo` (Worker riêng, nskt-hub chỉ chuyển tiếp) | ✅ | ❌ |
+| `gieoHat` | Quỹ gieo hạt `/gieo-hat`: tiền học viên bị trừ vì vi phạm kỷ luật, theo đội và cá nhân (chỉ BTC / coach / admin) | ✅ | ❌ |
 | `discipline` | Kỷ luật: lỗi nhẹ / nặng, Zoom, camera, trưởng nhóm, duyệt miễn | ❌ (chưa định nghĩa) | ✅ |
 
 Các trường khác của hồ sơ: `home` (trang chủ là `overview` hoặc `discipline`), `publicPath` (link công khai của phần kỷ luật), `discipline` (quy tắc lỗi, giờ Zoom, các mục nhật ký nhóm), `faq.sources` (câu nào trong bài tuần là nguồn FAQ), `scoring`, `grading`, `attendance`, `teams`, `brand`.
@@ -108,6 +109,13 @@ Các trường khác của hồ sơ: `home` (trang chủ là `overview` hoặc `
 | 2026-11-13 | **Chấm nhiều người:** giao đội **theo tuần, luân phiên** (bảng `grader_team_plans`; tuần không giao lại thì giữ như tuần trước). Nhiều người có thể chấm trùng đội; coach / BTC chấm bất kỳ. **Lưu mọi bản chấm** (`reviews_week`, `reviews_item`); điểm chính thức = **trung bình các bản**. Người chấm không thấy điểm người khác trước khi tự lưu. Bàn chấm đưa **"chưa ai chấm"** lên đầu. |
 | 2026-11-13 | **Bảng xếp hạng đồng đội** (`/bang-xep-hang?xem=doi`): điểm đội = **trung bình điểm thành viên**, có ghi số thành viên. Thêm **5 danh hiệu tuần**, không cộng điểm: 🏆 dẫn đầu, 📈 tiến bộ nhất, 🤝 đồng đều nhất, ✅ chuyên cần, 💬 tương trợ. Chủ dự án nói "giữ theo hiện tại cho dễ hiểu"; PR #31 (ghi rõ danh hiệu không cộng điểm) đã đóng không gộp ngày 18/11. |
 | 2026-11-18 | **Câu hỏi học viên → FAQ** (`/faq`, chỉ BTC / coach / admin). Nguồn: câu không bắt buộc của bài tuần "Bạn có khó khăn & câu hỏi gì đến BTC/Thầy?" và "03 điểm cần cải thiện" (`faq.sources`); bỏ câu không có nội dung. AI gộp câu trùng ý thành câu hỏi FAQ, kèm tóm tắt, chủ đề, mức độ **Cấp bách / Quan trọng / Thường**; **không gửi tên học viên cho AI**. Có hai phạm vi: từ đầu khóa và từng tuần. Chữ nhỏ ghi ai hỏi, đội, tuần; bấm vào thì mở câu gốc kèm link `/bai`. BTC soạn câu trả lời ở `/faq/dang`; câu "đăng công khai" hiện ở mục **Câu hỏi thường gặp** cuối `/bang-xep-hang`. Chủ dự án nói "admin đăng bài"; hiện admin, BTC và coach đều đăng được, chờ chủ dự án xác nhận. |
+
+## [nskt-hub] Quỹ gieo hạt `/gieo-hat` (20/11)
+
+Chủ dự án nhờ thống kê, cho BTC, tổng số tiền các thành viên đã "gieo hạt" vào quỹ khóa học: tiền học viên bị trừ dần khi vi phạm kỷ luật, từ số tiền cam kết đã đóng khi vào khóa (mỗi người một mức), tính đến ngày hôm nay (dd-mm-yyyy), theo đội và theo cá nhân.
+- Nguồn: file Google Sheet **"NSKT2026 — KỶ LUẬT TỔNG"** (`SHEET_KYLUAT_ID` trong `wrangler.jsonc`), tab `TONG_HOP` (cột "Trừ cá nhân", "Trừ do đội", "Tổng trừ"); bảng tính tự cập nhật 15 phút một lần, do hệ thống kỷ luật của BTC quản lý. Code ở `src/fund/read.ts`, trang `src/pages/fund.tsx`. **Chỉ đọc, không lưu vào D1** (tên và tiền chỉ đi từ bảng tính tới màn hình BTC). Đệm 60 giây. Đổi cột đầu bảng thì dừng và báo lỗi.
+- Giả định chưa được chủ dự án xác nhận: tính **cả người đã rời lớp** (phần đã gieo hạt đến lúc rời được giữ), tính theo **đội hiện tại** của học viên, dòng không thuộc 12 đội bị bỏ, tổng = cộng cột "Tổng trừ" (lỗi cá nhân + bị trừ theo đồng đội, mỗi khoản là tiền của một người khác nhau nên không cộng trùng).
+- Bảng tính còn tab `TRU_TIEN`, `SO_CAI` (sổ cái từng lỗi), `BIEN_DONG`: chưa dùng; có thể bổ sung thống kê theo tuần hoặc theo loại lỗi nếu chủ dự án muốn.
 
 ## [nskt-hub] Màn hình chiếu chấm chéo (lớp offline thứ Sáu) — hệ thống riêng, nskt-hub chỉ chuyển tiếp
 

@@ -69,6 +69,7 @@ export const COURSE: CourseConfig = {
     leaderboard: false,
     faq: false,
     chamCheo: false,
+    gieoHat: false,
     discipline: true,
   },
 };

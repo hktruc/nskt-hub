@@ -9,6 +9,8 @@ import { teamCodes } from "./domain/teams";
 import { PUBLIC_VIEWER } from "./pages/discipline";
 import { STAGE_HOME, STAGE_ROUTES, forwardToStage } from "./chamcheo/proxy";
 import { buildDay, loadSource } from "./chamcheo/live";
+import { loadFund } from "./fund/read";
+import { FundMessagePage, FundPage } from "./pages/fund";
 import { DisciplineHomePage, ExemptionsPage, HomeworkPage, LearnerPage, MembersPage, TeamPage, TeamsPage, ZoomPage, sessionName, type Viewer } from "./pages/discipline";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -276,6 +278,19 @@ app.use("*", async (c, next) => {
       const label = user.viaAccess ? "Admin (Cloudflare Access)" : ROLE_LABEL[user.role];
       c.res = new Response(html.replace(WHO_SLOT, whoChip(user.name, label)), c.res);
     } else c.res = new Response(html, c.res);
+  }
+});
+
+// ---- Quỹ gieo hạt: tiền học viên bị trừ vì vi phạm kỷ luật, theo đội và cá nhân (BTC, coach, admin; chỉ đọc bảng tính) ----
+app.get("/gieo-hat", async (c) => {
+  c.header("Cache-Control", "private, no-store");
+  try {
+    const r = await loadFund(c.env, new Date());
+    if (r.status === "chua-cau-hinh") return c.html(<FundMessagePage title="Chưa cấu hình nguồn dữ liệu" message="Chưa khai báo bảng tính kỷ luật hoặc chưa có khóa đọc Google Sheet." />, 503);
+    return c.html(<FundPage day={vietnamDay(new Date())} data={r.data} team={(c.req.query("doi") ?? "").toUpperCase()} />);
+  } catch (e) {
+    const msg = e instanceof SheetsError ? e.message : "Không đọc được bảng tính kỷ luật.";
+    return c.html(<FundMessagePage title="Chưa tải được số liệu" message={`${msg} Thử tải lại sau ít phút.`} />, 502);
   }
 });
 

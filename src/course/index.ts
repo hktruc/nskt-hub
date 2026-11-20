@@ -12,6 +12,7 @@ export function featureOfPath(path: string): Feature | null {
   if (path === "/cham" || path.startsWith("/cham/") || path === "/bao-cao/nguoi-cham") return "grading";
   if (path === "/bao-cao/buoi-hoc" || path === "/du-lieu/diem-danh") return "attendance";
   if (path === "/bao-cao" || path.startsWith("/bao-cao/")) return "reports";
+  if (path === "/gieo-hat" || path.startsWith("/gieo-hat/")) return "gieoHat";
   if (path === "/cham-cheo" || path.startsWith("/cham-cheo/")) return "chamCheo";
   if (path === "/faq" || path.startsWith("/faq/")) return "faq";
   if (path === "/ky-luat" || path.startsWith("/ky-luat/")) return "discipline";

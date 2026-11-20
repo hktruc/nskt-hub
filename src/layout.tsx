@@ -411,6 +411,7 @@ const MORE_NAV: NavItem[] = [
         { href: "/cham-cheo-moi/", label: "Màn hình chấm chéo bản mới (thử)", icon: "video" },
       ]
     : []),
+  ...(featureOn("gieoHat") ? [{ href: "/gieo-hat", label: "Quỹ gieo hạt (tiền kỷ luật)", icon: "chart" }] : []),
   ...(featureOn("faq") ? [{ href: "/faq", label: "Câu hỏi học viên (FAQ)", icon: "help" }] : []),
   ...(featureOn("reports") ? [{ href: "/bao-cao", label: "Báo cáo thống kê", icon: "chart" }] : []),
   { href: "/canh-bao", label: "Cảnh báo", icon: "alert" },

@@ -105,6 +105,7 @@ export const COURSE: CourseConfig = {
     leaderboard: true,
     faq: true,
     chamCheo: true,
+    gieoHat: true,
     discipline: false,
   },
 };
