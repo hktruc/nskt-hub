@@ -8,7 +8,7 @@
 //  - Ngày cũ: tự phát từ đầu.
 //  - Hết hàng đợi: luân phiên 12 đội, mỗi đội 10 giây (trừ khi đã ghim đội).
 //  - Mỗi 10 giây hỏi dữ liệu mới. Đổi ngày nhanh không để kết quả cũ ghi đè kết quả mới.
-import { COLORS, PAGE_LIMIT, TEAM_IDS, agoText, esc, fieldsOf, formatDate, normalizeRecords, paginate, pendingOf, readMs, shortTime, todayVN } from "./logic.js";
+import { COLORS, PAGE_LIMIT, TEAM_IDS, agoText, esc, fieldsOf, formatDate, GUIDE_HTML, normalizeRecords, paginate, pendingOf, readMs, shortTime, todayVN } from "./logic.js";
 
 const safeStorage = () => {
   try {
@@ -22,15 +22,15 @@ const safeStorage = () => {
 };
 
 export function startStage(opts) {
-  const { api, root = document, now = () => new Date(), pollMs = 10000, idleMs = 10000, signalMs = 3600, quietMs = 4000, qrSrc = "/cham-cheo-moi/qr.png", loginHref = "/dang-nhap?tiep=%2Fcham-cheo-moi%2F", logoutAction = "/dang-xuat" } = opts;
+  const { api, root = document, now = () => new Date(), pollMs = 10000, idleMs = 10000, signalMs = 3600, quietMs = 4000, guideEveryMs = 300000, guideShowMs = 30000, qrSrc = "/cham-cheo-moi/qr.png", loginHref = "/dang-nhap?tiep=%2Fcham-cheo-moi%2F", logoutAction = "/dang-xuat" } = opts;
   const storage = opts.storage ?? safeStorage();
   const $ = (s) => root.querySelector(s);
   const S = {
     role: "khach", user: "", day: "", doi: new Map(), records: [], index: 0, page: 0, pages: [], playing: false,
     focus: "T01", pinned: null, pending: new Map(), known: new Set(), queue: [], eventMode: false,
-    loading: false, loaded: false, version: 0, signal: "", speed: 1, lastOk: 0, userPaused: false, layout: "khoi", fx: "manh", sound: false, beeps: 0, nguon: null, invite: null, qrOk: false,
+    loading: false, loaded: false, version: 0, signal: "", speed: 1, lastOk: 0, userPaused: false, layout: "khoi", fx: "manh", sound: false, beeps: 0, nguon: null, invite: null, qrOk: false, guide: null,
   };
-  let readTimer = null, idleTimer = null, signalTimer = null, pollTimer = null, freshTimer = null, quietTimer = null, controller = null;
+  let guideTimer = null, guideLoop = null, readTimer = null, idleTimer = null, signalTimer = null, pollTimer = null, freshTimer = null, quietTimer = null, controller = null;
   let wasPlaying = false, hadIdle = false;
   const today = () => todayVN(now());
   const isToday = () => S.day === today();
@@ -95,16 +95,49 @@ export function startStage(opts) {
     $(`#${prefix}Team`).textContent = p ? p.doi : "—";
   }
 
+  // ---------- Màn hình hướng dẫn "Tranh biện nhóm" + một mã QR lớn, chiếu toàn khung ----------
+  // Hai trường hợp: "cho" = hôm nay chưa có lượt nào (hiện liên tục tới lượt đầu tiên); "dinhky" = trong buổi học, cứ ~5 phút hiện lại ~30 giây
+  // để người đến muộn quét mã. Lúc đó tạm dừng phát, hết giờ thì phát tiếp đúng chỗ.
+  function fitGuide() {
+    const box = $("#guidePanel"), g = box?.querySelector(".guide");
+    if (!box || !g || box.clientHeight === 0) return;
+    let size = Math.min(28, Math.max(14, window.innerWidth * 0.0175));
+    g.style.fontSize = `${size}px`;
+    while (box.scrollHeight > box.clientHeight + 1 && size > 10) { size -= 0.5; g.style.fontSize = `${size}px`; }
+  }
+  function drawGuide() {
+    $("#guidePanel").innerHTML = `<div class="guide">${GUIDE_HTML}${S.qrOk ? `<div class="g-qr"><div class="qr-big"><img src="${esc(qrSrc)}" alt="Mã QR chấm chéo cho học viên"></div><b>QUÉT BẰNG ZALO ĐỂ CHẤM CHÉO</b></div>` : ""}</div>`;
+    fitGuide();
+  }
+  function setGuide(mode) {
+    clearTimeout(guideTimer);
+    S.guide = mode;
+    document.body.dataset.guide = mode ? "1" : "0";
+    if (mode) drawGuide();
+  }
+  function endGuide() {
+    if (S.guide !== "dinhky") return;
+    setGuide(null);
+    if (wasPlayingG) { S.playing = true; renderPage(); } else if (hadIdleG && !S.pinned) startIdle();
+    if (S.queue.length && !S.eventMode && !root.querySelector("dialog[open]")) startNextEvent();
+  }
+  let wasPlayingG = false, hadIdleG = false;
+  function popGuide() {
+    if (S.guide || !isToday() || !S.loaded || !S.records.length || root.querySelector("dialog[open]")) return;
+    wasPlayingG = S.playing; hadIdleG = Boolean(idleTimer);
+    stopRead(); stopIdle();
+    setGuide("dinhky");
+    guideTimer = setTimeout(endGuide, guideShowMs);
+  }
   function renderEmpty(message, { invite = false } = {}) {
     S.invite = invite ? message : null;
+    setGuide(invite ? "cho" : null);
     stopRead();
     S.playing = false; S.index = 0; S.page = 0; S.pages = [];
     $("#eventType").textContent = isToday() ? "CHỜ LƯỢT CHẤM MỚI" : "KHÔNG CÓ DỮ LIỆU";
     $("#eventTime").textContent = formatDate(S.day);
     setPerson("from", null); setPerson("to", null);
-    $("#commentBody").innerHTML = invite && S.qrOk
-      ? `<div class="invite-wrap"><p>${esc(message)}</p><div class="qr-big"><img src="${esc(qrSrc)}" alt="Mã QR chấm chéo cho học viên"></div></div>`
-      : esc(message);
+    $("#commentBody").textContent = message;
     $("#page").textContent = "TRANG 0/0";
     $("#progress").textContent = `0 lượt · ${formatDate(S.day)}`;
     $("#review").classList.remove("cross"); $("#review").classList.add("same");
@@ -160,6 +193,7 @@ export function startStage(opts) {
 
   function show(i, { animate = true, consume = true } = {}) {
     if (!S.records.length) return;
+    if (S.guide) setGuide(null);
     stopIdle();
     S.index = Math.max(0, Math.min(i, S.records.length - 1));
     S.page = 0;
@@ -282,7 +316,7 @@ export function startStage(opts) {
         if (fresh.length) beep();
         for (const r of fresh) { S.known.add(r.khoa); S.queue.push(r.khoa); S.pending.set(r.nguoiNhan.doi, (S.pending.get(r.nguoiNhan.doi) || 0) + 1); }
         if (!S.eventMode && !S.playing) renderRoster(); else buildTeams();
-        if (S.queue.length && !S.eventMode && !root.querySelector("dialog[open]")) startNextEvent();
+        if (S.queue.length && !S.eventMode && S.guide !== "dinhky" && !root.querySelector("dialog[open]")) startNextEvent();
       }
       S.lastOk = Date.now(); updateFresh();
       setStatus(isToday() ? "ĐANG CHẠY THỰC TẾ" : "ĐANG XEM LỊCH SỬ");
@@ -349,7 +383,7 @@ export function startStage(opts) {
   }
   function setupQr() {
     const img = $("#qr");
-    img.onload = () => { S.qrOk = true; $("#qrCrop").hidden = false; $("#qrPending").hidden = true; if (S.invite && !S.records.length) renderEmpty(S.invite, { invite: true }); };
+    img.onload = () => { S.qrOk = true; $("#qrCrop").hidden = false; $("#qrPending").hidden = true; if (S.guide) drawGuide(); };
     img.onerror = () => { S.qrOk = false; $("#qrCrop").hidden = true; $("#qrPending").hidden = false; };
     img.src = qrSrc;
   }
@@ -472,6 +506,7 @@ export function startStage(opts) {
   on(window, "resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      if (S.guide) { fitGuide(); return; }
       const r = S.records[S.index];
       if (!r) return;
       const ratio = S.page / Math.max(1, S.pages.length);
@@ -527,6 +562,7 @@ export function startStage(opts) {
     renderEmpty("Đang tải dữ liệu của ngày hôm nay…");
     await sync(true).catch(() => {});
     pollTimer = setInterval(() => sync(false).catch(() => {}), pollMs);
+    guideLoop = setInterval(popGuide, guideEveryMs);
   })();
 
   return {
@@ -535,6 +571,6 @@ export function startStage(opts) {
     switchDay,
     /** Nhảy tới trang n của lượt đang chiếu (dùng khi kiểm tra). */
     showPage(n) { S.page = Math.max(0, Math.min(n, S.pages.length - 1)); renderPage(); },
-    destroy() { stopRead(); clearInterval(freshTimer); clearTimeout(quietTimer); clearTimeout(signalTimer); clearInterval(idleTimer); clearInterval(pollTimer); controller?.abort(); },
+    destroy() { stopRead(); clearInterval(guideLoop); clearTimeout(guideTimer); clearInterval(freshTimer); clearTimeout(quietTimer); clearTimeout(signalTimer); clearInterval(idleTimer); clearInterval(pollTimer); controller?.abort(); },
   };
 }

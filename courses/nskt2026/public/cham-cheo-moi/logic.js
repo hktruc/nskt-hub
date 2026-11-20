@@ -131,3 +131,25 @@ export function pendingOf(records, from = 0) {
   for (let i = from; i < records.length; i++) m.set(records[i].nguoiNhan.doi, (m.get(records[i].nguoiNhan.doi) || 0) + 1);
   return m;
 }
+
+/**
+ * Nội dung hướng dẫn chiếu khi hôm nay chưa có lượt chấm (theo slide "Tranh biện nhóm" của BTC).
+ * Chuỗi HTML tin cậy, viết cố định ở đây; <em> là phần nhấn mạnh (chữ đỏ).
+ */
+export const GUIDE_HTML =
+  '<div class="g-text">' +
+  '<h2>TRANH BIỆN NHÓM</h2>' +
+  '<p class="g-sub">Khó tính (có quan sát tâm) để nâng mình &amp; người cùng tốt lên</p>' +
+  '<p><b class="g-h">MỤC TIÊU:</b> luyện <em>kể chuyện</em> có <em>sơ đồ</em> &amp; <em>đúc kết</em>, <em>hỏi</em> &amp; <em>trả lời</em></p>' +
+  '<p class="g-h">CÁCH THỨC:</p>' +
+  '<p><b>B1. Chia nhóm</b> (<em>4 người/nhóm nhỏ</em>, ko nhất thiết cùng đội) &amp; chọn câu chuyện buổi trước (ưu tiên câu chuyện làm 4 kỹ)</p>' +
+  '<p><b>B2. Trình bày và tranh biện, có lắng nghe sâu</b> (<em>trình bày như NSKT, nghe như ly nước rỗng</em>)</p>' +
+  '<ul>' +
+  '<li><b>Keep-time:</b> <mark>20p/lượt</mark></li>' +
+  '<li><b>Kể chuyện:</b> mỗi cá nhân đều kể chuyện (đủ ý, đúng giờ), <em>10p/lượt</em> (hết 10p là cắt)</li>' +
+  '<li><b>Đặt câu hỏi:</b> mỗi cá nhân đều hỏi ít nhất 1 câu</li>' +
+  '<li><b>Trả lời:</b> <em>10p/lượt</em> (trả lời 3 câu hỏi, mỗi câu ~ 3p, hết 10p là cắt) và chuyển lượt trình bày tiếp theo; trả lời <em>ngắn gọn, trọng tâm</em> và tránh lan man</li>' +
+  '<li><b>Vi phạm:</b> 1 cá nhân chưa trình bày hoặc chưa hỏi → nhóm nhỏ <em>gieo hạt 50k/lỗi</em> ngay tại lớp</li>' +
+  '</ul>' +
+  '<p><b class="g-h">CHẤM ĐIỂM:</b> <em>Xong 1 lượt trình bày</em>, tất cả thành viên <em>chấm chéo</em> cho người trình bày: <em>5p/lượt</em></p>' +
+  '</div>';
