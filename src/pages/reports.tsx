@@ -96,9 +96,24 @@ export function CourseReport(props: { weeks: WeekRow[]; learners: number }) {
       </div>
     );
   };
+  // Tổng cả khóa: số lượt bài tập đã nộp so với số lượt đã tới hạn (mỗi học viên × mỗi bài là một lượt).
+  const sum = (k: "dailyDue" | "dailySubmitted" | "dailyAssignments" | "weeklyDue" | "weeklySubmitted" | "weeklyAssignments") => props.weeks.reduce((n, w) => n + w[k], 0);
+  const total = (label: string, submitted: number, due: number, assignments: number, unit: string) => (
+    <div class="tile">
+      <div class="lbl">{label}</div>
+      <div class="num">{submitted.toLocaleString("en-US").replace(/,/g, ".")}</div>
+      <div class="small muted">
+        trên {due.toLocaleString("en-US").replace(/,/g, ".")} lượt phải nộp ({pct(submitted, due)}%) · {assignments} {unit} đã tới hạn
+      </div>
+    </div>
+  );
   return (
     <ReportShell tab="/bao-cao" title="Báo cáo toàn khóa">
       <p class="muted small">{props.learners} học viên thuộc {COURSE.teams.count} đội. Số liệu theo tuần (thứ Hai → Chủ nhật), tuần mới nhất ở trên.</p>
+      <div class="tiles">
+        {total("Tổng bài tập ngày đã nộp", sum("dailySubmitted"), sum("dailyDue"), sum("dailyAssignments"), "bài ngày")}
+        {total("Tổng bài tập tuần đã nộp", sum("weeklySubmitted"), sum("weeklyDue"), sum("weeklyAssignments"), "bài tuần")}
+      </div>
       <div class="tiles">
         {tile("Đi học offline (có mặt)", "attendance")}
         {tile("Bài ngày nộp đúng hạn", "dailyOnTime")}
@@ -114,6 +129,8 @@ export function CourseReport(props: { weeks: WeekRow[]; learners: number }) {
               <th>Bài ngày đúng hạn</th>
               <th>Bài ngày đã nộp</th>
               <th>Bài tuần đã nộp</th>
+              <th class="r">Số bài ngày nộp</th>
+              <th class="r">Số bài tuần nộp</th>
               <th class="r">Chấm chéo</th>
             </tr>
           </thead>
@@ -133,6 +150,12 @@ export function CourseReport(props: { weeks: WeekRow[]; learners: number }) {
                 <td>
                   <Meter v={w.weeklyDone} />
                 </td>
+                <td class="r">
+                  {w.dailySubmitted}/{w.dailyDue}
+                </td>
+                <td class="r">
+                  {w.weeklySubmitted}/{w.weeklyDue}
+                </td>
                 <td class="r">{w.feedbacks}</td>
               </tr>
             ))}
@@ -140,7 +163,7 @@ export function CourseReport(props: { weeks: WeekRow[]; learners: number }) {
         </table>
       </div>
       <p class="muted small">
-        "Đã nộp" gồm cả nộp trễ. Bài đang mở (chưa tới hạn) chưa tính. Chấm chéo: số lượt học viên nhận xét bài của nhau trên dh3g, tính theo ngày nhận xét.
+        "Số bài ngày nộp / số bài tuần nộp" là số lượt đã nộp trên số lượt phải nộp trong tuần (mỗi học viên × mỗi bài là một lượt). "Đã nộp" gồm cả nộp trễ. Bài đang mở (chưa tới hạn) chưa tính. Chấm chéo: số lượt học viên nhận xét bài của nhau trên dh3g, tính theo ngày nhận xét.
       </p>
     </ReportShell>
   );
