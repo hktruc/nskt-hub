@@ -35,6 +35,8 @@ export const COURSE: CourseConfig = {
     lateVideo: 2,
     lateTextFactor: 0.5,
     attendance: { share: 0.5, halfLifeWeeks: 6, points: { OK: 1, M: 0.7, X: 0.6, M1: 0.4, CANH_BAO: 0.5, P: 0.3, VANG: 0 } },
+    // Chủ dự án duyệt 21/11: người vào sau khai giảng (29/09) chỉ tính từ ngày vào + 2 ngày ân hạn (như file Kỷ luật), 6 tuần mới xếp hạng.
+    newcomer: { openingDay: "2026-09-29", graceDays: 2, rankAfterDays: 42 },
   },
   chamCheo: { firstSessionDay: "2026-10-02" },
   attendance: {

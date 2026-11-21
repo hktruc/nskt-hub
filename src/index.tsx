@@ -3,6 +3,7 @@ import { featureOn } from "./course";
 import { faqTick } from "./faq/store";
 import type { Env } from "./env";
 import { isHourlySlot, syncOfflineAttendance } from "./attendance/offline";
+import { syncMemberHistory } from "./members/history";
 import { scoringTick } from "./scoring/run";
 import { DAILY_CRON, planDaily, planHourly, workQueue } from "./sync/queue";
 
@@ -23,6 +24,11 @@ export default {
             if (featureOn("attendance")) {
               const a = await syncOfflineAttendance(env, now);
               if (a.status !== "chua-cau-hinh") console.log("điểm danh offline:", JSON.stringify(a));
+            }
+            // Lịch sử thành viên (ngày vào / rời lớp) cho quy tắc người vào sau và người đã rời.
+            if (featureOn("leaderboard")) {
+              const m = await syncMemberHistory(env, now);
+              if (m.status !== "chua-cau-hinh") console.log("lịch sử thành viên:", JSON.stringify(m));
             }
           }
           // FAQ: chạy lần biên tập đang chờ (BTC bấm nút); mỗi giờ xem có câu hỏi mới để tự biên tập lại.

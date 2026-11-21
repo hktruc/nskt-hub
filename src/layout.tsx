@@ -138,6 +138,13 @@ a.tile { color:inherit; text-decoration:none; }
 .rank-row .name { flex:1; min-width:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rank-row .team { flex:none; font-size:.75rem; opacity:.8; white-space:nowrap; }
 .rank-row .pct { flex:none; width:3.8em; text-align:right; font-weight:700; font-variant-numeric:tabular-nums; }
+.late-mark { margin-left:2px; font-weight:700; opacity:.7; cursor:help; }
+.rank-row.moi { background:#e8eefc; color:#1f3a7a; border:1px dashed #98adde; }
+.rank-row.moi { flex-wrap:wrap; row-gap:0; }
+.rank-row.moi .eta { order:5; flex-basis:100%; padding-left:2.4em; font-size:.6875rem; opacity:.85; }
+.hv-head.moi { background:#e8eefc; color:#1f3a7a; }
+.newbies { margin-top:28px; padding:14px; border:1px solid #c9d6f3; border-radius:12px; background:#f4f7fe; }
+.newbies h2 { margin:0 0 4px; font-size:1.0625rem; color:#1f3a7a; }
 a.rank-row { color:inherit; text-decoration:none; }
 a.rank-row:hover .name { text-decoration:underline; }
 dialog.sheet { border:0; padding:0; border-radius:16px; width:min(560px, calc(100vw - 24px)); max-height:88vh; background:var(--bg); color:var(--fg); box-shadow:0 10px 40px rgba(0,0,0,.25); }

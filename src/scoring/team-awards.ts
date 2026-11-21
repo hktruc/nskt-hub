@@ -4,7 +4,7 @@
 import { addDays } from "../dates";
 import { isLearnerTeam, teamCode } from "../domain/teams";
 import { SCORING } from "./config";
-import { rank, type AttRow, type Ranked, type ScoreRow } from "./leaderboard";
+import { loadBoardInputs, rank, type AttRow, type Ranked, type ScoreRow } from "./leaderboard";
 
 export type AwardKey = "dan-dau" | "tien-bo" | "dong-deu" | "chuyen-can" | "tuong-tro";
 export type Award = { key: AwardKey; icon: string; title: string; teams: string[]; metric: string; hint: string };
@@ -35,14 +35,9 @@ function best(values: Map<string, number>, min = -Infinity): string[] {
 export async function teamAwards(db: D1Database, todayVN: string, ranked: Ranked[]): Promise<Award[]> {
   const today = todayVN.slice(0, 10);
   const weekAgo = addDays(today, -7);
-  const [rowsR, attR, peerR, rosterR] = await db.batch([
-    db
-      .prepare(
-        `SELECT sc.learner_id, l.full_name, t.name AS team_name, sc.due_at, sc.earned, sc.max, sc.on_time_videos, sc.hours_early, sc.provisional
-         FROM scores sc JOIN learners l ON l.id = sc.learner_id LEFT JOIN teams t ON t.id = l.team_id WHERE sc.due_at >= ?`,
-      )
-      .bind(SCORING.startDate),
-    db.prepare("SELECT learner_id, session_day, code FROM offline_attendance"),
+  // Bài và buổi học đã áp quy tắc người vào sau / người rời; người "mới vào" chưa tính vào điểm đội.
+  const inp = await loadBoardInputs(db, todayVN);
+  const [peerR, rosterR] = await db.batch([
     db
       .prepare(
         `SELECT json_extract(value,'$.reviewerId') AS reviewer FROM submissions s, json_each(s.feedbacks_json)
@@ -51,8 +46,8 @@ export async function teamAwards(db: D1Database, todayVN: string, ranked: Ranked
       .bind(weekAgo),
     db.prepare("SELECT l.id, t.name AS team_name FROM learners l LEFT JOIN teams t ON t.id = l.team_id"),
   ]);
-  const rows = (rowsR?.results ?? []) as ScoreRow[];
-  const att = (attR?.results ?? []) as AttRow[];
+  const rows: ScoreRow[] = inp.rows.filter((r) => !inp.newcomers.has(r.learner_id));
+  const att: AttRow[] = inp.att.filter((a) => !inp.newcomers.has(a.learner_id));
   const teamOf = new Map(((rosterR?.results ?? []) as { id: number; team_name: string | null }[]).map((r) => [r.id, teamCode(r.team_name)]));
   const members = new Map<string, number>();
   for (const r of ranked) members.set(r.team, (members.get(r.team) ?? 0) + 1);

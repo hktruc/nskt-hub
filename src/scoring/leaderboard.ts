@@ -2,6 +2,7 @@ import { addDays } from "../dates";
 import { loadLearnerQuality, type LearnerQuality } from "../grading/stats";
 import { isLearnerTeam, teamCode } from "../domain/teams";
 import { COLOR_LABEL, SCORING, colorOf, type Color } from "./config";
+import { applyMembership, type MemberInfo, type MemberRow } from "./newcomers";
 
 // Bảng xếp hạng: % điểm đạt / tối đa, trong đó bài càng cũ càng "mờ" (trọng số giảm một nửa
 // sau mỗi `halfLifeWeeks` tuần). Đồng điểm: nhiều video đúng hạn hơn xếp trên, rồi ai nộp
@@ -126,10 +127,38 @@ async function loadAtt(db: D1Database): Promise<AttRow[]> {
   ).results;
 }
 
+/** Lịch sử thành viên (ngày vào, ngày rời). Chưa có bảng hoặc chưa đồng bộ thì coi như không có: tính như trước. */
+async function loadMembers(db: D1Database): Promise<MemberRow[]> {
+  try {
+    return (await db.prepare("SELECT learner_id, joined_at, left_at FROM member_history WHERE learner_id IS NOT NULL").all<MemberRow>()).results;
+  } catch {
+    return [];
+  }
+}
+
+/** Bài và buổi học đã áp quy tắc người vào sau / người đã rời (xem newcomers.ts), kèm tập người "mới vào". */
+export async function loadBoardInputs(db: D1Database, todayVN: string) {
+  const [rows, att, members] = await Promise.all([loadRows(db), loadAtt(db), loadMembers(db)]);
+  return applyMembership(rows, att, members, todayVN.slice(0, 10));
+}
+
+export type Newcomer = Ranked & { joinedDay: string; eligibleOn: string; daysLeft: number };
+export type LateInfo = { joinedDay: string; eligibleOn: string };
+
 export async function loadLeaderboard(db: D1Database, todayVN: string) {
-  const [rows, att] = await Promise.all([loadRows(db), loadAtt(db)]);
+  const inp = await loadBoardInputs(db, todayVN);
+  const isMain = (id: number) => !inp.newcomers.has(id);
+  const main = rank(inp.rows.filter((r) => isMain(r.learner_id)), todayVN, inp.att.filter((a) => isMain(a.learner_id)));
+  const newcomers: Newcomer[] = rank(inp.rows.filter((r) => !isMain(r.learner_id)), todayVN, inp.att.filter((a) => !isMain(a.learner_id))).ranked.map((r) => {
+    const i = inp.info.get(r.learnerId)!;
+    return { ...r, joinedDay: i.joinedDay, eligibleOn: i.eligibleOn, daysLeft: i.daysLeft };
+  });
+  newcomers.sort((a, b) => a.daysLeft - b.daysLeft || b.percent - a.percent || a.name.localeCompare(b.name, "vi"));
+  // Người vào sau khai giảng đã đủ điều kiện: bảng chính ghi chú khi rê chuột vào tên.
+  const late: Record<number, LateInfo> = {};
+  for (const [id, i] of inp.info) if (!i.newcomer) late[id] = { joinedDay: i.joinedDay, eligibleOn: i.eligibleOn };
   const updated = await db.prepare("SELECT MAX(computed_at) AS at FROM scores").first<{ at: string | null }>();
-  return { ...rank(rows, todayVN, att), hasAttendance: att.length > 0, updatedAt: updated?.at ?? null };
+  return { ranked: main.ranked, provisional: main.provisional, newcomers, late, hasAttendance: inp.att.length > 0, updatedAt: updated?.at ?? null };
 }
 
 // ---- Chi tiết một học viên (mở khi bấm vào tên trên bảng xếp hạng) ----
@@ -173,6 +202,8 @@ export type LearnerDetail = {
   attendance: { sessions: number; present: number; onTime: number; late: number; excused: number; absent: number } | null;
   /** Chất lượng bài tuần do coach / ban phụng sự chấm (không ảnh hưởng xếp hạng). */
   quality: LearnerQuality | null;
+  /** Người vào sau khai giảng: ngày vào, ngày được vào bảng xếp hạng chính; `newcomer` = còn đang "mới vào". */
+  membership: (MemberInfo & { newcomer: boolean }) | null;
 };
 
 type DetailRow = { type: string | null; due_at: string; earned: number; max: number; on_time_videos: number; provisional: number; status: string | null };
@@ -232,10 +263,18 @@ export function summarize(items: DetailRow[], todayVN: string) {
 }
 
 export async function loadLearnerDetail(db: D1Database, learnerId: number, todayVN: string): Promise<LearnerDetail | null> {
-  const [rows, att] = await Promise.all([loadRows(db), loadAtt(db)]);
+  const inp = await loadBoardInputs(db, todayVN);
+  const rows = inp.rows.filter((r) => !inp.newcomers.has(r.learner_id));
+  const att = inp.att.filter((a) => !inp.newcomers.has(a.learner_id));
   const { ranked } = rank(rows, todayVN, att);
-  const me = ranked.find((r) => r.learnerId === learnerId);
-  if (!me) return null; // chỉ học viên thuộc 12 đội
+  const membership = inp.info.get(learnerId) ?? null;
+  let me = ranked.find((r) => r.learnerId === learnerId);
+  if (!me && inp.newcomers.has(learnerId)) {
+    // Người đang "mới vào": có điểm riêng, chưa có thứ hạng.
+    const own = rank(inp.rows.filter((r) => r.learner_id === learnerId), todayVN, inp.att.filter((a) => a.learner_id === learnerId)).ranked[0];
+    if (own) me = { ...own, rank: 0 };
+  }
+  if (!me) return null; // chỉ học viên thuộc 12 đội, chưa rời lớp
   const team = ranked.filter((r) => r.team === me.team);
   const items = (
     await db
@@ -245,14 +284,15 @@ export async function loadLearnerDetail(db: D1Database, learnerId: number, today
          LEFT JOIN submissions s ON s.learner_id = sc.learner_id AND s.assignment_id = sc.assignment_id
          WHERE sc.learner_id = ? AND sc.due_at >= ?`,
       )
-      .bind(learnerId, SCORING.startDate)
+      .bind(learnerId, membership?.start ?? SCORING.startDate)
       .all<DetailRow>()
   ).results;
   return {
     me,
     total: ranked.length,
-    teamRank: 1 + team.filter((r) => r.rank < me.rank).length,
+    teamRank: me.rank === 0 ? 0 : 1 + team.filter((r) => r.rank < me.rank).length,
     teamTotal: team.length,
+    membership,
     history: rankHistory(rows, learnerId, todayVN, 3, att),
     ...summarize(items, todayVN),
     attendance: summarizeAttendance(att.filter((a) => a.learner_id === learnerId && a.session_day <= todayVN.slice(0, 10))),
@@ -276,7 +316,9 @@ export function summarizeAttendance(mine: AttRow[]): LearnerDetail["attendance"]
 
 /** Số người Xanh / Vàng / Đỏ hôm nay và 7 ngày trước (để trang tổng quan hiện mũi tên thay đổi). */
 export async function loadColorTrend(db: D1Database, todayVN: string) {
-  const [rows, att] = await Promise.all([loadRows(db), loadAtt(db)]);
+  const inp = await loadBoardInputs(db, todayVN);
+  const rows = inp.rows.filter((r) => !inp.newcomers.has(r.learner_id));
+  const att = inp.att.filter((a) => !inp.newcomers.has(a.learner_id));
   const day = addDays(todayVN.slice(0, 10), -7);
   const count = (r: Ranked[]) => ({
     xanh: r.filter((x) => x.color === "xanh").length,

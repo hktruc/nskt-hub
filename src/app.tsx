@@ -22,6 +22,7 @@ import { DataStatusPage, loadDataStatus } from "./pages/data-status";
 import { SubmissionsPage, loadBoard } from "./pages/submissions";
 import { loadOverview, OverviewPage } from "./pages/overview";
 import { syncOfflineAttendance } from "./attendance/offline";
+import { syncMemberHistory } from "./members/history";
 import { SheetsError } from "./google/sheets";
 import { AccountPage, ActivatePage, ForbiddenPage, LoginPage, NeedLoginPage } from "./pages/account";
 import { QueuePage, SheetPage } from "./pages/grading";
@@ -91,6 +92,8 @@ app.get("/bang-xep-hang", async (c) => {
   return c.html(
     <LeaderboardPage
       ranked={data.ranked}
+      newcomers={data.newcomers}
+      late={data.late}
       team={teams.includes(doi) ? doi : ""}
       teams={teams}
       provisional={data.provisional}
@@ -432,7 +435,7 @@ app.get("/bao-cao/cham-cheo", async (c) => c.html(<PeerReportPage r={await peerR
 app.get("/bao-cao/hoc-vien", async (c) => {
   const now = nowVN(new Date());
   const [lb, peer] = await Promise.all([loadLeaderboard(c.env.DB, now), peerReport(c.env.DB)]);
-  const rows = await learnerSummary(c.env.DB, now, lb.ranked, peer);
+  const rows = await learnerSummary(c.env.DB, now, [...lb.ranked, ...lb.newcomers], peer);
   const teams = [...new Set(rows.map((r) => r.l.team))].sort();
   const doi = c.req.query("doi") ?? "";
   return c.html(<LearnerSummaryPage rows={rows} team={teams.includes(doi) ? doi : ""} teams={teams} sort={c.req.query("sx") ?? "diem"} asc={c.req.query("tang") === "1"} />);
@@ -962,7 +965,9 @@ const SHEET_NOTICES: Record<string, string> = {
 };
 
 app.post("/du-lieu/diem-danh", async (c) => {
-  const r = await syncOfflineAttendance(c.env, new Date());
+  const now = new Date();
+  const r = await syncOfflineAttendance(c.env, now);
+  await syncMemberHistory(c.env, now); // lịch sử thành viên (ngày vào / rời) đọc cùng lúc
   return c.redirect(`/du-lieu?dd=${r.status}#diem-danh`, 303);
 });
 
