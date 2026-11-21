@@ -14,6 +14,14 @@ import { AWARD_INFO, type Award } from "../scoring/team-awards";
 const ddmmyyyy = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`;
 const lateNote = (i: LateInfo) => `Vào lớp ngày ${ddmmyyyy(i.joinedDay)} (sau khai giảng), được đưa vào bảng xếp hạng từ ngày ${ddmmyyyy(i.eligibleOn)}`;
 
+/** Chú thích khi rê chuột vào người "mới vào": ngày vào, điểm tích lũy tạm tính, ngày được đưa vào bảng xếp hạng chính. */
+const newbieNote = (n: Newcomer) => {
+  const score = n.noData
+    ? `Chưa có bài tập hay buổi học nào được tính (điểm tính từ ngày ${ddmmyyyy(n.start)})`
+    : `Điểm tích lũy tạm tính: ${n.percent.toLocaleString("vi-VN")}% (bài tập ${n.noStudy ? "chưa có" : `${n.studyPercent.toLocaleString("vi-VN")}%`}, đi học ${n.attendancePercent === null ? "chưa có" : `${n.attendancePercent.toLocaleString("vi-VN")}%`})`;
+  return `Mới vào lớp ngày ${ddmmyyyy(n.joinedDay)}. ${score}. Được đưa vào bảng xếp hạng chính từ ngày ${ddmmyyyy(n.eligibleOn)} (còn ${n.daysLeft} ngày).`;
+};
+
 export function LeaderboardPage(props: {
   ranked: Ranked[];
   /** Người vào sau khai giảng chưa đủ 6 tuần: hiện ở bảng riêng, chưa xếp hạng. */
@@ -104,6 +112,12 @@ export function LeaderboardPage(props: {
       </nav>
       ) : null}
 
+      {fresh.length && !teamMode ? (
+        <p class="small newbies-hint">
+          🆕 Có {fresh.length} thành viên mới vào chưa đủ thời gian xếp hạng: <a href="#moi-vao">xem mục “Mới vào” ở cuối bảng</a>.
+        </p>
+      ) : null}
+
       {teamMode ? <TeamBoard ranked={props.ranked} awards={props.awards ?? []} /> : null}
 
       {teamMode ? null : (
@@ -169,7 +183,7 @@ export function LeaderboardPage(props: {
         <p class="muted small">* Vào lớp sau khai giảng: rê chuột vào tên (hoặc bấm vào tên) để xem ngày vào lớp và ngày được đưa vào bảng xếp hạng.</p>
       ) : null}
       {fresh.length ? (
-        <section class="newbies" aria-label="Thành viên mới vào">
+        <section class="newbies" id="moi-vao" aria-label="Thành viên mới vào">
           <h2>Mới vào · chưa xếp hạng</h2>
           <p class="small">
             Thành viên vào lớp sau khai giảng được tính điểm từ ngày vào (có {COURSE.scoring.newcomer?.graceDays ?? 0} ngày ân hạn) và được đưa vào bảng xếp hạng chính
@@ -178,18 +192,19 @@ export function LeaderboardPage(props: {
           <ol class="rank-list">
             {fresh.map((n) => (
               <li>
-                <a class="rank-row moi" href={`/bang-xep-hang/hv/${n.learnerId}`} data-hv="" data-name={n.name} title={`Vào lớp ngày ${ddmmyyyy(n.joinedDay)}`}>
+                <a class="rank-row moi" href={`/bang-xep-hang/hv/${n.learnerId}`} data-hv="" data-name={n.name} title={`${newbieNote(n)} Bấm để xem chi tiết`}>
                   <span class="rank">·</span>
                   <span class="name">{n.name}</span>
                   <span class="team">{teamLabel(n.team)}</span>
                   <span class="eta">
                     còn {n.daysLeft} ngày · {ddmmyyyy(n.eligibleOn)}
                   </span>
-                  <span class="pct">{n.percent.toLocaleString("vi-VN")}%</span>
+                  <span class="pct">{n.noData ? "—" : `${n.percent.toLocaleString("vi-VN")}%`}</span>
                 </a>
               </li>
             ))}
           </ol>
+          <p class="muted small">Rê chuột (hoặc bấm) vào tên để xem điểm tích lũy tạm tính và ngày được đưa vào bảng xếp hạng chính.</p>
         </section>
       ) : null}
       </>
@@ -364,7 +379,7 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
             </div>
           ) : null}
         </div>
-        <div class="hv-pct">{d.me.percent.toLocaleString("vi-VN")}%</div>
+        <div class="hv-pct">{d.me.noData ? "—" : `${d.me.percent.toLocaleString("vi-VN")}%`}</div>
         {props.inDialog ? (
           <button type="button" class="close" data-close="" aria-label="Đóng">
             ✕
