@@ -43,7 +43,7 @@ Chủ dự án không phải lập trình viên. Báo cáo, PR và giao diện �
 | Cấu hình Cloudflare | `wrangler.jsonc` (gốc repo) | `courses/45n-k2/wrangler.jsonc` |
 | Worker / Workers Builds | `nskt-hub`; deploy mặc định | `45n-hub`; lệnh deploy `npx wrangler deploy -c courses/45n-k2/wrangler.jsonc` (chủ dự án tạo 16/11) |
 | D1 | `nskt-hub-db` `66754a8e-7e74-4f88-aea9-bbd4c75b65fd` (APAC) | `45n-hub-db-apac` `2456ef6b-75b2-415f-a212-4313f92cf770` (APAC). D1 cũ `45n-hub-db` `d974a11a-…` (Bắc Mỹ) **không dùng nữa**, giữ chưa xóa |
-| Migration đã chạy | 0001–0011 | 0001–0011 |
+| Migration đã chạy | 0001–0012 | 0001–0012 |
 | Cloudflare Access (chỉ khóa `/quan-tri`) | ứng dụng "nskt-hub - Cloudflare Workers" (`2e2a4c1a-…`), AUD `cd04f88b…` | ứng dụng "45n-hub - quan-tri" (`f572a1ca-…`), AUD `837bbf85…` |
 | Chính sách Access | dùng chung chính sách "Long Mon staging owner only" (`c16e402a-…`): chỉ email chủ dự án | (như bên trái) |
 | Secret trên Cloudflare | `DH3G_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON` (đều đã nhập) | `DH3G_API_KEY` (đã nhập); không có OpenAI |
@@ -110,6 +110,8 @@ Các trường khác của hồ sơ: `home` (trang chủ là `overview` hoặc `
 | 2026-11-13 | **Bảng xếp hạng đồng đội** (`/bang-xep-hang?xem=doi`): điểm đội = **trung bình điểm thành viên**, có ghi số thành viên. Thêm **5 danh hiệu tuần**, không cộng điểm: 🏆 dẫn đầu, 📈 tiến bộ nhất, 🤝 đồng đều nhất, ✅ chuyên cần, 💬 tương trợ. Chủ dự án nói "giữ theo hiện tại cho dễ hiểu"; PR #31 (ghi rõ danh hiệu không cộng điểm) đã đóng không gộp ngày 18/11. |
 | 2026-11-18 | **Câu hỏi học viên → FAQ** (`/faq`, chỉ BTC / coach / admin). Nguồn: câu không bắt buộc của bài tuần "Bạn có khó khăn & câu hỏi gì đến BTC/Thầy?" và "03 điểm cần cải thiện" (`faq.sources`); bỏ câu không có nội dung. AI gộp câu trùng ý thành câu hỏi FAQ, kèm tóm tắt, chủ đề, mức độ **Cấp bách / Quan trọng / Thường**; **không gửi tên học viên cho AI**. Có hai phạm vi: từ đầu khóa và từng tuần. Chữ nhỏ ghi ai hỏi, đội, tuần; bấm vào thì mở câu gốc kèm link `/bai`. BTC soạn câu trả lời ở `/faq/dang`; câu "đăng công khai" hiện ở mục **Câu hỏi thường gặp** cuối `/bang-xep-hang`. Chủ dự án nói "admin đăng bài"; hiện admin, BTC và coach đều đăng được, chờ chủ dự án xác nhận. |
 | 2026-11-20 | **Báo cáo toàn khóa** (`/bao-cao`) thêm hai ô tổng: **tổng bài tập ngày đã nộp** và **tổng bài tập tuần đã nộp** (số lượt học viên × bài, gồm cả nộp trễ, trên số lượt đã tới hạn, kèm số bài đã tới hạn), và cột số lượt nộp theo từng tuần. |
+
+| 2026-11-21 | **Người vào sau khai giảng và người rời lớp** (chủ dự án duyệt): (1) chỉ tính bài và buổi học từ **ngày vào + ân hạn 2 ngày** (ngày vào là "mới vào lớp", 2 ngày sau là ân hạn, từ ngày kế tiếp mới tính, như file Kỷ luật); (2) chưa đủ **6 tuần** kể từ ngày vào thì **chưa xếp hạng** và **chưa tính vào điểm đội**, hiện ở bảng riêng "Mới vào" (màu khác, ở cuối bảng chính, ghi còn bao nhiêu ngày) và trang chi tiết; (3) bảng chính ghi chú khi rê chuột vào tên người vào sau khai giảng (ngày vào, ngày được xếp hạng); (4) người đã rời lớp bị bỏ khỏi bảng xếp hạng cá nhân và đội; (5) ngày vào / rời theo **hệ thống ghi nhận** (tab `THANH_VIEN`, ghép theo số điện thoại), không sửa tay. "Vào sau khai giảng" = vào sau `scoring.newcomer.openingDay` (29/09). Chưa có dữ liệu lịch sử thì tính như cũ. Mã: `src/scoring/newcomers.ts`, `src/members/history.ts` (đồng bộ mỗi giờ), bảng `member_history` (migration 0012). |
 
 ## [nskt-hub] Quỹ gieo hạt `/gieo-hat` (20/11)
 
@@ -187,6 +189,7 @@ Nguồn yêu cầu: phiếu của BTC 45N "Tieu chi XD dashboard HT45N K2" (Goog
 ## Bàn giao (cập nhật ở cuối mỗi đợt)
 
 **Việc đang dở hoặc cần dọn:**
+- [nskt-hub] **Người vào sau khai giảng** (PR "Mới vào", 21/11): sau khi gộp, kiểm tra tab `member_history` đã có dữ liệu (đồng bộ mỗi giờ hoặc bấm đọc lại ở `/du-lieu`) và bảng xếp hạng có mục "Mới vào". Còn mở: **mã Cư Dân bị dùng lại** làm lịch sử điểm danh gán nhầm cho người sau (ví dụ T0101 đã sửa tay ở `CHECKIN_DIEU_CHINH`); khoản trừ theo đội của đội 01 do 3 buổi sai chưa được file Kỷ luật tự hoàn; tab `BIEN_DONG` của file Kỷ luật đã kín hàng 3900.
 - [45n-hub] **Phiếu yêu cầu Google Docs chưa ghi được** đề xuất của Dev (Hồ Kháng Trực) và các câu hỏi cho BTC 45N, vì phiên chưa có connector **Google Docs** (chỉ có Google Drive để đọc). Chủ dự án muốn ghi vào phiếu: các đề xuất ghi rõ "đề xuất từ Dev, Hồ Kháng Trực", yêu cầu BTC 45N trả lời, báo các tính năng đã xây xong. Không ghi tính năng nào là "xong" khi chưa xong.
 - [45n-hub] D1 cũ `45n-hub-db` (Bắc Mỹ) vẫn còn, không dùng. Chỉ xóa khi chủ dự án yêu cầu.
 - [nskt-hub] 364/947 câu FAQ bị AI để "chưa xếp nhóm". Đã nhờ chủ dự án xem thử; nếu sót nhiều câu có vấn đề thật thì chỉnh lời nhắc AI trong `src/faq/ai.ts`.
@@ -318,10 +321,11 @@ Truy vấn D1 thật cũng dùng API trên (D1 của 45N có mã `2456ef6b-75b2-
 - `src/ai/openai.ts`: AI chấm câu. `src/faq/`: lấy câu hỏi (`collect`), AI gộp hai bước (`ai`), hàng đợi và câu trả lời công khai (`store`).
 - `src/grading/`: bàn chấm (`store`), tiêu chí (`rubric`), năng lực người chấm (`stats`). `src/reports/data.ts`: số liệu báo cáo.
 - `src/discipline/`: lõi tính lỗi, không phụ thuộc giao diện (`engine`); đọc và ghi D1 (`data`).
+- `src/members/history.ts`: lịch sử thành viên (ngày vào / rời) từ tab `THANH_VIEN`. `src/scoring/newcomers.ts`: quy tắc người vào sau và người rời.
 - `src/google/sheets.ts`: đọc Google Sheet bằng tài khoản dịch vụ. `src/attendance/offline.ts`: điểm danh offline.
 - `src/domain/`: `media.ts` (phát hiện video, ảnh, tệp), `teams.ts` (tên đội dh3g → T01…; số đội theo hồ sơ khóa).
 - `src/pages/`: `overview`, `submissions`, `submission-detail`, `flags`, `data-status`, `grading`, `graders`, `reports`, `leaderboard`, `account`, `admin` (NSKT và chung); `discipline`, `leaders` (45N); `faq` (NSKT).
-- `migrations/`: cấu trúc D1, chỉ thêm tệp mới (0001–0011).
+- `migrations/`: cấu trúc D1, chỉ thêm tệp mới (0001–0012).
 - `test/`: kiểm thử với hồ sơ NSKT. `test/45n/`: kiểm thử với hồ sơ 45N (`vitest.45n.config.ts`). `test/helpers/d1.ts` giả lập D1 bằng SQLite của Node; `test/helpers/fixtures.ts` giả lập dh3g. AI luôn dùng bản giả trong kiểm thử.
 - `docs/KHOA-HOC-MOI.md`: thêm khóa mới, Workers Builds. `docs/TRIEN-KHAI.md`: lịch sử triển khai NSKT, nối Google Sheet. `docs/THIET-KE.md`: hệ thống giao diện. `docs/TIEU-CHI-CHAM.md`: tiêu chí chấm bài tuần NSKT. `docs/anh/`: ảnh giao diện bằng dữ liệu giả.
 

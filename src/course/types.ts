@@ -51,6 +51,8 @@ export type CourseConfig = {
     lateVideo: number;
     lateTextFactor: number;
     attendance: { share: number; halfLifeWeeks: number; points: Record<string, number> };
+    /** Người vào sau khai giảng: chỉ tính từ ngày vào + ân hạn, chưa đủ `rankAfterDays` ngày thì chưa xếp hạng. Bỏ trống = không áp quy tắc. */
+    newcomer?: { openingDay: string; graceDays: number; rankAfterDays: number };
   };
   /** Màn hình chấm chéo bản mới (/cham-cheo-moi). `firstSessionDay`: ngày buổi offline đầu tiên, để đếm "Buổi N". */
   chamCheo?: { firstSessionDay: string };

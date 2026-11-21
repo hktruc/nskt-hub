@@ -5,13 +5,21 @@ import { formatVN } from "../dates";
 import { teamLabel } from "../domain/teams";
 import { Layout } from "../layout";
 import { SCORING, colorOf } from "../scoring/config";
-import type { LearnerDetail, Ranked } from "../scoring/leaderboard";
+import type { LateInfo, LearnerDetail, Newcomer, Ranked } from "../scoring/leaderboard";
 import { AWARD_INFO, type Award } from "../scoring/team-awards";
 
 // Trang công khai, không cần đăng nhập. Chỉ hiện: hạng, họ tên, đội, điểm (%), màu.
 
+/** "2026-10-10" → "10/10/2026". */
+const ddmmyyyy = (day: string) => `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`;
+const lateNote = (i: LateInfo) => `Vào lớp ngày ${ddmmyyyy(i.joinedDay)} (sau khai giảng), được đưa vào bảng xếp hạng từ ngày ${ddmmyyyy(i.eligibleOn)}`;
+
 export function LeaderboardPage(props: {
   ranked: Ranked[];
+  /** Người vào sau khai giảng chưa đủ 6 tuần: hiện ở bảng riêng, chưa xếp hạng. */
+  newcomers?: Newcomer[];
+  /** Người vào sau khai giảng đã đủ điều kiện: ghi chú khi rê chuột vào tên. */
+  late?: Record<number, LateInfo>;
   team: string;
   teams: string[];
   provisional: boolean;
@@ -36,6 +44,7 @@ export function LeaderboardPage(props: {
     r.shown = props.team ? (prev && same(prev, r) ? prev.shown : i + 1) : r.rank;
   });
   const count = (c: Ranked["color"]) => list.filter((r) => r.color === c).length;
+  const fresh = (props.newcomers ?? []).filter((n) => !props.team || n.team === props.team);
   return (
     <Layout
       title="Bảng xếp hạng"
@@ -136,9 +145,18 @@ export function LeaderboardPage(props: {
         <ol class="rank-list">
           {list.map((r) => (
             <li>
-              <a class={`rank-row ${r.color}`} href={`/bang-xep-hang/hv/${r.learnerId}`} data-hv="" data-name={r.name} title="Bấm để xem chi tiết">
+              <a
+                class={`rank-row ${r.color}`}
+                href={`/bang-xep-hang/hv/${r.learnerId}`}
+                data-hv=""
+                data-name={r.name}
+                title={props.late?.[r.learnerId] ? `${lateNote(props.late[r.learnerId]!)}. Bấm để xem chi tiết` : "Bấm để xem chi tiết"}
+              >
                 <span class="rank">{r.shown}</span>
-                <span class="name">{r.name}</span>
+                <span class="name">
+                  {r.name}
+                  {props.late?.[r.learnerId] ? <span class="late-mark" aria-label="Vào sau khai giảng">*</span> : null}
+                </span>
                 <span class="team">{props.team ? `#${r.rank} khóa` : teamLabel(r.team)}</span>
                 <span class="pct">{r.percent.toLocaleString("vi-VN")}%</span>
               </a>
@@ -147,6 +165,33 @@ export function LeaderboardPage(props: {
         </ol>
       )}
       <p class="muted small">Bấm vào một tên để xem điểm tích lũy và thứ hạng 3 tuần gần nhất.</p>
+      {props.late && Object.keys(props.late).length ? (
+        <p class="muted small">* Vào lớp sau khai giảng: rê chuột vào tên (hoặc bấm vào tên) để xem ngày vào lớp và ngày được đưa vào bảng xếp hạng.</p>
+      ) : null}
+      {fresh.length ? (
+        <section class="newbies" aria-label="Thành viên mới vào">
+          <h2>Mới vào · chưa xếp hạng</h2>
+          <p class="small">
+            Thành viên vào lớp sau khai giảng được tính điểm từ ngày vào (có {COURSE.scoring.newcomer?.graceDays ?? 0} ngày ân hạn) và được đưa vào bảng xếp hạng chính
+            sau {Math.round((COURSE.scoring.newcomer?.rankAfterDays ?? 42) / 7)} tuần. Điểm dưới đây là điểm tạm tính, chưa tính vào điểm đội.
+          </p>
+          <ol class="rank-list">
+            {fresh.map((n) => (
+              <li>
+                <a class="rank-row moi" href={`/bang-xep-hang/hv/${n.learnerId}`} data-hv="" data-name={n.name} title={`Vào lớp ngày ${ddmmyyyy(n.joinedDay)}`}>
+                  <span class="rank">·</span>
+                  <span class="name">{n.name}</span>
+                  <span class="team">{teamLabel(n.team)}</span>
+                  <span class="eta">
+                    còn {n.daysLeft} ngày · {ddmmyyyy(n.eligibleOn)}
+                  </span>
+                  <span class="pct">{n.percent.toLocaleString("vi-VN")}%</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
       </>
       )}
       <section class="rules" aria-label="Cách tính điểm">
@@ -303,12 +348,21 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
   const now = d.history[d.history.length - 1];
   return (
     <div class="hv-detail">
-      <div class={`hv-head ${d.me.color}`}>
+      <div class={`hv-head ${d.membership?.newcomer ? "moi" : d.me.color}`}>
         <div>
           <div class="hv-name">{d.me.name}</div>
           <div class="small">
-            {teamLabel(d.me.team)} · hạng {d.me.rank}/{d.total} khóa · {d.teamRank}/{d.teamTotal} trong đội
+            {d.membership?.newcomer
+              ? `${teamLabel(d.me.team)} · mới vào, chưa xếp hạng`
+              : `${teamLabel(d.me.team)} · hạng ${d.me.rank}/${d.total} khóa · ${d.teamRank}/${d.teamTotal} trong đội`}
           </div>
+          {d.membership ? (
+            <div class="small">
+              {d.membership.newcomer
+                ? `Vào lớp ngày ${ddmmyyyy(d.membership.joinedDay)}, còn ${d.membership.daysLeft} ngày nữa (${ddmmyyyy(d.membership.eligibleOn)}) được đưa vào bảng xếp hạng chính. Điểm tính từ ${ddmmyyyy(d.membership.start)}.`
+                : `Vào lớp ngày ${ddmmyyyy(d.membership.joinedDay)} (sau khai giảng), được đưa vào bảng xếp hạng từ ngày ${ddmmyyyy(d.membership.eligibleOn)}.`}
+            </div>
+          ) : null}
         </div>
         <div class="hv-pct">{d.me.percent.toLocaleString("vi-VN")}%</div>
         {props.inDialog ? (
@@ -329,19 +383,21 @@ export function LearnerDetailView(props: { d: LearnerDetail; inDialog?: boolean 
       </div>
       {d.provisional ? <p class="muted small">Có bài đang chờ chấm tự động, điểm có thể thay đổi nhẹ.</p> : null}
 
-      <h2>Thứ hạng 3 tuần gần nhất</h2>
-      <RankChart d={d} />
-      <ol class="hist">
-        {d.history.map((h, i) => (
-          <li class={h.weeksAgo === 0 ? "now" : ""}>
-            <span class="small muted">{h.weeksAgo === 0 ? "Hôm nay" : `${h.weeksAgo} tuần trước`}</span>
-            <span class="small muted">{ddmm(h.day)}</span>
-            <strong>{h.rank === null ? "—" : `#${h.rank}`}</strong>
-            <span class="small">{h.percent === null ? "chưa có điểm" : `${h.percent.toLocaleString("vi-VN")}%`}</span>
-            {i > 0 ? <Move from={d.history[i - 1]!.rank} to={h.rank} /> : null}
-          </li>
-        ))}
-      </ol>
+      {d.membership?.newcomer ? null : <h2>Thứ hạng 3 tuần gần nhất</h2>}
+      {d.membership?.newcomer ? null : <RankChart d={d} />}
+      {d.membership?.newcomer ? null : (
+        <ol class="hist">
+          {d.history.map((h, i) => (
+            <li class={h.weeksAgo === 0 ? "now" : ""}>
+              <span class="small muted">{h.weeksAgo === 0 ? "Hôm nay" : `${h.weeksAgo} tuần trước`}</span>
+              <span class="small muted">{ddmm(h.day)}</span>
+              <strong>{h.rank === null ? "—" : `#${h.rank}`}</strong>
+              <span class="small">{h.percent === null ? "chưa có điểm" : `${h.percent.toLocaleString("vi-VN")}%`}</span>
+              {i > 0 ? <Move from={d.history[i - 1]!.rank} to={h.rank} /> : null}
+            </li>
+          ))}
+        </ol>
+      )}
       {first && now && first.rank !== null && now.rank !== null ? (
         <p class="small">
           {first.rank > now.rank
