@@ -80,7 +80,9 @@ async function setup() {
       (2,'Học Viên Mới Vào', '0900000002',NULL,1,1,'${t}','${t}'),
       (3,'Học Viên Vào Sau Đủ 6 Tuần','0900000003',NULL,1,2,'${t}','${t}'),
       (4,'Học Viên Đã Rời',  '0900000004',NULL,1,2,'${t}','${t}'),
-      (5,'Học Viên Khác',    '0900000005',NULL,1,2,'${t}','${t}');
+      (5,'Học Viên Khác',    '0900000005',NULL,1,2,'${t}','${t}'),
+      (6,'Học Viên Vừa Vào', '0900000006',NULL,1,1,'${t}','${t}'),
+      (7,'Học Viên Chỉ Có Điểm Danh','0900000007',NULL,1,1,'${t}','${t}');
     INSERT INTO assignments (id,title,type,due_at,first_seen_at,last_seen_at) VALUES
       (10,'Bài 1','NORMAL','2026-10-02T23:00:00','${t}','${t}'), (11,'Bài 2','NORMAL','2026-11-12T23:00:00','${t}','${t}'),
       (12,'Bài 3','NORMAL','2026-11-18T23:00:00','${t}','${t}');
@@ -95,7 +97,10 @@ async function setup() {
   raw.exec(`INSERT INTO member_history (phone, learner_id, joined_at, left_at, last_code, synced_at) VALUES
     ('0900000002', 2, '2026-11-10 09:00', NULL, 'T0102', '${t}'),
     ('0900000003', 3, '2026-10-01 09:00', NULL, 'T0203', '${t}'),
-    ('0900000004', 4, '2026-09-07 16:04', '2026-11-01 08:00', 'T0204', '${t}');`);
+    ('0900000004', 4, '2026-09-07 16:04', '2026-11-01 08:00', 'T0204', '${t}'),
+    ('0900000006', 6, '2026-11-19 09:00', NULL, 'T0106', '${t}'),
+    ('0900000007', 7, '2026-11-15 09:00', NULL, 'T0107', '${t}');
+  INSERT INTO offline_attendance (learner_id, session_day, code, resident_code, region, synced_at) VALUES (7, '2026-11-20', 'OK', 'T0107', 'HN', '${t}');`);
   return { d1, raw };
 }
 
@@ -104,10 +109,23 @@ describe("bảng xếp hạng có quy tắc người vào sau", () => {
     const { d1 } = await setup();
     const lb = await loadLeaderboard(d1, TODAY);
     expect(lb.ranked.map((r) => r.learnerId).sort()).toEqual([1, 3, 5]); // 2 mới vào, 4 đã rời
-    expect(lb.newcomers.map((n) => n.learnerId)).toEqual([2]);
-    expect(lb.newcomers[0]).toMatchObject({ joinedDay: "2026-11-10", eligibleOn: "2026-12-22", daysLeft: 32 });
+    expect(lb.newcomers.map((n) => n.learnerId)).toEqual([2, 7, 6]); // xếp theo ngày được vào bảng chính (còn ít ngày hơn xếp trước)
+    const n2 = lb.newcomers.find((n) => n.learnerId === 2)!;
+    expect(n2).toMatchObject({ joinedDay: "2026-11-10", eligibleOn: "2026-12-22", daysLeft: 32 });
     // Người mới vào chỉ tính từ 13/11 (ngày vào 10/11 + ân hạn 2 ngày): chỉ còn bài 3 → 100%, không bị phạt bài trước ngày vào.
-    expect(lb.newcomers[0]!.studyPercent).toBe(100);
+    expect(n2.studyPercent).toBe(100);
+  });
+
+  it("người mới vào chưa có bài nào được tính vẫn hiện trên bảng (không biến mất)", async () => {
+    const { d1 } = await setup();
+    const lb = await loadLeaderboard(d1, TODAY);
+    // 6: vào 19/11, điểm tính từ 22/11 → chưa có bài hay buổi nào được tính.
+    expect(lb.newcomers.find((n) => n.learnerId === 6)).toMatchObject({ noData: true, noStudy: true, start: "2026-11-22", eligibleOn: "2026-12-31", daysLeft: 41, team: "T01" });
+    // 7: chỉ có điểm danh → điểm tạm tính lấy từ điểm danh, bài tập chưa có.
+    expect(lb.newcomers.find((n) => n.learnerId === 7)).toMatchObject({ noStudy: true, noData: false, percent: 100, attendancePercent: 100 });
+    const detail = (await loadLearnerDetail(d1, 6, TODAY))!;
+    expect(detail.me.noData).toBe(true);
+    expect(detail.membership).toMatchObject({ newcomer: true });
   });
 
   it("người vào sau đủ 6 tuần: xếp hạng bình thường, không bị phạt bài trước ngày vào, có ghi chú rê chuột", async () => {
@@ -154,6 +172,9 @@ describe("bảng xếp hạng có quy tắc người vào sau", () => {
     const res = await app.fetch(new Request("https://nskt-hub.invalid/bang-xep-hang"), env);
     const html = await res.text();
     expect(html).toContain("Mới vào · chưa xếp hạng");
+    expect(html).toContain("Có 3 thành viên mới vào"); // lời nhắc ở đầu trang
+    expect(html).toContain("Chưa có bài tập hay buổi học nào được tính (điểm tính từ ngày 22/11/2026)"); // chú thích rê chuột của người chưa có điểm
+    expect(html).toContain("Điểm tích lũy tạm tính: 100% (bài tập 100%, đi học chưa có). Được đưa vào bảng xếp hạng chính từ ngày 22/12/2026 (còn 32 ngày)");
     expect(html).toContain("còn 32 ngày");
     expect(html).toContain("22/12/2026");
     expect(html).toContain("Vào lớp ngày 01/10/2026 (sau khai giảng), được đưa vào bảng xếp hạng từ ngày 12/11/2026");

@@ -144,6 +144,8 @@ a.tile { color:inherit; text-decoration:none; }
 .rank-row.moi .eta { order:5; flex-basis:100%; padding-left:2.4em; font-size:.6875rem; opacity:.85; }
 .hv-head.moi { background:#e8eefc; color:#1f3a7a; }
 .newbies { margin-top:28px; padding:14px; border:1px solid #c9d6f3; border-radius:12px; background:#f4f7fe; }
+.newbies-hint { margin:8px 0; padding:8px 12px; border-radius:10px; background:#e8eefc; color:#1f3a7a; }
+.newbies-hint a { color:#1f3a7a; font-weight:700; }
 .newbies h2 { margin:0 0 4px; font-size:1.0625rem; color:#1f3a7a; }
 a.rank-row { color:inherit; text-decoration:none; }
 a.rank-row:hover .name { text-decoration:underline; }

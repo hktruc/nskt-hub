@@ -35,6 +35,10 @@ export type Ranked = {
   onTimeSessions: number; // số buổi có mặt đúng giờ, đúng chỗ
   onTimeVideos: number;
   avgHoursEarly: number;
+  /** Người "mới vào" chưa có bài tập nào được tính (đang ân hạn hoặc bài chưa chấm): điểm bài tập chưa có. */
+  noStudy?: boolean;
+  /** Chưa có cả bài tập lẫn buổi học nào được tính. */
+  noData?: boolean;
 };
 
 export function weight(dueAt: string, todayVN: string, halfLifeWeeks: number = SCORING.halfLifeWeeks): number {
@@ -51,8 +55,14 @@ export function sessionPoints(code: string): number | null {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-export function rank(rows: ScoreRow[], todayVN: string, att: AttRow[] = []): { ranked: Ranked[]; provisional: boolean } {
-  const by = new Map<number, { name: string; team: string; num: number; den: number; vids: number; early: number; earlyN: number }>();
+export function rank(
+  rows: ScoreRow[],
+  todayVN: string,
+  att: AttRow[] = [],
+  /** Học viên cần có mặt trong kết quả dù chưa có bài nào được tính (người "mới vào"). */
+  extra?: Map<number, { name: string; team: string }>,
+): { ranked: Ranked[]; provisional: boolean } {
+  const by = new Map<number, { name: string; team: string; num: number; den: number; vids: number; early: number; earlyN: number; empty?: boolean }>();
   let provisional = false;
   for (const r of rows) {
     const team = teamCode(r.team_name);
@@ -68,6 +78,9 @@ export function rank(rows: ScoreRow[], todayVN: string, att: AttRow[] = []): { r
       e.earlyN++;
     }
     by.set(r.learner_id, e);
+  }
+  for (const [id, x] of extra ?? []) {
+    if (!by.has(id) && isLearnerTeam(x.team)) by.set(id, { name: x.name, team: x.team, num: 0, den: 0, vids: 0, early: 0, earlyN: 0, empty: true });
   }
   const attBy = new Map<number, { num: number; den: number; ok: number }>();
   for (const a of att) {
@@ -85,7 +98,8 @@ export function rank(rows: ScoreRow[], todayVN: string, att: AttRow[] = []): { r
     const study = e.den > 0 ? (100 * e.num) / e.den : 0;
     const a = attBy.get(learnerId);
     const attendance = a && a.den > 0 ? (100 * a.num) / a.den : null;
-    const percent = round1(attendance === null ? study : (1 - share) * study + share * attendance);
+    const noStudy = e.empty === true;
+    const percent = round1(noStudy ? (attendance ?? 0) : attendance === null ? study : (1 - share) * study + share * attendance);
     const color = colorOf(percent);
     return {
       rank: 0,
@@ -100,6 +114,7 @@ export function rank(rows: ScoreRow[], todayVN: string, att: AttRow[] = []): { r
       onTimeSessions: a?.ok ?? 0,
       onTimeVideos: e.vids,
       avgHoursEarly: e.earlyN ? Math.round((10 * e.early) / e.earlyN) / 10 : 0,
+      ...(noStudy ? { noStudy: true, noData: attendance === null } : {}),
     };
   });
   const cmp = (a: Ranked, b: Ranked) =>
@@ -142,16 +157,32 @@ export async function loadBoardInputs(db: D1Database, todayVN: string) {
   return applyMembership(rows, att, members, todayVN.slice(0, 10));
 }
 
-export type Newcomer = Ranked & { joinedDay: string; eligibleOn: string; daysLeft: number };
+export type Newcomer = Ranked & { joinedDay: string; start: string; eligibleOn: string; daysLeft: number };
+
+/** Tên và đội của các học viên (để người "mới vào" luôn có mặt trên bảng dù chưa có bài nào được tính). */
+async function loadBasics(db: D1Database, ids: number[]): Promise<Map<number, { name: string; team: string }>> {
+  const out = new Map<number, { name: string; team: string }>();
+  if (!ids.length) return out;
+  const res = await db
+    .prepare(`SELECT l.id, l.full_name, t.name AS team_name FROM learners l LEFT JOIN teams t ON t.id = l.team_id WHERE l.id IN (${ids.map(() => "?").join(",")})`)
+    .bind(...ids)
+    .all<{ id: number; full_name: string | null; team_name: string | null }>();
+  for (const r of res.results) {
+    const team = teamCode(r.team_name);
+    if (isLearnerTeam(team)) out.set(r.id, { name: r.full_name ?? `#${r.id}`, team });
+  }
+  return out;
+}
 export type LateInfo = { joinedDay: string; eligibleOn: string };
 
 export async function loadLeaderboard(db: D1Database, todayVN: string) {
   const inp = await loadBoardInputs(db, todayVN);
   const isMain = (id: number) => !inp.newcomers.has(id);
   const main = rank(inp.rows.filter((r) => isMain(r.learner_id)), todayVN, inp.att.filter((a) => isMain(a.learner_id)));
-  const newcomers: Newcomer[] = rank(inp.rows.filter((r) => !isMain(r.learner_id)), todayVN, inp.att.filter((a) => !isMain(a.learner_id))).ranked.map((r) => {
+  const basics = await loadBasics(db, [...inp.newcomers]);
+  const newcomers: Newcomer[] = rank(inp.rows.filter((r) => !isMain(r.learner_id)), todayVN, inp.att.filter((a) => !isMain(a.learner_id)), basics).ranked.map((r) => {
     const i = inp.info.get(r.learnerId)!;
-    return { ...r, joinedDay: i.joinedDay, eligibleOn: i.eligibleOn, daysLeft: i.daysLeft };
+    return { ...r, joinedDay: i.joinedDay, start: i.start, eligibleOn: i.eligibleOn, daysLeft: i.daysLeft };
   });
   newcomers.sort((a, b) => a.daysLeft - b.daysLeft || b.percent - a.percent || a.name.localeCompare(b.name, "vi"));
   // Người vào sau khai giảng đã đủ điều kiện: bảng chính ghi chú khi rê chuột vào tên.
@@ -271,7 +302,7 @@ export async function loadLearnerDetail(db: D1Database, learnerId: number, today
   let me = ranked.find((r) => r.learnerId === learnerId);
   if (!me && inp.newcomers.has(learnerId)) {
     // Người đang "mới vào": có điểm riêng, chưa có thứ hạng.
-    const own = rank(inp.rows.filter((r) => r.learner_id === learnerId), todayVN, inp.att.filter((a) => a.learner_id === learnerId)).ranked[0];
+    const own = rank(inp.rows.filter((r) => r.learner_id === learnerId), todayVN, inp.att.filter((a) => a.learner_id === learnerId), await loadBasics(db, [learnerId])).ranked[0];
     if (own) me = { ...own, rank: 0 };
   }
   if (!me) return null; // chỉ học viên thuộc 12 đội, chưa rời lớp
