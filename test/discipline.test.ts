@@ -41,11 +41,11 @@ describe("kỷ luật: lỗi nhẹ / lỗi nặng", () => {
     expect(a!.bai.map((x) => x.state)).toEqual(["dung-han", "dung-han", "chua-den-han"]);
     expect(a!.zoom[0]!.state).toBe("dung-gio");
     expect([a!.nhe, a!.nang, a!.points]).toEqual([0, 1, 3]);
-    // B: nộp bù bài ngày (không lỗi), nộp trễ bài tuần (nặng), vào Zoom trễ (nặng).
-    expect(b!.bai[0]!.faults).toEqual([]);
+    // B: nộp bù bài ngày (nhẹ, BTC 45N 23/11), nộp trễ bài tuần (nặng), vào Zoom trễ (nặng).
+    expect(b!.bai[0]!.faults.map((f) => f.severity)).toEqual(["nhe"]);
     expect(b!.bai[1]!.faults.map((f) => f.severity)).toEqual(["nang"]);
     expect(b!.zoom[0]!.state).toBe("tre");
-    expect([b!.nhe, b!.nang]).toEqual([0, 2]);
+    expect([b!.nhe, b!.nang]).toEqual([1, 2]);
     // C: không làm bài ngày (nhẹ), không làm bài tuần (nặng), vắng Zoom (nặng). Bài chưa tới hạn không tính.
     expect([c!.nhe, c!.nang, c!.points]).toEqual([1, 2, 7]);
     expect([c!.due, c!.onTime, c!.zoomPast, c!.zoomPresent]).toEqual([2, 0, 1, 0]);
@@ -69,15 +69,15 @@ describe("kỷ luật: lỗi nhẹ / lỗi nặng", () => {
     const rs = computeDiscipline(base(), cfg);
     const teams = rankTeams(rs);
     expect(teams.map((t) => [t.team, t.avgPoints, t.rank])).toEqual([
-      ["T01", 4.5, 1],
+      ["T01", 5, 1],
       ["T02", 7, 2],
     ]);
     expect(teams[0]!.onTimeRate).toBe(50);
     const t = totals(rs);
-    expect([t.members, t.active, t.nhe, t.nang, t.zoomRate]).toEqual([3, 3, 1, 5, 67]);
+    expect([t.members, t.active, t.nhe, t.nang, t.zoomRate]).toEqual([3, 3, 2, 5, 67]);
     const w = byWeek(rs, cfg);
     expect(w).toHaveLength(6);
-    expect([w[0]!.due, w[0]!.onTime, w[0]!.nang, w[0]!.nhe]).toEqual([6, 2, 5, 1]);
+    expect([w[0]!.due, w[0]!.onTime, w[0]!.nang, w[0]!.nhe]).toEqual([6, 2, 5, 2]);
   });
 
   it("tuần hành trình và cộng phút", () => {
