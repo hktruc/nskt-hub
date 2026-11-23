@@ -43,7 +43,7 @@ export const COURSE: CourseConfig = {
     points: { nhe: 1, nang: 3 },
     rules: {
       dailyMissing: "nhe", // "Không làm bài tập ngày sau deadline: 1 lỗi nhẹ"
-      dailyLate: null, // nộp bù bài ngày: ghi "nộp trễ" nhưng không tính lỗi
+      dailyLate: "nhe", // BTC 45N 23/11: nộp bù bài ngày sau hạn cũng tính lỗi nhẹ (ghi "nộp trễ"); trước đó không tính lỗi
       weeklyMissing: "nang", // "Nộp trễ / không làm bài tập tuần sau deadline: 1 lỗi nặng"
       weeklyLate: "nang",
       zoomLate: "nang",

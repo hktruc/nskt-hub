@@ -155,7 +155,7 @@ function RuleNote() {
     <details class="card-item small">
       <summary>Cách tính lỗi</summary>
       <ul>
-        <li>Bài ngày qua hạn mà không nộp: {lab(r.dailyMissing)}. Nộp bù sau hạn: {lab(r.dailyLate)} (vẫn ghi "nộp trễ").</li>
+        <li>Bài ngày qua hạn mà không nộp: {lab(r.dailyMissing)}. Nộp bù bài ngày sau hạn: {lab(r.dailyLate)} (ghi "nộp trễ").</li>
         <li>Bài tuần nộp trễ: {lab(r.weeklyLate)}. Qua hạn mà không nộp: {lab(r.weeklyMissing)}.</li>
         <li>
           Zoom: {LATE_RULE}: {lab(r.zoomLate)}. Vắng: {lab(r.zoomAbsent)}. Không bật camera (trưởng nhóm báo): {lab(r.cameraOff)}.

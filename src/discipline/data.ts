@@ -5,6 +5,23 @@ import { isLearnerTeam, teamCode } from "../domain/teams";
 import { nowVN } from "../scoring/run";
 import { computeDiscipline, type DisciplineInput, type LearnerResult } from "./engine";
 
+type AssignmentRow = { id: number; title: string | null; type: string | null; due_at: string; last_seen_at?: string | null };
+
+/**
+ * dh3g có lúc xóa rồi tạo lại một bài (cùng tên, cùng hạn nhưng mã mới). Bản cũ vẫn nằm trong D1 với toàn bộ "chưa nộp",
+ * nên bị tính lỗi oan cho cả lớp. Cùng tên + cùng hạn: chỉ giữ bản dh3g còn trả về gần nhất; các bản cũ bỏ qua (không xóa gì trong D1).
+ */
+export function dropSupersededAssignments<T extends AssignmentRow>(rows: T[]): { kept: T[]; droppedIds: Set<number> } {
+  const key = (a: T) => `${(a.title ?? "").trim().toLowerCase()}|${a.due_at}`;
+  const best = new Map<string, T>();
+  for (const a of rows) {
+    const cur = best.get(key(a));
+    if (!cur || (a.last_seen_at ?? "") > (cur.last_seen_at ?? "") || ((a.last_seen_at ?? "") === (cur.last_seen_at ?? "") && a.id > cur.id)) best.set(key(a), a);
+  }
+  const keptIds = new Set([...best.values()].map((a) => a.id));
+  return { kept: rows.filter((a) => keptIds.has(a.id)), droppedIds: new Set(rows.filter((a) => !keptIds.has(a.id)).map((a) => a.id)) };
+}
+
 export async function loadDisciplineInput(db: D1Database, now: Date): Promise<DisciplineInput> {
   const start = COURSE.discipline.startDate;
   const [ls, as, ss, ses, at, cam, ex, rep] = await db.batch([
@@ -12,7 +29,7 @@ export async function loadDisciplineInput(db: D1Database, now: Date): Promise<Di
       `SELECT l.id, l.full_name, t.name AS team_name, st.stopped_from, st.reason AS stop_reason
        FROM learners l LEFT JOIN teams t ON t.id = l.team_id LEFT JOIN learner_status st ON st.learner_id = l.id`,
     ),
-    db.prepare("SELECT id, title, type, due_at FROM assignments WHERE due_at >= ?").bind(start),
+    db.prepare("SELECT id, title, type, due_at, last_seen_at FROM assignments WHERE due_at >= ?").bind(start),
     db.prepare("SELECT s.learner_id, s.assignment_id, s.status, s.submitted_at FROM submissions s JOIN assignments a ON a.id = s.assignment_id WHERE a.due_at >= ?").bind(start),
     db.prepare("SELECT id, title, start_at, end_at FROM sessions WHERE start_at >= ?").bind(start),
     db.prepare("SELECT x.learner_id, x.session_id, x.attended, x.attended_at FROM attendances x JOIN sessions s ON s.id = x.session_id WHERE s.start_at >= ?").bind(start),
@@ -25,15 +42,16 @@ export async function loadDisciplineInput(db: D1Database, now: Date): Promise<Di
     .map((r) => ({ id: r.id, name: r.full_name ?? `#${r.id}`, team: teamCode(r.team_name), stoppedFrom: r.stopped_from, stopReason: r.stop_reason }))
     .filter((l) => isLearnerTeam(l.team))
     .sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name, "vi"));
+  const { kept, droppedIds } = dropSupersededAssignments((as?.results ?? []) as AssignmentRow[]);
   return {
     learners,
-    assignments: ((as?.results ?? []) as { id: number; title: string | null; type: string | null; due_at: string }[]).map((a) => ({
+    assignments: kept.map((a) => ({
       id: a.id,
       title: (a.title ?? `Bài #${a.id}`).trim(),
       type: a.type ?? "NORMAL",
       dueAt: a.due_at,
     })),
-    subs: ((ss?.results ?? []) as { learner_id: number; assignment_id: number; status: string | null; submitted_at: string | null }[]).map((s) => ({
+    subs: ((ss?.results ?? []) as { learner_id: number; assignment_id: number; status: string | null; submitted_at: string | null }[]).filter((s) => !droppedIds.has(s.assignment_id)).map((s) => ({
       learnerId: s.learner_id,
       assignmentId: s.assignment_id,
       status: s.status,
